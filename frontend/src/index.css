@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f5f7fb;
+  --card-bg: #ffffff;
+  --primary: #2563eb;
+  --primary-soft: #e0ecff;
+  --active-blue: #1d4ed8;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border-soft: #e5e7eb;
+}
+
+body {
+  background: radial-gradient(circle at top, #e0ebff 0, #f5f7fb 45%, #f5f7fb 100%);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-card-bg: var(--card-bg);
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-border-soft: var(--border-soft);
+}
+
+@layer components {
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm;
+  }
+}
