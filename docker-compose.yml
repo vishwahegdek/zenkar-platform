@@ -38,4 +38,11 @@ services:
     ports:
       - "5435:5432"
     volumes:
+    volumes:
       - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - zenkar-network
+
+networks:
+  zenkar-network:
+    driver: bridge
