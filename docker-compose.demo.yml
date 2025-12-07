@@ -6,7 +6,7 @@ services:
     container_name: zenkar-backend-demo
     restart: always
     ports:
-      - "3002:3000" # Demo Backend on 3002
+      - "3000:3000" # Demo Backend on 3000 (Internal & Host)
     depends_on:
       - db
     environment:
@@ -21,7 +21,7 @@ services:
     container_name: zenkar-frontend-demo
     restart: always
     ports:
-      - "3001:80" # Demo Frontend on 3001 (Nginx will proxy here)
+      - "5173:5173" # Demo Frontend on 5173 (Internal & Host)
     depends_on:
       - backend
     networks:
@@ -40,7 +40,7 @@ services:
     networks:
       - zenkar-network-demo
     ports:
-      - "5436:5432" # Exposed on 5436 if needed for remote debug
+      - "5432:5432" # Exposed on 5432
 
 networks:
   zenkar-network-demo:

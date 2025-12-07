@@ -6,7 +6,7 @@ services:
     container_name: zenkar-backend
     restart: always
     ports:
-      - "3001:3000" # Shifted to 3001 to free up 3000 for Frontend
+      - "3001:3000" # Shifted to 3001
     depends_on:
       - db
     environment:
@@ -21,7 +21,7 @@ services:
     container_name: zenkar-frontend
     restart: always
     ports:
-      - "3000:80" # Nginx expects Frontend on 3000
+      - "5174:5173" # Nginx expects Frontend on 5174 (Mapped to 5173)
     depends_on:
       - backend
     networks:
@@ -35,6 +35,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=order_book
+    ports:
+      - "5433:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
     networks:

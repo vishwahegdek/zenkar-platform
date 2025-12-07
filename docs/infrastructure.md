@@ -14,12 +14,38 @@
 -   **Project Root**: `/home/vishwa/projects/zenkar/Order Book/`
 -   **Git Repo**: `zenkar-platform/` (inside root)
 
-## 3. Database Configuration
-| Environment | Host | Port | User | Database | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Local (Host)** | `localhost` | `5432` | *(You know)* | `zenkar_db` | Use for local testing. |
-| **Docker (Dev)** | `db` | `5432` | `postgres` | `zenkar_db` | Mapped to host:5435 |
-| **Production** | `zenkar-db` | `5432` | `postgres` | `zenkar_db` | Managed via Docker. |
+## 3. System Architecture & Ports
+
+This section details the exact configuration for Local, Staging, and Production environments.
+
+### A. Local Development (on your linux system)
+*   **Database**:
+    *   **Connection**: `localhost:5432` (Configured in `backend/.env`).
+    *   **Type**: This expects a **Native Postgres Service** running on your host machine.
+    *   *(Alternative)*: If you run `docker-compose up` locally, the database lives in the `zenkar-db` container but is exposed on `localhost:5435`. You would need to update `.env` to use port 5435 to connect to the Docker DB.
+*   **Backend**: Runs on `http://localhost:3000`.
+*   **Frontend**: Runs on `http://localhost:5173` (Vite Default) and proxies API calls to `localhost:3000`.
+
+### B. Containers & Ports (Server)
+
+| Feature | Production (`order.zenkar.in`) | Staging (`orderdemo.zenkar.in`) |
+| :--- | :--- | :--- |
+| **Database Container** | `zenkar-db` | `zenkar-db-demo` |
+| **DB Internal Port** | `5432` | `5432` |
+| **DB Host Port** | `5433` | `5432` |
+| **Backend Container** | `zenkar-backend` | `zenkar-backend-demo` |
+| **Backend Port** | `3000` (Internal) / `3001` (Host) | `3000` (Internal) / `3000` (Host) |
+| **Frontend Container** | `zenkar-frontend` | `zenkar-frontend-demo` |
+| **Frontend Port** | `5173` (Internal) / `5174` (Host) | `5173` (Internal) / `5173` (Host) |
+
+### C. Domain Connection
+*   `order.zenkar.in` -> Nginx (Host) -> `http://localhost:5174`.
+*   `orderdemo.zenkar.in` -> Nginx (Host) -> `http://localhost:5173`.
+
+### D. Data Backup
+*   **Location**: `zenkar-platform/backups/` (on the remote server).
+*   **Double Safety**: Run `scripts/sync_backups.sh` locally to pull backups to your machine.
+
 
 ## 4. Domains & Routing (Nginx)
 The server runs a host-level Nginx acting as a Reverse Proxy.
