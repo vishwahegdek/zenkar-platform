@@ -72,6 +72,7 @@ This project is optimized for collaboration with AI agents.
 ## 📦 Deployment
 
 For detailed deployment instructions, please refer to [docs/deployment.md](docs/deployment.md).
+For server access details and current state, see [docs/server_access.md](docs/server_access.md).
 
 ### Quick Build
 ```bash

@@ -6,7 +6,7 @@ services:
     container_name: zenkar-backend
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000" # Shifted to 3001 to free up 3000 for Frontend
     depends_on:
       - db
     environment:
@@ -21,7 +21,7 @@ services:
     container_name: zenkar-frontend
     restart: always
     ports:
-      - "5173:80"
+      - "3000:80" # Nginx expects Frontend on 3000
     depends_on:
       - backend
     networks:
