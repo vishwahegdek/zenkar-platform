@@ -1,5 +1,5 @@
 services:
-  backend:
+  demo-backend:
     build: 
       context: .
       dockerfile: backend/Dockerfile
@@ -8,13 +8,13 @@ services:
     ports:
       - "3000:3000" # Demo Backend on 3000 (Internal & Host)
     depends_on:
-      - db
+      - demo-db
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
+      DATABASE_URL: "postgresql://postgres:postgres@demo-db:5432/zenkar_db_demo?schema=public"
     networks:
       - zenkar-network-demo
 
-  frontend:
+  demo-frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -23,11 +23,11 @@ services:
     ports:
       - "5173:5173" # Demo Frontend on 5173 (Internal & Host)
     depends_on:
-      - backend
+      - demo-backend
     networks:
       - zenkar-network-demo
 
-  db:
+  demo-db:
     image: postgres:15-alpine
     container_name: zenkar-db-demo
     restart: always
