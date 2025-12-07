@@ -1,0 +1,47 @@
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: zenkar-backend-demo
+    restart: always
+    ports:
+      - "3002:3000" # Demo Backend on 3002
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
+    networks:
+      - zenkar-network-demo
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: zenkar-frontend-demo
+    restart: always
+    ports:
+      - "3001:80" # Demo Frontend on 3001 (Nginx will proxy here)
+    depends_on:
+      - backend
+    networks:
+      - zenkar-network-demo
+
+  db:
+    image: postgres:15-alpine
+    container_name: zenkar-db-demo
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: zenkar_db_demo
+    volumes:
+      - ./pgdata_demo:/var/lib/postgresql/data # Isolated Data Volume
+    networks:
+      - zenkar-network-demo
+    ports:
+      - "5436:5432" # Exposed on 5436 if needed for remote debug
+
+networks:
+  zenkar-network-demo:
+    driver: bridge
