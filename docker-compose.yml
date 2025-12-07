@@ -10,7 +10,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db?schema=public"
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/order_book?schema=public"
     networks:
       - zenkar-network
 
@@ -34,7 +34,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=zenkar_db
+      - POSTGRES_DB=order_book
     ports:
       - "5435:5432"
     volumes:

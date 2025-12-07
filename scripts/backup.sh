@@ -7,7 +7,7 @@
 BACKUP_DIR="../backups"
 CONTAINER_NAME="zenkar-db"
 DB_USER="postgres"
-DB_NAME="zenkar_db"
+DB_NAME="order_book"
 DATE=$(date +"%Y-%m-%d_%H%M%S")
 FILENAME="backup_${DATE}.sql.gz"
 
