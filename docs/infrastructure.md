@@ -15,19 +15,25 @@
 -   **Production Path**: `zenkar-platform/` (inside root)
 -   **Staging Path**: `zenkar-staging/` (inside root)
 
-## 3. System Architecture & Ports
+## 3. Workflow & Architecture
 
-This section details the exact configuration for Local, Staging, and Production environments.
+### A. The 3-Step Promotion Workflow
+1.  **Develop (Local)**: Code and test on your local machine.
+2.  **Staging (Server)**: Deploy to `zenkar-staging/` directory. Run `docker-compose.demo.yml`.
+    *   **Url**: `orderdemo.zenkar.in`
+    *   **Port**: `5173`
+3.  **Production (Server)**: Copy code to `zenkar-platform/` directory. Run `docker-compose.yml`.
+    *   **Url**: `order.zenkar.in`
+    *   **Port**: `5174`
 
-### A. Local Development (on your linux system)
-*   **Database**:
-    *   **Connection**: `localhost:5432` (Configured in `backend/.env`).
-    *   **Type**: This expects a **Native Postgres Service** running on your host machine.
-    *   *(Alternative)*: If you run `docker-compose up` locally, the database lives in the `zenkar-db` container but is exposed on `localhost:5435`. You would need to update `.env` to use port 5435 to connect to the Docker DB.
-*   **Backend**: Runs on `http://localhost:3000`.
-*   **Frontend**: Runs on `http://localhost:5173` (Vite Default) and proxies API calls to `localhost:3000`.
+### B. Directory Isolation (Server)
+We use separate directories to allow standard service names (`backend`, `frontend`) without conflict.
 
-### B. Containers & Ports (Server)
+| Environment | Directory | Compose File |
+| :--- | :--- | :--- |
+| **Staging** | `/home/vishwa/zenkar-staging/` | `docker-compose.demo.yml` |
+| **Production** | `/home/vishwa/zenkar-platform/` | `docker-compose.yml` |
+
 
 | Feature | Production (`order.zenkar.in`) | Staging (`orderdemo.zenkar.in`) |
 | :--- | :--- | :--- |
