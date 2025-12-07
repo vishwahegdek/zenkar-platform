@@ -12,7 +12,8 @@
 -   **Host IP**: `160.250.204.219`
 -   **SSH User**: `vishwa`
 -   **Project Root**: `/home/vishwa/projects/zenkar/Order Book/`
--   **Git Repo**: `zenkar-platform/` (inside root)
+-   **Production Path**: `zenkar-platform/` (inside root)
+-   **Staging Path**: `zenkar-staging/` (inside root)
 
 ## 3. System Architecture & Ports
 
