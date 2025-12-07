@@ -1,29 +1,79 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 export default function Layout() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Close menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location]);
+
   return (
-    <div className="min-h-screen pb-10">
+    <div className="min-h-screen pb-10 bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link to="/" className="text-xl font-bold text-primary tracking-tight">Order Book</Link>
-            <nav className="flex gap-1">
-              <Link to="/orders" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors">Orders</Link>
-              <Link to="/customers" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors">Customers</Link>
-              <Link to="/products" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md transition-colors">Products</Link>
+            <Link to="/" className="text-xl font-bold text-blue-600 tracking-tight">Order Book</Link>
+            
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex gap-1">
+              <NavLink to="/orders">Orders</NavLink>
+              <NavLink to="/customers">Customers</NavLink>
+              <NavLink to="/products">Products</NavLink>
             </nav>
           </div>
+
           <div className="flex items-center gap-4">
-            <Link to="/orders/new" className="bg-primary text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
-              <span>＋</span> New Order
+            <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+              <span>＋</span> <span className="hidden md:inline">New Order</span>
             </Link>
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              <span className="text-xl">☰</span>
+            </button>
           </div>
         </div>
+
+        {/* Mobile Nav Dropdown */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white">
+            <div className="px-4 py-2 flex flex-col gap-1">
+              <NavLink to="/orders" mobile>Orders</NavLink>
+              <NavLink to="/customers" mobile>Customers</NavLink>
+              <NavLink to="/products" mobile>Products</NavLink>
+            </div>
+          </div>
+        )}
       </header>
       
       <main className="max-w-6xl mx-auto px-4 py-8">
         <Outlet />
       </main>
     </div>
+  );
+}
+
+function NavLink({ to, children, mobile }) {
+  const location = useLocation();
+  const isActive = location.pathname.startsWith(to);
+  
+  const baseClasses = mobile 
+    ? "block px-3 py-2 text-base font-medium rounded-md transition-colors"
+    : "px-3 py-2 text-sm font-medium rounded-md transition-colors";
+    
+  const activeClasses = isActive 
+    ? "text-blue-700 bg-blue-50" 
+    : "text-gray-600 hover:text-blue-600 hover:bg-gray-50";
+
+  return (
+    <Link to={to} className={`${baseClasses} ${activeClasses}`}>
+      {children}
+    </Link>
   );
 }

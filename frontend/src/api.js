@@ -17,5 +17,14 @@ export const api = {
     const res = await fetch(`/api${url}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('API Request Failed');
     return res.json();
+  },
+  patch: async (url, data) => {
+    const res = await fetch(`/api${url}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('API Request Failed');
+    return res.json();
   }
 };

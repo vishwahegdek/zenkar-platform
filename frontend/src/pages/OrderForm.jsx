@@ -62,11 +62,27 @@ export default function OrderForm() {
     mutationFn: (data) => {
        const payload = {
           ...data,
-          customerId: data.customerId || 0, // 0 triggers backend 'create new' logic if name present
+          customerId: Number(data.customerId) || 0,
+          customerPhone: data.customerPhone || '',
+          customerAddress: data.customerAddress || '',
+          // Handle Dates: send null if empty string
+          orderDate: data.orderDate ? new Date(data.orderDate).toISOString() : new Date().toISOString(),
+          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+          
+          status: data.status || 'confirmed',
           totalAmount: calculateTotal(),
-          items: data.items.filter(i => i.productName || i.quantity > 0)
+          advanceAmount: Number(data.advanceAmount) || 0,
+          
+          items: data.items
+            .filter(i => i.productName || i.quantity > 0)
+            .map(i => ({
+              ...i,
+              quantity: Number(i.quantity) || 0,
+              unitPrice: Number(i.unitPrice) || 0,
+              lineTotal: Number(i.lineTotal) || 0,
+            }))
        };
-       return isEdit ? api.post(`/orders/${id}`, payload) : api.post('/orders', payload);
+       return isEdit ? api.patch(`/orders/${id}`, payload) : api.post('/orders', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['orders']);
@@ -204,6 +220,7 @@ export default function OrderForm() {
                 <option value="production">In Production</option>
                 <option value="ready">Ready</option>
                 <option value="delivered">Delivered</option>
+                <option value="closed">Closed (Archived)</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>

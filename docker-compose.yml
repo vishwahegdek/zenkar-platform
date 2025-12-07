@@ -1,0 +1,41 @@
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: zenkar-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db?schema=public"
+    networks:
+      - zenkar-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: zenkar-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - zenkar-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: zenkar-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=zenkar_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data

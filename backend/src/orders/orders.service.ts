@@ -47,10 +47,18 @@ export class OrdersService {
     });
   }
 
-  findAll() {
+  findAll(view?: string) {
+    const isHistory = view === 'history';
+    const statusFilter = isHistory 
+      ? { in: ['closed', 'cancelled'] } 
+      : { notIn: ['closed', 'cancelled'] };
+
     return this.prisma.order.findMany({
-      where: { isDeleted: false },
-      include: { customer: true },
+      where: { 
+        isDeleted: false,
+        status: statusFilter
+      },
+      include: { customer: true, items: true },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -64,32 +72,38 @@ export class OrdersService {
   }
 
   async update(id: number, dto: UpdateOrderDto) {
-    const { items, ...orderData } = dto;
+    const { items, customerId, customerName, customerPhone, customerAddress, ...orderData } = dto;
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Update Order Fields
+      // 1. Update Order details
       await tx.order.update({
         where: { id },
-        data: orderData,
+        data: {
+          ...orderData,
+          customer: customerId ? { connect: { id: customerId } } : undefined,
+        },
       });
 
-      // 2. Replace Items (Delete All + Insert New) if items provided
+      // 2. If items provided, replace them (delete all + create new)
       if (items) {
         await tx.orderItem.deleteMany({ where: { orderId: id } });
-        await tx.orderItem.createMany({
-          data: items.map((item) => ({
-            orderId: id,
-            productId: item.productId,
-            productName: item.productName,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            lineTotal: item.lineTotal,
-          })),
-        });
+
+        if (items.length > 0) {
+          await tx.orderItem.createMany({
+            data: items.map((item) => ({
+              orderId: id,
+              productId: item.productId,
+              productName: item.productName,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              lineTotal: item.lineTotal,
+            })),
+          });
+        }
       }
 
-      return tx.order.findUnique({ where: { id }, include: { items: true } });
+      return tx.order.findUnique({ where: { id }, include: { items: true, customer: true } });
     });
   }
 
