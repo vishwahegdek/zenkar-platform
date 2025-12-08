@@ -1,50 +1,45 @@
 # Zenkar Platform: Deployment & Data Migration Guide
 
-This guide details how to deploy the refactored Zenkar Platform (NestJS + React) to your production server while preserving your existing data.
+This guide details how to deploy the Zenkar Platform using the automated Push Pipeline.
 
 ## 1. Prerequisites
-- [x] Legacy code archived to `_archive/`.
-- [x] New `Dockerfile`s created for Backend and Frontend.
-- [x] `docker-compose.yml` updated for new services.
+- [x] Local environment set up with `cicd.sh`, `remote_scp.py`, and `remote_exec.py`.
+- [x] SSH access enabled to `server` (160.250.204.219).
+- [x] Docker configured on the remote server.
 
-## 2. Server Deployment Steps
+## 2. Deployment Workflow (Push Pipeline)
 
-Since you have already pulled the code to your server, follow these steps:
+We do **not** pull code directly on the server. Instead, we bundle the application locally and push it.
 
-### Step 1: Stop the Old Application
-Stop the running containers to release the database lock.
+### Commands
+
+**Deploy to Production** (order.zenkar.in):
 ```bash
-docker-compose down
+./cicd.sh prod
 ```
 
-### Step 2: Verify Data Location
-Ensure your database data is structured as expected. The new configuration expects the PostgreSQL data to be in the `pgdata/` folder in the project root.
+**Deploy to Demo** (orderdemo.zenkar.in):
 ```bash
-ls -d pgdata
-# Should output: pgdata
-```
-> **Note**: If your old data lives elsewhere (e.g., a named volume), update `docker-compose.yml` to point to that location.
-
-### Step 3: Build and Start the New Application
-Rebuild the containers using the new Dockerfiles.
-```bash
-docker-compose up --build -d
+./cicd.sh demo
 ```
 
-### Step 4: Verify Deployment
-Check the logs to ensure everything started correctly.
-```bash
-docker-compose logs -f
-```
-- **Backend**: Look for `Nest application successfully started`.
-- **Frontend**: Look for Nginx startup logs.
+### What Happens Behind the Scenes
+1.  **Test**: Runs local frontend tests (`npm test`).
+2.  **Package**: Compresses the project into `zenkar-platform.tar.gz`.
+3.  **Upload**: SCPs the tarball to the server.
+4.  **Deploy**:
+    -   Extracts the code.
+    -   Triggers a pre-deployment database backup.
+    -   Runs `docker-compose up --build -d` to restart services.
 
-## 3. Data Migration (Automatic)
-The new application uses the **same database schema** and **same volume mapping** (`./pgdata`) as the legacy application.
-**No manual data migration is required.**
-When the new Backend starts, it will connect to the existing Postgres database and see all your old Customers, Products, and Orders immediately.
+## 3. Data Migration
+The system maps `../../pgdata` (relative to the compose file) to the database container.
+-   **No manual migration needed** for code updates.
+-   Database schema changes should be handled via Prisma Migrations (run automatically if configured in start script).
 
 ## 4. Troubleshooting
-If you see connection errors:
-1.  **Check Database URL**: Ensure `DATABASE_URL` in `docker-compose.yml` matches the credentials used by your existing Postgres instance (default: `postgres:postgres@db:5432/order_book`).
-2.  **Permissions**: If `pgdata` permissions are wrong, run `sudo chown -R 70:70 pgdata/` (Postgres default user/group).
+-   **"SCP Upload Failed"**: Check internet connection and VPN/SSH keys.
+-   **"Remote Execution Failed"**:
+    -   Try running manual commands: `python3 remote_exec.py "docker ps"`
+    -   Check server disk space: `python3 remote_exec.py "df -h"`
+-   **Lock Files**: If deployment hangs, check for existing `apt` or `docker` processes on the server.

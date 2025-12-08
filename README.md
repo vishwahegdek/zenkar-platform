@@ -11,6 +11,18 @@ The **Zenkar Platform** is a modern, mobile-first Order Book application designe
 *   **Containerization**: Docker & Docker Compose
 *   **Documentation**: Swagger / OpenAPI
 
+### Component Versioning
+| Component | Technology | Version | Source |
+| :--- | :--- | :--- | :--- |
+| **Runtime** | Node.js | `v22` (Slim) | `backend/Dockerfile` |
+| **Backend** | NestJS | `v11.x` | `backend/package.json` |
+| **Frontend** | React | `v19.x` | `frontend/package.json` |
+| **Build Tool** | Vite | `v7.x` | `frontend/package.json` |
+| **CSS** | TailwindCSS | `v4.1` | `frontend/package.json` |
+| **Database** | PostgreSQL | `v15-alpine` | `deploy/production/docker-compose.yml` |
+| **ORM** | Prisma | `v5.22` | `backend/package.json` |
+| **Test** | Vitest / Jest | `v4.0` / `v30.0` | `package.json` |
+
 ## 🛠️ Prerequisites
 
 *   Node.js (v20 or higher)
@@ -19,62 +31,68 @@ The **Zenkar Platform** is a modern, mobile-first Order Book application designe
 
 ## 🏁 Getting Started (Local Development)
 
-### 1. clone the repository
+We use a unified workflow. You do not need to start backend and frontend separately.
+
+### 1. Setup
 ```bash
 git clone <repository-url>
 cd zenkar-platform
+npm install
 ```
 
-### 2. Backend Setup
+### 2. Start Everything
 ```bash
-cd backend
-npm install
-
-# Configure Environment
-# Ensure .env contains DATABASE_URL="postgresql://postgres:postgres@localhost:5432/order_book?schema=public"
-
-# Start Database (if not using local Postgres)
-cd ..
-docker-compose up -d db
-
-# Run Migrations
-cd backend
-npx prisma generate
-npx prisma migrate dev
-
-# Start Server
-npm run start:dev
-```
-*Backend runs on: `http://localhost:3000`*
-
-### 3. Frontend Setup
-```bash
-cd frontend
-npm install
+# Starts Backend (3000) and Frontend (5173) concurrently
 npm run dev
 ```
-*Frontend runs on: `http://localhost:5173`*
+
+### 3. Testing & Linting
+```bash
+# Run all tests
+npm test
+
+# Run linting
+npm run lint
+```
+
+## 📦 Deployment & CI/CD
+
+Deployment is handled via the `cicd.sh` pipeline script, which performs safety checks (Git status, Tests) before deploying.
+
+### Deployment Files
+Configuration files are isolated by environment:
+*   **Staging**: [`deploy/staging/docker-compose.yml`](deploy/staging/docker-compose.yml)
+*   **Production**: [`deploy/production/docker-compose.yml`](deploy/production/docker-compose.yml)
+
+### How to Deploy
+Run the pipeline script from your local machine:
+
+```bash
+# 1. Deploy to Staging (Demo)
+./cicd.sh demo
+# Target: https://orderdemo.zenkar.in
+
+# 2. Deploy to Production
+./cicd.sh prod
+# Target: https://order.zenkar.in
+```
+
+### Pipeline Steps
+The `cicd.sh` script automates the following:
+1.  **Safety Check**: Ensures no uncommitted changes (git status).
+2.  **Test**: Runs `npm test` locally. Fails if broken.
+3.  **Compress**: Bundles the code (excluding node_modules).
+4.  **Upload**: SCPs the bundle to the VPS.
+5.  **Deploy**: 
+    *   Extracts code on server.
+    *   Runs **Backup** of existing DB.
+    *   Runs `docker-compose up -d --build` using the correct environment file.
+6.  **Verify**: Checks if the site is reachable.
 
 ## 🤖 AI-Friendly Features
 
-This project is optimized for collaboration with AI agents.
-
-*   **API Documentation**: 
-    *   Full Swagger/OpenAPI documentation is available at **[`http://localhost:3000/api/docs`](http://localhost:3000/api/docs)**.
-    *   Agents can use this to understand the schema and available endpoints.
-*   **Testing**:
-    *   Run `npm test` in the `backend` directory to execute the test suite.
-    *   Includes Unit tests for critical services (e.g., `OrdersService`).
-*   **Architecture**:
-    *   Strict layering (Controller -> Service -> Data Access).
-    *   Single Source of Truth: `backend/prisma/schema.prisma`.
-
-## 📦 Deployment
-
-For detailed deployment instructions, please refer to [docs/deployment.md](docs/deployment.md).
-For server access details and current state, see [docs/server_access.md](docs/server_access.md).
-
-### Quick Build
-```bash
-docker-compose up --build -d
-```
+*   **API Documentation**: Swagger is available at `http://localhost:3000/api/docs`.
+*   **Structure**: 
+    *   `backend/`: NestJS source
+    *   `frontend/`: React source
+    *   `deploy/`: Docker configurations

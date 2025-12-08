@@ -19,20 +19,26 @@
 
 ### A. The 3-Step Promotion Workflow
 1.  **Develop (Local)**: Code and test on your local machine.
-2.  **Staging (Server)**: Deploy to `zenkar-staging/` directory. Run `docker-compose.demo.yml`.
+2.  **Staging (Server)**: Deploy using the workflow script.
+    ```bash
+    ./zenkar-platform/scripts/deploy_workflow.sh staging
+    ```
+    *   **Action**: Syncs Local -> `/home/vishwa/zenkar-staging`. Rebuilds Staging.
     *   **Url**: `orderdemo.zenkar.in`
-    *   **Port**: `5173`
-3.  **Production (Server)**: Copy code to `zenkar-platform/` directory. Run `docker-compose.yml`.
+3.  **Production (Server)**: Promote Staging to Production.
+    ```bash
+    ./zenkar-platform/scripts/deploy_workflow.sh prod
+    ```
+    *   **Action**: Syncs Staging -> `/home/vishwa/zenkar-platform` (Internal Copy). Rebuilds Prod.
     *   **Url**: `order.zenkar.in`
-    *   **Port**: `5174`
 
 ### B. Directory Isolation (Server)
 We use separate directories to allow standard service names (`backend`, `frontend`) without conflict.
 
 | Environment | Directory | Compose File |
 | :--- | :--- | :--- |
-| **Staging** | `/home/vishwa/zenkar-staging/` | `docker-compose.demo.yml` |
-| **Production** | `/home/vishwa/zenkar-platform/` | `docker-compose.yml` |
+| **Staging** | `/home/vishwa/zenkar-staging/` | `deploy/staging/docker-compose.yml` |
+| **Production** | `/home/vishwa/zenkar-platform/` | `deploy/production/docker-compose.yml` |
 
 
 | Feature | Production (`order.zenkar.in`) | Staging (`orderdemo.zenkar.in`) |

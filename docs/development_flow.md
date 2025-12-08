@@ -8,9 +8,9 @@ All work should follow this cycle to ensure stability and tracking.
 1.  **Feature/Bug Identification**: Define the task in `task.md`.
 2.  **Implementation**: Write code locally.
 3.  **Local Verification**:
-    -   Frontend: `cd zenkar-platform/frontend && npm test`
-    -   Full Stack: `sudo docker compose up --build -d`
-    -   Manual Check: Verify changes at `http://localhost:5173`.
+    -   **Test**: `npm test` (Runs both frontend and backend tests)
+    -   **Run**: `npm run dev` (Starts full stack)
+    -   **Manual Check**: Verify changes at `http://localhost:5173`.
 
 ## 2. Versioning Strategy
 We follow **Semantic Versioning** (vX.Y.Z):
@@ -50,7 +50,8 @@ Deployment is containerized via Docker Compose.
 # git pull origin main
 
 # 2. Rebuild & Restart
-sudo docker compose up --build -d
+# 2. Deploy Script
+./cicd.sh prod
 
 # 3. Verify
 docker ps

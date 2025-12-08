@@ -1,7 +1,7 @@
 services:
   backend:
     build: 
-      context: .
+      context: ../../
       dockerfile: backend/Dockerfile
     container_name: zenkar-backend
     restart: always
@@ -16,7 +16,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ../../
       dockerfile: frontend/Dockerfile
     container_name: zenkar-frontend
     restart: always
@@ -38,7 +38,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - ../../pgdata:/var/lib/postgresql/data
     networks:
       - zenkar-network
 

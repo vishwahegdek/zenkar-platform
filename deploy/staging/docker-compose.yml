@@ -1,7 +1,7 @@
 services:
   backend:
     build: 
-      context: .
+      context: ../../
       dockerfile: backend/Dockerfile
     container_name: zenkar-backend-demo
     restart: always
@@ -16,7 +16,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ../../
       dockerfile: frontend/Dockerfile
     container_name: zenkar-frontend-demo
     restart: always
@@ -36,7 +36,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: zenkar_db_demo
     volumes:
-      - ./pgdata_demo:/var/lib/postgresql/data # Isolated Data Volume
+      - ../../pgdata_demo:/var/lib/postgresql/data # Isolated Data Volume
     networks:
       - zenkar-network-demo
     ports:
