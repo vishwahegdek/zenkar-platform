@@ -2,6 +2,13 @@
 
 All notable changes to the Zenkar Platform will be documented in this file.
 
+## [v1.2.0] - 2025-12-08
+### Added
+-   **Unified Workflow**: Root `package.json` for concurrent development.
+-   **Deployment Structure**: Separated `deploy/staging` and `deploy/production`.
+-   **CI/CD Hardening**: `cicd.sh` now includes Git Status checks, auto-testing, and health checks.
+-   **Documentation**: Strict versioning table in README and updated guides.
+
 ## [v1.1.0] - 2025-12-07
 ### Added
 -   **Mobile Navigation**: Responsive hamburger menu for better mobile experience.
