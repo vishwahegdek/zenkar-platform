@@ -40,12 +40,12 @@ echo "    scp $USER@160.250.204.219:$ABS_BACKUP_PATH ./local_backup.sql"
 
 # 3. Pull/Build Updates
 echo "🔨 Building new images..."
-docker compose build
+docker-compose build
 
 # 4. Safe Migration
 echo "🔄 Running migrations..."
 # Run a temporary backend container to execute migrations against the running DB
-if ! docker compose run --rm backend npx prisma migrate deploy; then
+if ! docker-compose run --rm backend npx prisma migrate deploy; then
     echo "❌ Migration failed! Aborting deployment. Database might be in inconsistent state, but we have a backup."
     echo "💡 To restore: docker exec -i $DB_CONTAINER psql -U postgres -d zenkar_db_demo < $BACKUP_FILE"
     exit 1
@@ -54,7 +54,7 @@ echo "✅ Migrations applied successfully."
 
 # 5. Restart Services
 echo "🚀 Restarting services..."
-docker compose up -d
+docker-compose up -d
 
 # 6. Verify
 echo "✅ Deployment Complete!"
