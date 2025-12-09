@@ -30,10 +30,13 @@ Future enhancements for the Zenkar Platform.
 
 
 ##    Future Scope
-- [ ] **E2E Testing Implementation**
-    -   **Context**: Current testing is limited to Unit tests. Need full system verification.
-    -   **Goal**: Implement strict E2E tests using Cypress or Playwright.
     -   **Scope**: Cover Critical Paths: Order Creation -> Product Auto-Save -> Inventory Update.
+    -   **CI Integration**: Run E2E suite on every PR.
+- [x] **E2E Testing Implementation** (Completed 2025-12-09)
+    -   Backend: Jest + Supertest (Orders & Payments).
+    -   Frontend: Playwright (Full Order Flow).
+    -   Logs: `TEST_LOGS.md`.
     -   **CI Integration**: Run E2E suite on every PR.
 - [ ] **Infrastructure**
     - [ ] **Telegram Bot Integration**: For notifications and server control (deploy/restart)through commands.
+    - [x] **Schema Documentation**: maintaned in `backend/SCHEMA_CHANGELOG.md` and `backend/prisma/schema.prisma`.

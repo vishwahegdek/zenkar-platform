@@ -1,20 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import Autocomplete from '../components/Autocomplete';
 import Modal from '../components/Modal';
-import ImageGallery from '../components/ImageGallery';
-import ImageUploader from '../components/ImageUploader';
-import { Image as ImageIcon } from 'lucide-react';
+import Autocomplete from '../components/Autocomplete';
+import { toast } from 'react-hot-toast';
 
 export default function OrderForm() {
-  const { id } = useParams();
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isEdit = Boolean(id);
+  
+  // Local ID state to support seamless "New -> Edit" transition without remounting
+  const [createdOrderId, setCreatedOrderId] = useState(null);
+  const activeId = paramId || createdOrderId;
+  const isEdit = Boolean(activeId);
 
-  const [managingItem, setManagingItem] = useState(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // idle, saving, saved, error
+  
+  // Ref to track if we have performed initial load from server
+  const initialLoadDone = useRef(false);
 
   const [formData, setFormData] = useState({
     customerId: null,
@@ -30,15 +35,21 @@ export default function OrderForm() {
   });
 
   // Fetch Order Data if Edit
-  const { data: order, isLoading, refetch } = useQuery({
-    queryKey: ['orders', id],
-    queryFn: () => api.get(`/orders/${id}`),
+  const { data: order, isLoading } = useQuery({
+    queryKey: ['orders', activeId],
+    queryFn: () => api.get(`/orders/${activeId}`),
     enabled: isEdit,
   });
 
   // Populate Form on Load
   useEffect(() => {
-    if (order) {
+    // Only load data if we have an order AND we haven't loaded it yet.
+    // However, if we just created the order locally (createdOrderId), 
+    // we already have the data in formData, so we might want to skip overwriting 
+    // unless it's a fresh page load (paramId existed from start).
+    const isFreshLoad = Boolean(paramId) && !initialLoadDone.current;
+    
+    if (order && (isFreshLoad || !initialLoadDone.current)) {
       setFormData({
         customerId: order.customerId,
         customerName: order.customer?.name || '',
@@ -49,7 +60,6 @@ export default function OrderForm() {
         status: order.status,
         items: order.items.map(i => ({
            ...i, 
-           // Ensure numbers for calc
            quantity: Number(i.quantity), 
            unitPrice: Number(i.unitPrice),
            lineTotal: Number(i.lineTotal)
@@ -57,49 +67,131 @@ export default function OrderForm() {
         notes: order.notes || '',
         advanceAmount: Number(order.advanceAmount),
       });
-    } else if (!isEdit) {
-      // Initialize with one empty row
+      initialLoadDone.current = true;
+    } else if (!isEdit && !initialLoadDone.current) {
+      // Initialize with one empty row for new order
       setFormData(prev => ({ ...prev, items: [{ productName: '', description: '', quantity: 1, unitPrice: 0, lineTotal: 0 }]}));
+      initialLoadDone.current = true;
     }
-  }, [order, isEdit]);
+  }, [order, isEdit, paramId]);
 
-  // Mutations
-  const mutation = useMutation({
-    mutationFn: (data) => {
-       const payload = {
-          ...data,
-          customerId: Number(data.customerId) || 0,
-          customerPhone: data.customerPhone || '',
-          customerAddress: data.customerAddress || '',
-          // Handle Dates: send null if empty string
-          orderDate: data.orderDate ? new Date(data.orderDate).toISOString() : new Date().toISOString(),
-          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-          
-          status: data.status || 'confirmed',
-          totalAmount: calculateTotal(),
-          advanceAmount: Number(data.advanceAmount) || 0,
-          
-          items: data.items
-            .filter(i => i.productName || i.quantity > 0)
-            .map(i => ({
-              ...i,
-              quantity: Number(i.quantity) || 0,
-              unitPrice: Number(i.unitPrice) || 0,
-              lineTotal: Number(i.lineTotal) || 0,
-              // Keep ID if exists (for updates)
-              id: i.id
-            }))
-       };
-       return isEdit ? api.patch(`/orders/${id}`, payload) : api.post('/orders', payload);
-    },
-    onSuccess: () => {
+  const calculateTotal = () => {
+    return formData.items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
+  };
+
+  const validateForAutoSave = (data) => {
+    // 1. Customer Name present
+    if (!data.customerName || data.customerName.trim().length === 0) return false;
+    
+    // 2. At least one valid item
+    const hasValidItem = data.items.some(
+      i => i.productName && Number(i.quantity) > 0 && Number(i.unitPrice) > 0
+    );
+    
+    return hasValidItem;
+  };
+
+  // Generic Save Function
+  const saveOrder = async (data, isAuto = false) => {
+    if (isAuto && !validateForAutoSave(data)) return;
+
+    if (isAuto) setAutoSaveStatus('saving');
+
+    const payload = {
+      ...data,
+      customerId: Number(data.customerId) || 0,
+      customerPhone: data.customerPhone || '',
+      customerAddress: data.customerAddress || '',
+      orderDate: data.orderDate ? new Date(data.orderDate).toISOString() : new Date().toISOString(),
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+      status: data.status || 'confirmed',
+      totalAmount: calculateTotal(),
+      advanceAmount: Number(data.advanceAmount) || 0,
+      
+      items: data.items
+        .filter(i => i.productName || i.quantity > 0)
+        .map(i => ({
+          ...i,
+          quantity: Number(i.quantity) || 0,
+          unitPrice: Number(i.unitPrice) || 0,
+          lineTotal: Number(i.lineTotal) || 0,
+          id: i.id // Keep ID if exists
+        }))
+    };
+
+    try {
+      let result;
+      if (isEdit) {
+         result = await api.patch(`/orders/${activeId}`, payload);
+      } else {
+         result = await api.post('/orders', payload);
+      }
+      
+      if (isAuto) {
+         setAutoSaveStatus('saved');
+         setTimeout(() => setAutoSaveStatus('idle'), 2000);
+         
+         // If we just created a new order via auto-save, handle transition
+         if (!isEdit && result.id) {
+            setCreatedOrderId(result.id);
+            // Update URL without remounting
+            window.history.replaceState(null, '', `/orders/${result.id}/edit`);
+            // Mark initial load as done so we don't overwrite user data with server response later
+            initialLoadDone.current = true; 
+         }
+      } else {
+         // Manual Save
+         toast.success(isEdit ? 'Order updated!' : 'New order added successfully');
+         navigate('/orders');
+      }
+      
       queryClient.invalidateQueries(['orders']);
-      navigate('/orders');
-    },
-    onError: (err) => alert('Failed to save order: ' + err.message)
-  });
+      
+    } catch (err) {
+       if (isAuto) setAutoSaveStatus('error');
+       else toast.error('Failed to save order: ' + err.message);
+       console.error(err);
+    }
+  };
+
+  // Debounced Auto-Save Effect
+  useEffect(() => {
+    // Skip if confirming delete or other modal actions?
+    const timer = setTimeout(() => {
+      saveOrder(formData, true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [formData, activeId]); 
+
+  // Visibility Change / Blur Effect
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+         saveOrder(formData, true);
+      }
+    };
+    
+    // Also save on window blur?
+    const handleBlur = () => {
+      saveOrder(formData, true);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [formData, activeId]); 
 
   // Handlers
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveOrder(formData, false); // Manual save
+  };
+
   const handleItemChange = (index, field, val) => {
     const newItems = [...formData.items];
     const item = { ...newItems[index], [field]: val };
@@ -145,28 +237,32 @@ export default function OrderForm() {
     });
   };
 
-  const calculateTotal = () => {
-    return formData.items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
-  };
-
-  if (isEdit && isLoading) return <div className="p-8">Loading...</div>;
+  if (isEdit && isLoading && !initialLoadDone.current) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{isEdit ? 'Edit Order' : 'New Order'}</h1>
+    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-0 md:space-y-6 pb-24 md:pb-6">
+      <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
+        <div className="flex items-center gap-3">
+           <h1 className="text-2xl font-bold">{isEdit ? 'Edit Order' : 'New Order'}</h1>
+           {/* Auto Save Status Indicator */}
+           {autoSaveStatus === 'saving' && <span className="text-xs text-gray-500 animate-pulse">Saving...</span>}
+           {autoSaveStatus === 'saved' && <span className="text-xs text-green-600 font-medium">Saved</span>}
+           {autoSaveStatus === 'error' && <span className="text-xs text-red-500">Save Failed</span>}
+        </div>
+        
         <button 
-          onClick={() => mutation.mutate(formData)}
+          type="button" 
+          onClick={() => saveOrder(formData, false)}
           className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
-          disabled={mutation.isPending}
+          disabled={autoSaveStatus === 'saving'}
         >
-          {mutation.isPending ? 'Saving...' : 'Save Order'}
+          {autoSaveStatus === 'saving' ? 'Saving...' : 'Save Order'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-6">
         {/* Customer Card */}
-        <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+        <div className="md:col-span-2 bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-y md:border border-gray-200 space-y-4">
           <h2 className="font-semibold text-gray-900">Customer Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-full">
@@ -175,7 +271,7 @@ export default function OrderForm() {
                 endpoint="/customers"
                 placeholder="Search or type new name..."
                 value={formData.customerName}
-                onChange={(val) => setFormData({...formData, customerName: val, customerId: null})} // clear ID on typing new name
+                onChange={(val) => setFormData({...formData, customerName: val, customerId: null})} 
                 onSelect={(customer) => setFormData({
                   ...formData, 
                   customerId: customer.id, 
@@ -183,13 +279,13 @@ export default function OrderForm() {
                   customerPhone: customer.phone || '',
                   customerAddress: customer.address || ''
                 })}
-                subDisplayKey="phone"
+                subDisplayKey="address"
               />
             </div>
             
             <div className="col-span-full">
                <label htmlFor="customerAddress" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-               <textarea id="customerAddress" className="input-field" rows="2"
+               <input id="customerAddress" type="text" className="input-field" 
                   value={formData.customerAddress} 
                   onChange={e => setFormData({...formData, customerAddress: e.target.value})}
                />
@@ -206,7 +302,7 @@ export default function OrderForm() {
         </div>
 
         {/* Order Meta Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4 h-fit">
+        <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 space-y-4 h-fit">
           <h2 className="font-semibold text-gray-900">Order Details</h2>
            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
@@ -241,10 +337,9 @@ export default function OrderForm() {
       </div>
 
        {/* Items Card */}
-       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-         <div className="flex justify-between items-center mb-4">
+       <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0">
+         <div className="mb-4">
            <h2 className="font-semibold text-gray-900">Order Items</h2>
-           <button onClick={addItem} type="button" className="text-sm text-primary font-medium hover:underline">+ Add Item</button>
          </div>
 
          <div className="space-y-4">
@@ -257,7 +352,7 @@ export default function OrderForm() {
            </div>
 
             {formData.items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 items-start bg-gray-50 md:bg-transparent p-4 md:p-0 rounded-lg group text-sm border border-gray-100 md:border-none relative">
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-50 md:bg-transparent p-3 md:p-0 rounded-lg group text-sm border border-gray-100 md:border-none relative">
                  {/* Mobile Delete Button (Top Right) */}
                  <button onClick={() => removeItem(idx)} type="button" className="md:hidden absolute top-2 right-2 text-gray-400 hover:text-red-500 p-2">✕</button>
 
@@ -272,17 +367,6 @@ export default function OrderForm() {
                        onChange={(val) => handleItemChange(idx, 'productName', val)}
                        onSelect={(p) => handleProductSelect(idx, p)}
                     />
-                     {/* Image Management Link (Only if item has ID) */}
-                     {item.id && (
-                       <button 
-                         type="button"
-                         onClick={() => setManagingItem(item)}
-                         className="mt-1 text-xs text-blue-600 flex items-center gap-1 hover:underline"
-                       >
-                         <ImageIcon size={12} />
-                         Manage Images ({item.images?.length || 0})
-                       </button>
-                     )}
                  </div>
                  <div className="md:col-span-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Description</label>
@@ -292,7 +376,7 @@ export default function OrderForm() {
                     />
                  </div>
                  
-                 <div className="grid grid-cols-3 gap-3 md:contents">
+                 <div className="grid grid-cols-3 gap-2 md:contents">
                    <div className="md:col-span-1">
                       <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Qty</label>
                       <input type="number" placeholder="Qty" className="input-field text-center"
@@ -317,6 +401,10 @@ export default function OrderForm() {
             ))}
          </div>
 
+         <div className="mt-6">
+            <button onClick={addItem} type="button" className="w-full md:w-auto text-sm text-primary font-medium hover:underline border border-dashed border-primary/30 p-2 rounded-lg bg-blue-50/50">+ Add Another Item</button>
+         </div>
+
          <div className="mt-8 border-t border-gray-100 pt-8 flex justify-end">
            <div className="w-full md:w-64 space-y-3">
               <div className="flex justify-between text-lg font-bold">
@@ -338,7 +426,7 @@ export default function OrderForm() {
          </div>
        </div>
        
-       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+       <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0">
           <label htmlFor="internalNotes" className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
            <textarea id="internalNotes" className="input-field" rows="3"
              placeholder="Delivery instructions, special requests..."
@@ -347,38 +435,7 @@ export default function OrderForm() {
           />
        </div>
 
-      {/* Image Management Modal */}
-      <Modal
-        isOpen={!!managingItem}
-        onClose={() => setManagingItem(null)}
-        title={`Images for ${managingItem?.productName || 'Item'}`}
-      >
-        {managingItem && (
-          <div className="space-y-4">
-            <ImageGallery images={managingItem.images} />
-            <ImageUploader 
-              uploadUrl={`/api/orders/items/${managingItem.id}/images`}
-              onUploadSuccess={() => {
-                queryClient.invalidateQueries(['orders', id]);
-                // We also need to update the managingItem local state to show new images immediately?
-                // Refetch triggers update of 'order' prop, allowing useEffect to update formData.
-                // But managingItem is a separate state clone?
-                // We should probably rely on refetch -> useEffect -> formData update.
-                // But Modal uses 'managingItem'. 
-                // We need to keep managingItem in sync?
-                // Simplest: Close and reopen, or better:
-                // Just trigger refetch. The parent 'order' updates.
-                // But 'managingItem' won't auto-update unless we find it in new 'order' data.
-                refetch().then((res) => {
-                  const updatedItem = res.data.items.find(i => i.id === managingItem.id);
-                  if (updatedItem) setManagingItem(updatedItem);
-                });
-              }}
-            />
-          </div>
-        )}
-      </Modal>
 
-    </div>
+    </form>
   );
 }

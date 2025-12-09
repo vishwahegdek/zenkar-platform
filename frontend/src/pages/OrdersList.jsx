@@ -1,12 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 
 export default function OrdersList() {
-  const [view, setView] = useState('active'); // 'active' or 'history'
-  const [filter, setFilter] = useState('All');
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const view = searchParams.get('view') || 'active';
+  const filter = searchParams.get('filter') || 'All';
+  const search = searchParams.get('search') || '';
+
+  const updateParams = (newParams) => {
+    // Merge new params with existing ones
+    // Note: iterating existing to keep any others? or just these 3?
+    // Generally safer to keep existing.
+    const next = new URLSearchParams(searchParams);
+    Object.entries(newParams).forEach(([k, v]) => {
+       if (v === null || v === '') next.delete(k); // cleanup empty
+       else next.set(k, v);
+    });
+    setSearchParams(next, { replace: true });
+  };
+
+  const setView = (val) => updateParams({ view: val });
+  const setFilter = (val) => updateParams({ filter: val });
+  const setSearch = (val) => updateParams({ search: val });
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', view],
@@ -19,6 +37,15 @@ export default function OrdersList() {
     mutationFn: (id) => api.delete(`/orders/${id}`),
     onSuccess: () => queryClient.invalidateQueries(['orders']),
   });
+
+  const updateStatusMutation = useMutation({
+     mutationFn: ({ id, status }) => api.patch(`/orders/${id}`, { status }),
+     onSuccess: () => queryClient.invalidateQueries(['orders'])
+  });
+
+  const handleStatusChange = (id, status) => {
+     updateStatusMutation.mutate({ id, status });
+  };
 
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this order?')) {
@@ -105,7 +132,7 @@ export default function OrdersList() {
     return matchesFilter && matchesSearch;
   });
 
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const navigate = useNavigate();
 
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading orders...</div>;
 
@@ -151,7 +178,7 @@ export default function OrdersList() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white md:rounded-xl shadow-sm md:border border-y border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
            <input 
               type="text" 
@@ -165,7 +192,7 @@ export default function OrdersList() {
         {/* Mobile View: Cards */}
         <div className="md:hidden divide-y divide-gray-100">
           {filteredOrders.map(order => (
-            <div key={order.id} className="p-4 space-y-3 bg-white" onClick={() => setSelectedOrder(order)}>
+            <div key={order.id} className="p-3 space-y-2 bg-white" onClick={() => navigate(`/orders/${order.id}`)}>
               <div className="flex justify-between items-start">
                 <div>
                   <span className="font-bold text-gray-900">
@@ -173,7 +200,7 @@ export default function OrdersList() {
                   </span>
                   <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
-                <StatusBadge status={order.status} />
+                <StatusSelect order={order} onChange={handleStatusChange} />
               </div>
               
               <div className="flex justify-between items-start text-sm">
@@ -226,7 +253,7 @@ export default function OrdersList() {
                 <tr 
                   key={order.id} 
                   className="hover:bg-gray-50/80 transition-colors group cursor-pointer"
-                  onClick={() => setSelectedOrder(order)}
+                  onClick={() => navigate(`/orders/${order.id}`)}
                 >
                   <td className="px-6 py-4 font-medium text-gray-900">
                     <span className="text-blue-600 hover:underline">
@@ -242,7 +269,7 @@ export default function OrdersList() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={order.status} />
+                    <StatusSelect order={order} onChange={handleStatusChange} />
                   </td>
                   <td className="px-6 py-4 text-right font-medium">
                      ₹{Number(order.totalAmount).toLocaleString()}
@@ -292,112 +319,11 @@ export default function OrdersList() {
         </div>
       </div>
 
-       {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedOrder(null)}>
-           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="p-6 border-b border-gray-100 flex justify-between items-start">
-                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Order #{selectedOrder.orderNo || selectedOrder.id}</h2>
-                    <p className="text-sm text-gray-500">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
-                 </div>
-                 <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-              </div>
-              
-              <div className="p-6 space-y-6">
-                 {/* Internal Notes - AT TOP */}
-                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-                    <h3 className="text-xs font-bold text-yellow-800 uppercase tracking-wide mb-2">Internal Notes</h3>
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedOrder.notes || 'No notes.'}</p>
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Customer</h3>
-                       <div className="space-y-1 text-sm">
-                          <div className="font-medium text-gray-900">{selectedOrder.customer?.name}</div>
-                          <div className="text-gray-600">{selectedOrder.customer?.address || 'No Address'}</div>
-                          <div className="text-gray-600">{selectedOrder.customer?.phone || 'No Phone'}</div>
-                       </div>
-                    </div>
-                    <div>
-                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Dates & Status</h3>
-                       <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Order Date:</span>
-                            <span className="font-medium">{new Date(selectedOrder.orderDate).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Due Date:</span>
-                            <span className="font-medium">{selectedOrder.dueDate ? new Date(selectedOrder.dueDate).toLocaleDateString() : '—'}</span>
-                          </div>
-                          <div className="mt-2">
-                             <StatusBadge status={selectedOrder.status} />
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 <div>
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Items</h3>
-                    <div className="border border-gray-100 rounded-lg overflow-hidden">
-                       <table className="w-full text-sm">
-                          <thead className="bg-gray-50 text-gray-500 font-medium">
-                             <tr>
-                                <th className="px-4 py-2 text-left">Item</th>
-                                <th className="px-4 py-2 text-center w-20">Qty</th>
-                                <th className="px-4 py-2 text-right w-24">Price</th>
-                                <th className="px-4 py-2 text-right w-24">Total</th>
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                             {selectedOrder.items.map((item, i) => (
-                                <tr key={i}>
-                                   <td className="px-4 py-2">
-                                      <div className="font-medium text-gray-900">{item.productName}</div>
-                                      <div className="text-xs text-gray-500">{item.description}</div>
-                                   </td>
-                                   <td className="px-4 py-2 text-center text-gray-600">{Number(item.quantity)}</td>
-                                   <td className="px-4 py-2 text-right text-gray-600">₹{Number(item.unitPrice).toLocaleString()}</td>
-                                   <td className="px-4 py-2 text-right font-medium text-gray-900">₹{Number(item.lineTotal).toLocaleString()}</td>
-                                </tr>
-                             ))}
-                          </tbody>
-                          <tfoot className="bg-gray-50 font-bold text-gray-900">
-                             <tr>
-                                <td colSpan={3} className="px-4 py-2 text-right">Total</td>
-                                <td className="px-4 py-2 text-right">₹{Number(selectedOrder.totalAmount).toLocaleString()}</td>
-                             </tr>
-                             <tr>
-                                <td colSpan={3} className="px-4 py-2 text-right text-gray-500 font-normal">Advance</td>
-                                <td className="px-4 py-2 text-right text-gray-600 font-normal">−₹{Number(selectedOrder.advanceAmount).toLocaleString()}</td>
-                             </tr>
-                             <tr className="text-red-600">
-                                <td colSpan={3} className="px-4 py-2 text-right">Balance Due</td>
-                                <td className="px-4 py-2 text-right">₹{Number(selectedOrder.remainingBalance).toLocaleString()}</td>
-                             </tr>
-                          </tfoot>
-                       </table>
-                    </div>
-                 </div>
-              </div>
-              
-              <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
-                 <Link to={`/orders/${selectedOrder.id}/edit`} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Edit Order
-                 </Link>
-                 <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                    Close
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function StatusBadge({ status }) {
+const StatusSelect = ({ order, onChange }) => {
   const styles = {
     enquired: 'bg-orange-50 text-orange-700 ring-orange-600/20',
     confirmed: 'bg-blue-50 text-blue-700 ring-blue-600/20',
@@ -407,12 +333,33 @@ function StatusBadge({ status }) {
     closed: 'bg-gray-800 text-white ring-gray-700/20',
     cancelled: 'bg-red-50 text-red-700 ring-red-600/20',
   };
-  
-  const style = styles[status?.toLowerCase()] || 'bg-gray-100 text-gray-600';
 
+  const style = styles[order.status?.toLowerCase()] || 'bg-gray-100 text-gray-600';
+  
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${style}`}>
-      {status}
-    </span>
+    <div className="relative inline-block" onClick={e => e.stopPropagation()}>
+      <select 
+        value={order.status}
+        onChange={(e) => {
+           if (e.target.value === 'closed') {
+             if (!window.confirm('Closing this order will write off any remaining balance as a discount. Continue?')) return;
+           }
+           onChange(order.id, e.target.value);
+        }}
+        className={`appearance-none cursor-pointer pl-2.5 pr-6 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${style} border-none outline-none focus:ring-2`}
+      >
+        <option value="enquired">Enquired</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="production">Production</option>
+        <option value="ready">Ready</option>
+        <option value="delivered">Delivered</option>
+        <option value="closed">Closed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+       {/* Tiny arrow hint */}
+       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+          <svg className="h-2 w-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+       </div>
+    </div>
   );
-}
+};

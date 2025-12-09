@@ -3,6 +3,20 @@
 All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
+
+## [v1.2.1] - 2025-12-09
+### Added
+- **E2E Testing**: Full coverage for Customers and Products modules using Playwright.
+- **Documentation**: Added `project_rules.md` for team conventions.
+- **Scripts**: Added safe staging deployment script with backup and migration.
+
+### Changed
+- **E2E Config**: Removed Mobile Safari support; enabled auto-start for dev server.
+- **Tests**: Improved `orders.spec.ts` robustness with visible-only locators.
+
+### Fixed
+- **Strict Mode Violations**: Fixed Playwright errors caused by duplicate elements in responsive views (FAB vs Desktop buttons).
+
 ### 🎨 UI Changes
 -   **Products**: Added full **Product Management** interface at `/products`.
     -   List view with search and actions.

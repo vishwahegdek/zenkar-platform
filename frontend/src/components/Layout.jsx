@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,6 +13,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen pb-10 bg-gray-50">
+      <Toaster position="top-center" />
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
@@ -27,7 +29,7 @@ export default function Layout() {
 
           <div className="flex items-center gap-4">
             <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2" aria-label="New Order">
-              <span>＋</span> <span className="hidden md:inline">New Order</span>
+              <span className="md:hidden">New</span> <span className="hidden md:inline">New Order</span>
             </Link>
             
             {/* Mobile Menu Button */}
@@ -53,7 +55,7 @@ export default function Layout() {
         )}
       </header>
       
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-0 md:px-4 py-4 md:py-8">
         <Outlet />
       </main>
     </div>

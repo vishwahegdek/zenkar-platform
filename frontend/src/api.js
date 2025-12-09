@@ -1,6 +1,11 @@
 export const api = {
-  get: async (url) => {
-    const res = await fetch(`/api${url}`);
+  get: async (url, options = {}) => {
+    let fullUrl = `/api${url}`;
+    if (options.params) {
+      const queryString = new URLSearchParams(options.params).toString();
+      if (queryString) fullUrl += `?${queryString}`;
+    }
+    const res = await fetch(fullUrl);
     if (!res.ok) throw new Error('API Request Failed');
     return res.json();
   },

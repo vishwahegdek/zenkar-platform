@@ -62,6 +62,7 @@ model Order {
   status        String      @default("confirmed") // enquired, confirmed, production, ready, delivered, cancelled
   totalAmount   Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
   advanceAmount Decimal     @default(0) @map("advance_amount") @db.Decimal(12, 2)
+  discount      Decimal     @default(0) @db.Decimal(12, 2)
   notes         String?
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
@@ -70,8 +71,22 @@ model Order {
 
   customer      Customer?   @relation(fields: [customerId], references: [id])
   items         OrderItem[]
+  payments      Payment[]
 
   @@map("orders")
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  amount    Decimal  @db.Decimal(12, 2)
+  date      DateTime @default(now()) @db.Date // Payment date
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
 }
 
 model OrderItem {

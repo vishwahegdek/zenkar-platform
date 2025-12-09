@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import ImageGallery from '../components/ImageGallery';
-import ImageUploader from '../components/ImageUploader';
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -87,32 +85,7 @@ export default function ProductForm() {
            />
         </div>
 
-        {/* Image Management Section (Only in Edit Mode) */}
-        {isEdit && (
-          <div className="pt-4 border-t border-gray-100">
-             <h3 className="text-sm font-medium text-gray-700 mb-2">Product Images</h3>
-             <ImageGallery images={product?.images} />
-             <ImageUploader 
-               uploadUrl={`/api/products/${id}/images`} 
-               // ImageUploader uses standard fetch, so we need full URL or relative if proxied.
-               // Vite proxy handles /api -> backend. 
-               // api.js uses axios baseURL.
-               // Let's ensure ImageUploader uses the right path.
-               // If using fetch('/api/products...') it relies on proxy.
-               // I used `uploadUrl` in ImageUploader fetch call.
-               // If I pass `/api/products/${id}/images`, it should work with proxy.
-               // Wait, api.js might have /api prefix.
-               // Let's assume proxy creates /api. 
-               // I'll check vite.config.js or Setup.
-               // Previous tasks said "Frontend Proxy setup". 
-               // If I pass `/api/products/${id}/images`, it hits localhost:5173/api/... -> localhost:3000/...
-               onUploadSuccess={() => {
-                 queryClient.invalidateQueries(['products', id]);
-                 refetch();
-               }}
-             />
-          </div>
-        )}
+        {/* Image Management Section REMOVED for staging */}
 
         <div className="pt-4 flex gap-3 justify-end border-t border-gray-100">
            <button 
