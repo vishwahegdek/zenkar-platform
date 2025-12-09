@@ -3,12 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import Autocomplete from '../components/Autocomplete';
+import Modal from '../components/Modal';
+import ImageGallery from '../components/ImageGallery';
+import ImageUploader from '../components/ImageUploader';
+import { Image as ImageIcon } from 'lucide-react';
 
 export default function OrderForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
+
+  const [managingItem, setManagingItem] = useState(null);
 
   const [formData, setFormData] = useState({
     customerId: null,
@@ -24,7 +30,7 @@ export default function OrderForm() {
   });
 
   // Fetch Order Data if Edit
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['orders', id],
     queryFn: () => api.get(`/orders/${id}`),
     enabled: isEdit,
@@ -80,6 +86,8 @@ export default function OrderForm() {
               quantity: Number(i.quantity) || 0,
               unitPrice: Number(i.unitPrice) || 0,
               lineTotal: Number(i.lineTotal) || 0,
+              // Keep ID if exists (for updates)
+              id: i.id
             }))
        };
        return isEdit ? api.patch(`/orders/${id}`, payload) : api.post('/orders', payload);
@@ -99,6 +107,11 @@ export default function OrderForm() {
     // Auto calc total
     if (field === 'quantity' || field === 'unitPrice') {
       item.lineTotal = Number(item.quantity || 0) * Number(item.unitPrice || 0);
+    }
+
+    // Clear productId if name changes (implies new product or search started)
+    if (field === 'productName') {
+      item.productId = null;
     }
     
     newItems[index] = item;
@@ -174,19 +187,19 @@ export default function OrderForm() {
               />
             </div>
             
+            <div className="col-span-full">
+               <label htmlFor="customerAddress" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+               <textarea id="customerAddress" className="input-field" rows="2"
+                  value={formData.customerAddress} 
+                  onChange={e => setFormData({...formData, customerAddress: e.target.value})}
+               />
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="text" className="input-field" 
+              <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input id="customerPhone" type="text" className="input-field" 
                  value={formData.customerPhone} 
                  onChange={e => setFormData({...formData, customerPhone: e.target.value})}
-              />
-            </div>
-            
-             <div className="col-span-full">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <textarea className="input-field" rows="2"
-                 value={formData.customerAddress} 
-                 onChange={e => setFormData({...formData, customerAddress: e.target.value})}
               />
             </div>
           </div>
@@ -255,10 +268,21 @@ export default function OrderForm() {
                        placeholder="Product Name"
                        endpoint="/products"
                        displayKey="name"
-                       subDisplayKey="sku"
+                       subDisplayKey="defaultUnitPrice"
                        onChange={(val) => handleItemChange(idx, 'productName', val)}
                        onSelect={(p) => handleProductSelect(idx, p)}
                     />
+                     {/* Image Management Link (Only if item has ID) */}
+                     {item.id && (
+                       <button 
+                         type="button"
+                         onClick={() => setManagingItem(item)}
+                         className="mt-1 text-xs text-blue-600 flex items-center gap-1 hover:underline"
+                       >
+                         <ImageIcon size={12} />
+                         Manage Images ({item.images?.length || 0})
+                       </button>
+                     )}
                  </div>
                  <div className="md:col-span-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Description</label>
@@ -286,7 +310,7 @@ export default function OrderForm() {
                    <div className="md:col-span-1 flex flex-col md:flex-row items-end md:items-center justify-center md:justify-end gap-2 h-full md:h-10">
                       <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Total</label>
                       <span className="font-bold text-gray-900 md:font-medium">₹{item.lineTotal.toLocaleString()}</span>
-                      <button onClick={() => removeItem(idx)} type="button" className="hidden md:block text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                      <button onClick={() => removeItem(idx)} type="button" className="hidden md:block text-gray-400 hover:text-red-500 transition-colors" title="Remove Item">×</button>
                    </div>
                  </div>
               </div>
@@ -315,13 +339,46 @@ export default function OrderForm() {
        </div>
        
        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
-           <textarea className="input-field" rows="3"
+          <label htmlFor="internalNotes" className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
+           <textarea id="internalNotes" className="input-field" rows="3"
              placeholder="Delivery instructions, special requests..."
              value={formData.notes} 
              onChange={e => setFormData({...formData, notes: e.target.value})}
           />
        </div>
+
+      {/* Image Management Modal */}
+      <Modal
+        isOpen={!!managingItem}
+        onClose={() => setManagingItem(null)}
+        title={`Images for ${managingItem?.productName || 'Item'}`}
+      >
+        {managingItem && (
+          <div className="space-y-4">
+            <ImageGallery images={managingItem.images} />
+            <ImageUploader 
+              uploadUrl={`/api/orders/items/${managingItem.id}/images`}
+              onUploadSuccess={() => {
+                queryClient.invalidateQueries(['orders', id]);
+                // We also need to update the managingItem local state to show new images immediately?
+                // Refetch triggers update of 'order' prop, allowing useEffect to update formData.
+                // But managingItem is a separate state clone?
+                // We should probably rely on refetch -> useEffect -> formData update.
+                // But Modal uses 'managingItem'. 
+                // We need to keep managingItem in sync?
+                // Simplest: Close and reopen, or better:
+                // Just trigger refetch. The parent 'order' updates.
+                // But 'managingItem' won't auto-update unless we find it in new 'order' data.
+                refetch().then((res) => {
+                  const updatedItem = res.data.items.find(i => i.id === managingItem.id);
+                  if (updatedItem) setManagingItem(updatedItem);
+                });
+              }}
+            />
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 }

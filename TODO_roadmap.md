@@ -1,18 +1,39 @@
-# Future Roadmap (Deferred)
+# Project Roadmap
 
-These items were identified during the initial analysis but deferred to prioritize feature development.
+Future enhancements for the Zenkar Platform.
 
-## 🚨 Immediate Infrastructure Fixes
-- [x] **Docker Port Conflict**: Frontend maps `3000:80` which conflicts with Backend on `3000`. Move frontend ports or expose backend properly.
-- [x] **Repository Cleanup**: Consolidate redundant READMEs and clarify `docker-compose.yml` location.
+**Current Version**: `v1.2.0` (Infrastructure Overhaul)
+**Last Updated**: 2025-12-08
 
-## 🧪 Testing & Stability
-- [ ] **Backend Tests**: Fix boilerplate tests and mock `PrismaService`.
-- [ ] **Frontend Tests**: Setup `Vitest` and `React Testing Library`.
+## 🔐 Security & Access Control
+- [ ] **Authentication**: Implement JWT-based login screen.
+- [ ] **RBAC**: Differentiate between Admin (full access) and Staff (restricted access).
 
-## 🤖 AI & Documentation
-- [ ] **Context File**: Create `ARCHITECTURE.md` for AI context.
-- [ ] **OpenAPI**: Complete Swagger documentation annotations.
+## 👥 Customer Management (CRM)
+- [ ] **Directory**: Dedicated page to list and search all customers.
+- [ ] **History**: View customer lifetime value and past orders.
+- [ ] **Merge Utils**: Logic to merge duplicate customers by phone number.
 
-## 🚀 DevOps
-- [ ] **CI/CD**: Add GitHub Actions workflow.
+## 📦 Inventory Management
+- [ ] **Stock Tracking**: Add `quantityInStock` to Product model.
+- [ ] **Auto-Deduction**: Reduce stock when Order is confirmed/delivered.
+- [ ] **Low Stock Alerts**: Visual indicators when stock dips below threshold (e.g., 5).
+
+## 📊 Dashboard & Analytics
+- [ ] **Main Dashboard**: "Sales Today", "Pending Deliveries", "Top Products" widgets.
+
+## ⚙️ Deployment & Infrastructure
+- [ ] **CI/CD**: Research GitHub Actions workflow (Deferred).
+- [ ] **Notifications**: Implement Telegram Bot for order confirmations and alerts.
+- [ ] **Testing**: Setup Frontend testing infrastructure (`Vitest`).
+- [ ] **Documentation**: Complete OpenAPI/Swagger annotations.
+
+
+##    Future Scope
+- [ ] **E2E Testing Implementation**
+    -   **Context**: Current testing is limited to Unit tests. Need full system verification.
+    -   **Goal**: Implement strict E2E tests using Cypress or Playwright.
+    -   **Scope**: Cover Critical Paths: Order Creation -> Product Auto-Save -> Inventory Update.
+    -   **CI Integration**: Run E2E suite on every PR.
+- [ ] **Infrastructure**
+    - [ ] **Telegram Bot Integration**: For notifications and server control (deploy/restart)through commands.

@@ -26,7 +26,7 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+            <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2" aria-label="New Order">
               <span>＋</span> <span className="hidden md:inline">New Order</span>
             </Link>
             
@@ -34,6 +34,7 @@ export default function Layout() {
             <button 
               className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-md"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Open menu"
             >
               <span className="text-xl">☰</span>
             </button>

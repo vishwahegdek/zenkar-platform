@@ -6,10 +6,6 @@ export class CreateProductDto {
   name: string;
 
   @IsOptional()
-  @IsString()
-  sku?: string;
-
-  @IsOptional()
   @IsNumber()
   defaultUnitPrice?: number;
 

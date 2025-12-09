@@ -1,21 +1,30 @@
+
 import { Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { ImagesService } from '../images/images.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private imagesService: ImagesService
+  ) {}
 
-  async create(dto: CreateOrderDto) {
-    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, ...rest } = dto;
+  async uploadImage(itemId: number, file: Express.Multer.File) {
+    return this.imagesService.processAndUpload(file.buffer, file.originalname, { orderItemId: itemId });
+  }
+
+  async create(createOrderDto: CreateOrderDto) {
+    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, ...rest } = createOrderDto;
     let orderData: any = { ...rest };
     if (orderDate) orderData.orderDate = new Date(orderDate);
     if (dueDate) orderData.dueDate = new Date(dueDate);
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Handle New Customer Creation
-      if (dto.customerId === 0 && customerName) {
+      if (createOrderDto.customerId === 0 && customerName) {
         const newCustomer = await tx.customer.create({
           data: {
             name: customerName,
@@ -26,12 +35,15 @@ export class OrdersService {
         orderData.customerId = newCustomer.id;
       }
 
-      // 2. Create Order
+      // 2. Process Items (Create new products if needed)
+      const processedItems = await this.processItems(items, tx);
+
+      // 3. Create Order
       const order = await tx.order.create({
         data: {
           ...orderData,
           items: {
-            create: items.map((item) => ({
+            create: processedItems.map((item) => ({
               productId: item.productId,
               productName: item.productName,
               description: item.description,
@@ -47,6 +59,39 @@ export class OrdersService {
     });
   }
 
+  // Helper handling new product creation
+  private async processItems(items: any[], tx: any) {
+    const processed: any[] = [];
+    for (const item of items) {
+      let productId = item.productId;
+      const productName = item.productName;
+
+      // If no ID but has name, find or create product
+      if (!productId && productName) {
+        // Check if exists by name (case-insensitive search could be better, but exact for now)
+        const existing = await tx.product.findFirst({
+           where: { name: { equals: productName, mode: 'insensitive' } }
+        });
+
+        if (existing) {
+          productId = existing.id;
+        } else {
+          // Create new product
+          const newProduct = await tx.product.create({
+            data: {
+              name: productName,
+              defaultUnitPrice: item.unitPrice || 0,
+              notes: item.description || null, // Map item description to product notes
+            }
+          });
+          productId = newProduct.id;
+        }
+      }
+      processed.push({ ...item, productId });
+    }
+    return processed;
+  }
+
   findAll(view?: string) {
     const isHistory = view === 'history';
     const statusFilter = isHistory 
@@ -58,17 +103,38 @@ export class OrdersService {
         isDeleted: false,
         status: statusFilter
       },
-      include: { customer: true, items: true },
+      include: { 
+        customer: true, 
+        items: {
+          include: { images: true }
+        }
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
-    });
+    }).then(orders => orders.map(order => ({
+      ...order,
+      remainingBalance: Number(order.totalAmount) - Number(order.advanceAmount)
+    })));
   }
 
-  findOne(id: number) {
-    return this.prisma.order.findUnique({
+  async findOne(id: number) {
+    const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { customer: true, items: true },
+      include: { 
+        customer: true, 
+        items: {
+          include: { images: true }
+        }
+      },
     });
+    
+    if (order) {
+      return {
+        ...order,
+        remainingBalance: Number(order.totalAmount) - Number(order.advanceAmount)
+      };
+    }
+    return null;
   }
 
   async update(id: number, dto: UpdateOrderDto) {
@@ -89,8 +155,10 @@ export class OrdersService {
         await tx.orderItem.deleteMany({ where: { orderId: id } });
 
         if (items.length > 0) {
+          const processedItems = await this.processItems(items, tx);
+          
           await tx.orderItem.createMany({
-            data: items.map((item) => ({
+            data: processedItems.map((item) => ({
               orderId: id,
               productId: item.productId,
               productName: item.productName,
@@ -103,7 +171,15 @@ export class OrdersService {
         }
       }
 
-      return tx.order.findUnique({ where: { id }, include: { items: true, customer: true } });
+      return tx.order.findUnique({ 
+        where: { id }, 
+        include: { 
+          items: {
+            include: { images: true }
+          }, 
+          customer: true 
+        } 
+      });
     });
   }
 

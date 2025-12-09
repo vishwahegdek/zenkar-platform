@@ -26,11 +26,13 @@ describe('OrdersService', () => {
           customer: { name: 'Test Customer' },
           items: [],
           totalAmount: 100,
+          advanceAmount: 0,
         },
       ];
       mockPrismaService.order.findMany.mockResolvedValue(result);
 
-      expect(await service.findAll({})).toBe(result);
+      const expected = result.map(o => ({ ...o, remainingBalance: 100 }));
+      expect(await service.findAll({})).toEqual(expected);
       expect(mockPrismaService.order.findMany).toHaveBeenCalled();
     });
   });
@@ -69,14 +71,44 @@ describe('OrdersService', () => {
         data: { name: 'New User', phone: undefined, address: undefined },
       });
     });
+
+    it('should create new product with description as notes if productId is 0', async () => {
+      const dto = {
+        customerId: 1,
+        items: [{ 
+          productId: 0, 
+          productName: 'New Prod', 
+          unitPrice: 100, 
+          description: 'Note mapped from desc' 
+        }],
+      };
+      const newProduct = { id: 88, name: 'New Prod' };
+      const createdOrder = { id: 3 };
+
+      mockPrismaService.$transaction.mockImplementation(async (cb) => cb(mockPrismaService));
+      mockPrismaService.product.findFirst.mockResolvedValue(null); // Not found
+      mockPrismaService.product.create.mockResolvedValue(newProduct);
+      mockPrismaService.order.create.mockResolvedValue(createdOrder);
+
+      await service.create(dto as any);
+
+      expect(mockPrismaService.product.create).toHaveBeenCalledWith({
+        data: {
+          name: 'New Prod',
+          defaultUnitPrice: 100,
+          notes: 'Note mapped from desc',
+        }
+      });
+    });
   });
 
   describe('findOne', () => {
     it('should return a single order', async () => {
-      const order = { id: 1, orderNo: 'ORD-001' };
+      const order = { id: 1, orderNo: 'ORD-001', totalAmount: 100, advanceAmount: 0 };
       mockPrismaService.order.findUnique.mockResolvedValue(order);
 
-      expect(await service.findOne(1)).toBe(order);
+      const expected = { ...order, remainingBalance: 100 };
+      expect(await service.findOne(1)).toEqual(expected);
     });
 
     it('should return null if order not found', async () => {
