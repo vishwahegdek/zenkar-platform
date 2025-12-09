@@ -13,9 +13,10 @@ services:
       - ../../minio_data_demo:/data
 
   backend:
-    build: 
+    build:
       context: ../../
       dockerfile: backend/Dockerfile
+    image: zenkar-backend:staging
     container_name: zenkar-backend-demo
     restart: always
     ports:
@@ -31,6 +32,7 @@ services:
     build:
       context: ../../
       dockerfile: frontend/Dockerfile
+    image: zenkar-frontend:staging
     container_name: zenkar-frontend-demo
     restart: always
     ports:

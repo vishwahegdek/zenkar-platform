@@ -38,9 +38,9 @@ echo "⬇️  To download to your LOCAL machine, run this on your computer:"
 echo "    scp $USER@160.250.204.219:$ABS_BACKUP_PATH ./local_backup.sql"
 
 
-# 3. Pull/Build Updates
-echo "🔨 Building new images..."
-docker-compose build
+# 3. (Skipped) Build Updates
+# Images are loaded externally via 'docker load' (Direct Transfer)
+
 
 # 4. Safe Migration
 echo "🔄 Running migrations..."
