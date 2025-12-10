@@ -25,6 +25,8 @@ backups/*
 
 # Data Volumes (Strict)
 pgdata_demo/
+minio_data_demo/
+minio_data/
 
 # CI/CD Artifacts
 zenkar-platform.tar.gz

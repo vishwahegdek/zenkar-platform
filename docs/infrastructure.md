@@ -11,53 +11,39 @@
 ## 2. Server Details
 -   **Host IP**: `160.250.204.219`
 -   **SSH User**: `vishwa`
--   **Project Root**: `/home/vishwa/projects/zenkar/Order Book/`
--   **Production Path**: `zenkar-platform/` (inside root)
--   **Staging Path**: `zenkar-staging/` (inside root)
+-   **Production Path**: `~/zenkar-platform-production/` (Renamed from `zenkar-platform/`)
+-   **Staging Path**: `~/zenkar-staging/`
 
 ## 3. Workflow & Architecture
 
 ### A. The 3-Step Promotion Workflow
-1.  **Develop (Local)**: Code and test on your local machine.
-2.  **Staging (Server)**: Deploy using the workflow script.
-    ```bash
-    ./zenkar-platform/scripts/deploy_workflow.sh staging
-    ```
-    *   **Action**: Syncs Local -> `/home/vishwa/zenkar-staging`. Rebuilds Staging.
-    *   **Url**: `orderdemo.zenkar.in`
-3.  **Production (Server)**: Promote Staging to Production.
-    ```bash
-    ./zenkar-platform/scripts/deploy_workflow.sh prod
-    ```
-    *   **Action**: Syncs Staging -> `/home/vishwa/zenkar-platform` (Internal Copy). Rebuilds Prod.
-    *   **Url**: `order.zenkar.in`
+See `deploy/DEPLOYMENT_REFERENCE.md` for specific commands.
 
 ### B. Directory Isolation (Server)
 We use separate directories to allow standard service names (`backend`, `frontend`) without conflict.
 
 | Environment | Directory | Compose File |
 | :--- | :--- | :--- |
-| **Staging** | `/home/vishwa/zenkar-staging/` | `deploy/staging/docker-compose.yml` |
-| **Production** | `/home/vishwa/zenkar-platform/` | `deploy/production/docker-compose.yml` |
+| **Staging** | `~/zenkar-staging/` | `deploy/staging/docker-compose.yml` |
+| **Production** | `~/zenkar-platform-production/` | `deploy/production/docker-compose.yml` |
 
 
 | Feature | Production (`order.zenkar.in`) | Staging (`orderdemo.zenkar.in`) |
 | :--- | :--- | :--- |
-| **Database Container** | `zenkar-db` | `zenkar-db-demo` |
+| **Database Container** | `zenkar-db-prod` | `zenkar-db-demo` |
 | **DB Internal Port** | `5432` | `5432` |
 | **DB Host Port** | `5433` | `5432` |
-| **Backend Container** | `zenkar-backend` | `zenkar-backend-demo` |
-| **Backend Port** | `3000` (Internal) / `3001` (Host) | `3000` (Internal) / `3000` (Host) |
-| **Frontend Container** | `zenkar-frontend` | `zenkar-frontend-demo` |
-| **Frontend Port** | `5173` (Internal) / `5174` (Host) | `5173` (Internal) / `5173` (Host) |
+| **Backend Container** | `zenkar-backend-prod` | `zenkar-backend-demo` |
+| **Backend Port** | `3001` (Host) | `3000` (Host) |
+| **Frontend Container** | `zenkar-frontend-prod` | `zenkar-frontend-demo` |
+| **Frontend Port** | `5174` (Host) | `5173` (Host) |
 
 ### C. Domain Connection
 *   `order.zenkar.in` -> Nginx (Host) -> `http://localhost:5174`.
 *   `orderdemo.zenkar.in` -> Nginx (Host) -> `http://localhost:5173`.
 
 ### D. Data Backup
-*   **Location**: `zenkar-platform/backups/` (on the remote server).
-*   **Double Safety**: Run `scripts/sync_backups.sh` locally to pull backups to your machine.
+*   **Location**: `~/backups/` and `pgdata` snapshots.
 
 
 ## 4. Domains & Routing (Nginx)

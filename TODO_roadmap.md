@@ -2,6 +2,26 @@
 
 Future enhancements for the Zenkar Platform.
 
+# Roadmap & Todo
+
+## ✅ Validated & Completed (v1.2.1 Deployment)
+- [x] **Restore Production Environment**
+    - [x] Rename `zenkar-platform` to `zenkar-platform-production`
+    - [x] Backup Legacy Data (`pgdata`)
+    - [x] Configure Alternate Ports (3001, 5174, 5433)
+    - [x] Migrate Schema (Add `discount` column)
+    - [x] Verify URL `order.zenkar.in`
+- [x] **Create Deployment Documentation**
+    - [x] Registry of Ports, Paths, and Containers (`deploy/DEPLOYMENT_REFERENCE.md`)
+
+## 🚀 Future Deployment Improvements
+- [ ] **Automate Build & Push**: Set up CI to build Docker images and push to a container registry (e.g., GHCR, Docker Hub). This avoids building on the server and ensures artifacts are immutable.
+- [ ] **Dedicated Staging User**: Create a `deploy-staging` user on the server with restricted permissions to strictly isolate staging from the production environment.
+- [ ] **Implement Health Check**: Add a proper `/api/health` endpoint in the NestJS backend to return 200 OK, enabling reliable uptime monitoring.
+- [ ] **Automate Migrations**: Integrate `npx prisma migrate deploy` into the container's startup script (entrypoint) to ensure the database schema is always in sync with the code on startup.
+- [ ] **Fix File Permissions**: Refactor Dockerfiles to run applications as a non-root user (e.g., `node` user) to prevent file ownership conflicts on the host volume.
+
+
 **Current Version**: `v1.2.0` (Infrastructure Overhaul)
 **Last Updated**: 2025-12-08
 

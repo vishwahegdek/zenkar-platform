@@ -4,7 +4,31 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
 
-## [v1.2.1] - 2025-12-09
+## [v1.3.0] - 2025-12-10 (Auth System)
+### 🔒 Security
+- **Authentication**: Implemented JWT-based authentication for the entire platform.
+- **Global Guard**: Secured all API endpoints by default (`JwtAuthGuard`); only `/auth/login` is public.
+- **User Management**: Added `User` model to database.
+
+### 👤 Admin Interface
+- **Dashboard**: Added `/admin` dashboard for user management.
+- **User Creation**: Admin can now create new users with username/password.
+
+### ✨ Frontend
+- **Auth Context**: Added global state for user session management.
+- **Login Page**: New Login UI at `/login`.
+- **Protected Routes**: Implemented `RequireAuth` wrapper to redirect unauthenticated users.
+
+### 🔧 chore
+- **Branching**: Moved experiment/feature work to `feature/auth-system` branch.
+- **Cleanup**: Ignored MinIO data directories in git.
+
+## [v1.2.1] - 2025-12-10 (Production Restoration)
+### 🚀 Infrastructure
+- **Production Restoration**: Successfully restored Production environment at `~/zenkar-platform-production` on ports **3001** (Backend) and **5174** (Frontend).
+- **Data Safety**: Preserved legacy `pgdata` volume and migrated schema (Added `discount` column) using `zenkar-db-prod` on port **5433**.
+- **Documentation**: Added `deploy/DEPLOYMENT_REFERENCE.md` as the single source of truth for deployment.
+
 ### Added
 - **E2E Testing**: Full coverage for Customers and Products modules using Playwright.
 - **Documentation**: Added `project_rules.md` for team conventions.

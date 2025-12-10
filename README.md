@@ -56,38 +56,24 @@ npm run lint
 ```
 
 ## 📦 Deployment & CI/CD
+**See [`deploy/DEPLOYMENT_REFERENCE.md`](deploy/DEPLOYMENT_REFERENCE.md) for the verified Staging and Production deployment procedures.**
 
-Deployment is handled via the `cicd.sh` pipeline script, which performs safety checks (Git status, Tests) before deploying.
-
-### Deployment Files
+### Configuration Files
 Configuration files are isolated by environment:
 *   **Staging**: [`deploy/staging/docker-compose.yml`](deploy/staging/docker-compose.yml)
 *   **Production**: [`deploy/production/docker-compose.yml`](deploy/production/docker-compose.yml)
 
-### How to Deploy
-Run the pipeline script from your local machine:
+### Workflow Overview (Manual)
+1.  **Code**: Push to `deploy/staging-products`.
+2.  **Deploy Staging**: SSH to server, pull code in `~/zenkar-staging`, and run `docker-compose up -d --build`.
+3.  **Deploy Production**: SSH to server, pull code in `~/zenkar-platform-production`, and run `docker-compose up -d --build`.
 
-```bash
-# 1. Deploy to Staging (Demo)
-./cicd.sh demo
-# Target: https://orderdemo.zenkar.in
-
-# 2. Deploy to Production
-./cicd.sh prod
-# Target: https://order.zenkar.in
-```
-
-### Pipeline Steps
-The `cicd.sh` script automates the following:
-1.  **Safety Check**: Ensures no uncommitted changes (git status).
-2.  **Test**: Runs `npm test` locally. Fails if broken.
-3.  **Compress**: Bundles the code (excluding node_modules).
-4.  **Upload**: SCPs the bundle to the VPS.
-5.  **Deploy**: 
-    *   Extracts code on server.
-    *   Runs **Backup** of existing DB.
-    *   Runs `docker-compose up -d --build` using the correct environment file.
-6.  **Verify**: Checks if the site is reachable.
+### Pipeline Steps (Concept)
+The previous `cicd.sh` is deprecated. We now use a direct verified pull/build process on the server to ensure consistency.
+1.  **Safety Check**: Ensure no conflicting containers.
+2.  **Backup**: Snapshot `pgdata` before production changes.
+3.  **Migrate**: Run `npx prisma migrate deploy` in the container.
+4.  **Restart**: `docker-compose up -d --build`.
 
 ## 🤖 AI-Friendly Features
 

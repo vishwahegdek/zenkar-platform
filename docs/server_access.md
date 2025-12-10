@@ -25,10 +25,12 @@ The server is running the Zenkar Platform via Docker Compose.
 
 | Container Name | Image | Port | Status |
 | :--- | :--- | :--- | :--- |
-| **zenkar-frontend** | `vishwa-frontend` | `3000:80` | ✅ Up |
-| **zenkar-backend** | `vishwa-backend` | `3000` (Internal) | ✅ Up |
-| **zenkar-db** | `postgres:15-alpine` | `5432:5432` | ✅ Up |
-| **odoo_zenkar** | `odoo:18` | `8069:8069` | ✅ Up (Legacy/Parallel) |
+| **zenkar-frontend-prod** | `local` | `5174:5173` | ✅ Up (Production) |
+| **zenkar-backend-prod** | `local` | `3001:3000` | ✅ Up (Production) |
+| **zenkar-db-prod** | `postgres:15-alpine` | `5433:5432` | ✅ Up (Production DB) |
+| **zenkar-frontend-demo** | `local` | `5173:5173` | ✅ Up (Staging) |
+| **zenkar-backend-demo** | `local` | `3000:3000` | ✅ Up (Staging) |
+| **zenkar-db-demo** | `postgres:15-alpine` | `5432:5432` | ✅ Up (Staging DB) |
 
 ### Important Processes (System)
 - **Docker Daemon**: Managed by `systemd`.

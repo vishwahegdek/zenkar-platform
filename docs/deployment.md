@@ -7,39 +7,33 @@ This guide details how to deploy the Zenkar Platform using the automated Push Pi
 - [x] SSH access enabled to `server` (160.250.204.219).
 - [x] Docker configured on the remote server.
 
-## 2. Deployment Workflow (Push Pipeline)
+## 2. Deployment Workflow (Manual Pull)
 
-We do **not** pull code directly on the server. Instead, we bundle the application locally and push it.
+We verify deployments by building directly on the server.
 
-### Commands
+### Staging (Demo)
+1.  **Code**: Push to `deploy/staging-products`.
+2.  **Server**: SSH and `cd ~/zenkar-staging`.
+3.  **Command**: `git pull && docker-compose -f deploy/staging/docker-compose.yml up -d --build`.
+   
+### Production (Live)
+1.  **Code**: Push to `deploy/staging-products`.
+2.  **Server**: SSH and `cd ~/zenkar-platform-production`.
+3.  **Command**: `git pull && docker-compose -f deploy/production/docker-compose.yml up -d --build`.
 
-**Deploy to Production** (order.zenkar.in):
-```bash
-./cicd.sh prod
-```
-
-**Deploy to Demo** (orderdemo.zenkar.in):
-```bash
-./cicd.sh demo
-```
-
-### What Happens Behind the Scenes
-1.  **Test**: Runs local frontend tests (`npm test`).
-2.  **Package**: Compresses the project into `zenkar-platform.tar.gz`.
-3.  **Upload**: SCPs the tarball to the server.
-4.  **Deploy**:
-    -   Extracts the code.
-    -   Triggers a pre-deployment database backup.
-    -   Runs `docker-compose up --build -d` to restart services.
+**Note**: Always check `deploy/DEPLOYMENT_REFERENCE.md` for the latest port configurations.
 
 ## 3. Data Migration
-The system maps `../../pgdata` (relative to the compose file) to the database container.
--   **No manual migration needed** for code updates.
--   Database schema changes should be handled via Prisma Migrations (run automatically if configured in start script).
+The system maps:
+-   **Production**: `~/zenkar-platform-production/pgdata` (Legacy Data).
+-   **Staging**: `~/zenkar-staging/pgdata_demo`.
+
+Database schema changes should be handled via Prisma Migrations:
+```bash
+docker-compose exec backend npx prisma migrate deploy
+```
 
 ## 4. Troubleshooting
--   **"SCP Upload Failed"**: Check internet connection and VPN/SSH keys.
--   **"Remote Execution Failed"**:
-    -   Try running manual commands: `python3 remote_exec.py "docker ps"`
-    -   Check server disk space: `python3 remote_exec.py "df -h"`
--   **Lock Files**: If deployment hangs, check for existing `apt` or `docker` processes on the server.
+-   **"Port Already Allocated"**: Check `docker ps`. You may have an old container running.
+    -   Run `docker rm -f <container_name>` to clear it.
+-   **"Database Does Not Exist"**: Ensure you are pointing to the correct DB name relative to the volume (`order_book` vs `zenkar_db_demo`).

@@ -10,6 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Future relation for contact sync
+  // customers Customer[]
+
+  @@map("users")
+}
+
 model Customer {
   id        Int      @id @default(autoincrement())
   name      String

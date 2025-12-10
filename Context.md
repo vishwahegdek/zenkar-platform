@@ -35,6 +35,7 @@ python3 remote_exec.py "docker ps"
 ```
 
 ## 4. Key Files to Check
+-   `deploy/DEPLOYMENT_REFERENCE.md`: **Source of Truth** for Ports/Paths.
 -   `zenkar-platform/docs/deployment.md`: Detailed manual steps.
 -   `zenkar-platform/frontend/src/pages/OrdersList.jsx`: Main UI logic.
 -   `zenkar-platform/backend/src/orders/orders.service.ts`: Core business logic.
