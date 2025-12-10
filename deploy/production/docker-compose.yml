@@ -1,31 +1,16 @@
 services:
-  minio:
-    image: quay.io/minio/minio
-    command: server /data --console-address ":9001"
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: "admin"
-      MINIO_ROOT_PASSWORD: "password"
-    volumes:
-      - ../../minio_data:/data
-    networks:
-      - zenkar-network
-
   backend:
     build:
       context: ../../
       dockerfile: backend/Dockerfile
-    container_name: zenkar-backend
+    container_name: zenkar-backend-prod
     restart: always
     ports:
       - "3001:3000" # Shifted to 3001
     depends_on:
       - db
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/order_book?schema=public"
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
     networks:
       - zenkar-network
 
@@ -33,7 +18,7 @@ services:
     build:
       context: ../../
       dockerfile: frontend/Dockerfile
-    container_name: zenkar-frontend
+    container_name: zenkar-frontend-prod
     restart: always
     ports:
       - "5174:5173" # Nginx expects Frontend on 5174 (Mapped to 5173)
@@ -44,12 +29,12 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: zenkar-db
+    container_name: zenkar-db-prod
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=order_book
+      - POSTGRES_DB=zenkar_db_demo
     ports:
       - "5433:5432"
     volumes:
