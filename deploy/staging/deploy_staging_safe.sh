@@ -52,11 +52,17 @@ if ! docker-compose run --rm backend npx prisma migrate deploy; then
 fi
 echo "✅ Migrations applied successfully."
 
-# 5. Restart Services
-echo "🚀 Restarting services..."
-docker-compose up -d
+# 5. Cleanup Legacy/Conflicting Containers
+echo "🧹 Cleaning up potential legacy containers..."
+# We stop by NAME to ensure no conflicts with previous deployments from different folders
+docker stop zenkar-backend-demo zenkar-frontend-demo zenkar-db-demo 2>/dev/null || true
+docker rm zenkar-backend-demo zenkar-frontend-demo zenkar-db-demo 2>/dev/null || true
 
-# 6. Verify
+# 6. Restart Services
+echo "🚀 Restarting services..."
+docker-compose up -d --remove-orphans
+
+# 7. Verify
 echo "✅ Deployment Complete!"
 echo "📡 Checking Health..."
 sleep 5
