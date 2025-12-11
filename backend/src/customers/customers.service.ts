@@ -16,6 +16,7 @@ export class CustomersService {
     let totalFound = 0;
 
     do {
+      try {
         const res = await people.people.connections.list({
           resourceName: 'people/me',
           personFields: 'names,phoneNumbers,addresses',
@@ -25,7 +26,10 @@ export class CustomersService {
 
         const connections = res.data.connections || [];
         totalFound += connections.length;
-
+        
+        // ... (We need to include the processing loop inside try or move it out?)
+        // Better to just wrap the 'res' fetch.
+        
         for (const person of connections) {
           const name = person.names?.[0]?.displayName;
           const phone = person.phoneNumbers?.[0]?.value;
@@ -56,6 +60,15 @@ export class CustomersService {
         }
         
         nextPageToken = res.data.nextPageToken;
+
+      } catch (error) {
+          console.error('Error importing contacts from Google:', error);
+          if (error.code === 404 || error.status === 404) {
+             console.warn('Google People API returned 404. User might not have a Google Profile or Contacts.');
+             break; // Stop loop and return what we have
+          }
+          throw error; // Re-throw other errors (will result in 500)
+      }
 
     } while (nextPageToken);
 
