@@ -9,6 +9,7 @@ services:
       - "3001:3000" # Shifted to 3001
     depends_on:
       - db
+    env_file: ../../.env
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/order_book?schema=public"
     networks:
