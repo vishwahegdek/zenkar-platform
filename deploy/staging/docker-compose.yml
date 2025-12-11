@@ -14,6 +14,7 @@ services:
       - db
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
+      GOOGLE_CALLBACK_URL: "https://orderdemo.zenkar.in/api/auth/google/callback"
     networks:
       - zenkar-network-demo
 
