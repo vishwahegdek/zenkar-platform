@@ -198,6 +198,11 @@ export default function OrdersList() {
                   <span className="font-bold text-gray-900">
                     {order.orderNo || `#${order.id}`}
                   </span>
+                  {order.isQuickSale && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wide">
+                        QS
+                      </span>
+                  )}
                   <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
                 <StatusSelect order={order} onChange={handleStatusChange} />
@@ -259,6 +264,11 @@ export default function OrdersList() {
                     <span className="text-blue-600 hover:underline">
                       {order.orderNo || `#${order.id}`}
                     </span>
+                    {order.isQuickSale && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase tracking-wide">
+                        QS
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{order.customer?.name}</div>
@@ -318,7 +328,6 @@ export default function OrdersList() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

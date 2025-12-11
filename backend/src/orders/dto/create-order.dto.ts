@@ -24,6 +24,8 @@ export class CreateOrderDto {
   @IsNumber() totalAmount: number;
   @IsNumber() advanceAmount: number;
   @IsOptional() @IsString() notes?: string;
+  @IsOptional() isQuickSale?: boolean;
+  @IsOptional() @IsString() paymentMethod?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

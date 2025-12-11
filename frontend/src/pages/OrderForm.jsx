@@ -291,7 +291,7 @@ export default function OrderForm() {
         <button 
           type="button" 
           onClick={() => saveOrder(formData, false)}
-          className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
+          className="hidden md:block bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
           disabled={autoSaveStatus === 'saving'}
         >
           {autoSaveStatus === 'saving' ? 'Saving...' : 'Save Order'}
@@ -575,6 +575,15 @@ export default function OrderForm() {
               }}
           />
        </Modal>
+
+        {/* Mobile FAB for Save Order */}
+        <button 
+           onClick={() => saveOrder(formData, false)}
+           disabled={autoSaveStatus === 'saving'}
+           className="md:hidden fixed bottom-6 right-6 bg-primary text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 z-50 text-2xl disabled:opacity-50"
+        >
+           {autoSaveStatus === 'saving' ? '...' : '✓'}
+        </button>
     </div>
   );
 }

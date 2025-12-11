@@ -53,7 +53,7 @@ export class OrdersService implements OnModuleInit {
   }
 
   async create(createOrderDto: CreateOrderDto) {
-    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, ...rest } = createOrderDto;
+    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, paymentMethod, ...rest } = createOrderDto;
     let orderData: any = { ...rest };
     if (orderDate) orderData.orderDate = new Date(orderDate);
     if (dueDate) orderData.dueDate = new Date(dueDate);
@@ -64,8 +64,21 @@ export class OrdersService implements OnModuleInit {
     if (orderData.advanceAmount) orderData.advanceAmount = 0;
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Handle New Customer Creation
-      if (createOrderDto.customerId === 0 && customerName) {
+      let finalCustomerId = createOrderDto.customerId;
+
+      // 1. Handle New Customer Creation or Walk-In
+      if (createOrderDto.isQuickSale && !finalCustomerId && !createOrderDto.customerName) {
+         // Auto-assign "Walk-In" customer
+         const walkIn = await tx.customer.findFirst({ where: { name: 'Walk-In' } });
+         if (walkIn) {
+             finalCustomerId = walkIn.id;
+         } else {
+             const newWalkIn = await tx.customer.create({
+                 data: { name: 'Walk-In' }
+             });
+             finalCustomerId = newWalkIn.id;
+         }
+      } else if (createOrderDto.customerId === 0 && customerName) {
         const newCustomer = await tx.customer.create({
           data: {
             name: customerName,
@@ -73,8 +86,11 @@ export class OrdersService implements OnModuleInit {
             address: customerAddress,
           },
         });
-        orderData.customerId = newCustomer.id;
+        finalCustomerId = newCustomer.id;
       }
+      
+      // Clean up orderData to remove fields not in Order model
+      delete orderData.customerId; // We use connect syntax or just ensure it's removed if using stricter types
 
       // 2. Process Items
       const processedItems = await this.processItems(items, tx);
@@ -83,6 +99,8 @@ export class OrdersService implements OnModuleInit {
       const order = await tx.order.create({
         data: {
           ...orderData,
+          customer: { connect: { id: finalCustomerId } }, // Connect syntax is safer
+          isQuickSale: createOrderDto.isQuickSale || false,
           items: {
             create: processedItems.map((item) => ({
               productId: item.productId,
@@ -99,12 +117,17 @@ export class OrdersService implements OnModuleInit {
 
       // 4. Create Initial Payment if advance was provided
       if (initialAdvance > 0) {
+        let paymentNote = createOrderDto.isQuickSale ? 'Quick Sale Payment' : 'Initial Advance';
+        if (createOrderDto.paymentMethod) {
+            paymentNote = createOrderDto.paymentMethod;
+        }
+
         await tx.payment.create({
           data: {
             orderId: order.id,
             amount: initialAdvance,
             date: new Date(),
-            note: 'Initial Advance'
+            note: paymentNote
           }
         });
       }

@@ -28,6 +28,9 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Link to="/quick-sale" className="bg-purple-100 text-purple-700 px-3 py-2 rounded-full text-sm font-medium hover:bg-purple-200 transition-colors shadow-sm flex items-center gap-1" aria-label="Quick Sale">
+               <span className="text-lg">⚡</span> <span className="hidden md:inline">Quick</span>
+            </Link>
             <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2" aria-label="New Order">
               <span className="md:hidden">New</span> <span className="hidden md:inline">New Order</span>
             </Link>

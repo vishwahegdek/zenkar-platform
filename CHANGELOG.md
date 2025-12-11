@@ -6,6 +6,23 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 
 ## Released Versions
+## [v1.4.1] - 2025-12-11 (Quick Sale Feature)
+### ⚡ Quick Sale
+- **New Page**: Launched dedicated `/quick-sale` page for rapid counter sales.
+- **Workflow**: Auto-assigns "Walk-In" customer, defaults to "Closed" status, and simplifies inputs (no due date).
+- **Payment Method**: Added "Cash", "UPI", "Card", "Due" selector (Stored in Payment Note).
+- **Navigation**: Added "Quick" button in Header; removed extra link from dropdown.
+
+### 📱 UI Improvements
+- **Mobile FABs**: Added Floating Action Buttons for key actions on mobile:
+    - **Right Tick (✓)** on Quick Sale & Order Form (Save/Complete).
+    - **Note**: Removed FAB from Orders List to reduce clutter.
+
+### 🛠️ Backend
+- **Schema**: Added `isQuickSale` boolean column to `Order` table.
+- **Logic**: Enhanced `OrdersService` to handle "Walk-In" auto-creation and single-payment processing.
+- **Fix**: Resolved `customerId` type handling in `create` method.
+
 ## [v1.4.0] - 2025-12-11 (Customer Search & UX)
 ### 👥 Customer Experience
 - **Strict Selection**: Enforced strict customer selection in `OrderForm` (No more manual text entry).

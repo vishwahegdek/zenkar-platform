@@ -57,6 +57,11 @@ See `backend/prisma/schema.prisma` for the source of truth.
 *   **Products**: Items available for order.
 *   **Orders**: The central entity linking Customers, Products (via OrderItems), and Payments.
 
+*   **Products**: Items available for order.
+*   **Orders**: The central entity linking Customers, Products (via OrderItems), and Payments.
+    *   **Quick Sale**: Orders with `isQuickSale=true` are treated as immediate counter sales (Status: Closed, Customer: Walk-In).
+    *   **Payments**: Quick Sale payment method (e.g., 'UPI') is stored in the `note` field of the Payment record.
+
 ## 4. Setup & Installation
 
 ### Prerequisites

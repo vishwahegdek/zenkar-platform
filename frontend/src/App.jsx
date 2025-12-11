@@ -9,6 +9,7 @@ import ProductsList from './pages/ProductsList';
 import ProductForm from './pages/ProductForm';
 import CustomersList from './pages/CustomersList';
 import CustomerForm from './pages/CustomerForm';
+import QuickSale from './pages/QuickSale';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -41,6 +42,7 @@ function App() {
             }>
               <Route index element={<Navigate to="/orders" replace />} />
               <Route path="orders" element={<OrdersList />} />
+              <Route path="quick-sale" element={<QuickSale />} />
               <Route path="orders/new" element={<OrderForm />} />
               <Route path="orders/:id" element={<OrderDetails />} />
               <Route path="orders/:id/edit" element={<OrderForm />} />

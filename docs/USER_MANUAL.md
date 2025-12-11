@@ -48,6 +48,19 @@ The Dashboard provides a quick overview of the business.
 4.  Enter the Amount, Date, and a Note (e.g., "UPI Ref: 123456").
 5.  Save. The "Balance Due" will update automatically.
 
+5.  Save. The "Balance Due" will update automatically.
+
+### Quick Sale (Walk-In)
+Designed for rapid counter sales where detailed tracking isn't needed immediately.
+1.  Click the **"⚡ Quick"** button in the header.
+2.  **Customer**: Defaults to "Walk-In" (can be changed).
+3.  **Items**: Add products as usual.
+4.  **Payment Method**: Select **Cash**, **UPI**, **Card**, or **Due**.
+5.  **Complete**: Click the "Complete Sale" button (or Tick button on mobile).
+    -   The order is automatically marked as **Closed**.
+    -   A full payment entry is created.
+    -   It appears in the "Order History" tab with a purple **QS** badge.
+
 ## 4. Product Management
 
 ### Product Catalog
