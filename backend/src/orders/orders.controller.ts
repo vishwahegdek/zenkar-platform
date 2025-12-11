@@ -3,6 +3,8 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
+import { SyncPaymentsDto } from './dto/sync-payments.dto';
+
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -35,5 +37,10 @@ export class OrdersController {
   @Post(':id/payments')
   addPayment(@Param('id') id: string, @Body() body: { amount: number; date: string; note?: string }) {
     return this.ordersService.addPayment(+id, +body.amount, new Date(body.date), body.note);
+  }
+
+  @Patch(':id/payments')
+  syncPayments(@Param('id') id: string, @Body() body: SyncPaymentsDto) {
+    return this.ordersService.syncPayments(+id, body.payments);
   }
 }

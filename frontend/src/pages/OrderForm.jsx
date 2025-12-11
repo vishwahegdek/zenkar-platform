@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import Modal from '../components/Modal';
 import Autocomplete from '../components/Autocomplete';
+import CustomerForm from './CustomerForm';
+import ProductForm from './ProductForm';
 import { toast } from 'react-hot-toast';
 
 export default function OrderForm() {
@@ -17,6 +19,28 @@ export default function OrderForm() {
   const isEdit = Boolean(activeId);
 
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // idle, saving, saved, error
+  
+  // Customer Modal State
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [tempCustomerName, setTempCustomerName] = useState('');
+
+  // Product Modal State
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [activeProductRowIndex, setActiveProductRowIndex] = useState(null);
+  const [tempProductName, setTempProductName] = useState('');
+  const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+
+  // Handle Hash Change for Modals
+  useEffect(() => {
+    const handleHashChange = () => {
+        setIsCustomerModalOpen(window.location.hash === '#new-customer');
+        setIsProductModalOpen(window.location.hash === '#new-product');
+    };
+    // Initial check
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   
   // Ref to track if we have performed initial load from server
   const initialLoadDone = useRef(false);
@@ -80,12 +104,13 @@ export default function OrderForm() {
   };
 
   const validateForAutoSave = (data) => {
-    // 1. Customer Name present
-    if (!data.customerName || data.customerName.trim().length === 0) return false;
+    // 1. Must have a selected Customer ID (Locked)
+    if (!data.customerId) return false;
     
     // 2. At least one valid item
     const hasValidItem = data.items.some(
-      i => i.productName && Number(i.quantity) > 0 && Number(i.unitPrice) > 0
+      i => i.productName && Number(i.quantity) > 0 && Number(i.unitPrice) > 0 && 
+      (i.productId || i.isNewProductConfirmed)
     );
     
     return hasValidItem;
@@ -94,6 +119,17 @@ export default function OrderForm() {
   // Generic Save Function
   const saveOrder = async (data, isAuto = false) => {
     if (isAuto && !validateForAutoSave(data)) return;
+
+    // Manual Validation
+    if (!isAuto) {
+        if (!data.customerId) {
+            return toast.error("Please select a customer before saving.");
+        }
+        const unconfirmedProduct = data.items.find(i => i.productName && !i.productId && !i.isNewProductConfirmed);
+        if (unconfirmedProduct) {
+            return toast.error(`Product '${unconfirmedProduct.productName}' not found. Please select existing or create new.`);
+        }
+    }
 
     if (isAuto) setAutoSaveStatus('saving');
 
@@ -204,6 +240,7 @@ export default function OrderForm() {
     // Clear productId if name changes (implies new product or search started)
     if (field === 'productName') {
       item.productId = null;
+      item.isNewProductConfirmed = false;
     }
     
     newItems[index] = item;
@@ -240,7 +277,8 @@ export default function OrderForm() {
   if (isEdit && isLoading && !initialLoadDone.current) return <div className="p-8">Loading...</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-0 md:space-y-6 pb-24 md:pb-6">
+    <div className="max-w-5xl mx-auto pb-24 md:pb-6">
+      <form onSubmit={handleSubmit} className="space-y-0 md:space-y-6">
       <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
         <div className="flex items-center gap-3">
            <h1 className="text-2xl font-bold">{isEdit ? 'Edit Order' : 'New Order'}</h1>
@@ -264,41 +302,65 @@ export default function OrderForm() {
         {/* Customer Card */}
         <div className="md:col-span-2 bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-y md:border border-gray-200 space-y-4">
           <h2 className="font-semibold text-gray-900">Customer Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="col-span-full">
-              <Autocomplete 
-                label="Customer Name"
-                endpoint="/customers"
-                placeholder="Search or type new name..."
-                value={formData.customerName}
-                onChange={(val) => setFormData({...formData, customerName: val, customerId: null})} 
-                onSelect={(customer) => setFormData({
-                  ...formData, 
-                  customerId: customer.id, 
-                  customerName: customer.name,
-                  customerPhone: customer.phone || '',
-                  customerAddress: customer.address || ''
-                })}
-                subDisplayKey="address"
-              />
+          
+          {formData.customerId ? (
+            <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <div className="text-lg font-bold text-gray-900">{formData.customerName}</div>
+                        <div className="text-gray-600 mt-1 whitespace-pre-wrap">{formData.customerAddress || 'No Address'}</div>
+                        <div className="text-gray-600 mt-1">{formData.customerPhone || 'No Phone'}</div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            type="button"
+                            onClick={() => setIsEditCustomerModalOpen(true)}
+                            className="text-sm text-green-600 hover:text-green-800 font-medium px-3 py-1 hover:bg-green-100 rounded-lg transition-colors border border-transparent hover:border-green-200"
+                        >
+                            Edit
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setFormData({
+                                ...formData, 
+                                customerId: null, 
+                                customerName: '', 
+                                customerPhone: '', 
+                                customerAddress: ''
+                            })}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium px-3 py-1 hover:bg-blue-100 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                        >
+                            Change
+                        </button>
+                    </div>
+                </div>
             </div>
-            
-            <div className="col-span-full">
-               <label htmlFor="customerAddress" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-               <input id="customerAddress" type="text" className="input-field" 
-                  value={formData.customerAddress} 
-                  onChange={e => setFormData({...formData, customerAddress: e.target.value})}
-               />
-            </div>
-
+          ) : (
             <div>
-              <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input id="customerPhone" type="text" className="input-field" 
-                 value={formData.customerPhone} 
-                 onChange={e => setFormData({...formData, customerPhone: e.target.value})}
-              />
+                <Autocomplete 
+                    endpoint="/customers"
+                    placeholder="Search customer..."
+                    value={formData.customerName}
+                    onChange={(val) => {
+                        setFormData({...formData, customerName: val, customerId: null});
+                    }} 
+                    onCreate={(name) => {
+                        setTempCustomerName(name);
+                        window.location.hash = 'new-customer';
+                    }}
+                    onSelect={(customer) => {
+                        setFormData({
+                        ...formData, 
+                        customerId: customer.id, 
+                        customerName: customer.name,
+                        customerPhone: customer.phone || '',
+                        customerAddress: customer.address || ''
+                        });
+                    }}
+                    subDisplayKey="address"
+                />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Order Meta Card */}
@@ -365,7 +427,16 @@ export default function OrderForm() {
                        displayKey="name"
                        subDisplayKey="defaultUnitPrice"
                        onChange={(val) => handleItemChange(idx, 'productName', val)}
-                       onSelect={(p) => handleProductSelect(idx, p)}
+                       onCreate={(name) => {
+                           setTempProductName(name);
+                           setActiveProductRowIndex(idx);
+                           window.location.hash = 'new-product';
+                       }}
+                       onSelect={(p) => {
+                           handleProductSelect(idx, p);
+                           // handleProductSelect handles setting ID/price.
+                           // We just ensure confirmed is false (it probably is undefined or ignored if ID is set)
+                       }}
                     />
                  </div>
                  <div className="md:col-span-4">
@@ -411,17 +482,21 @@ export default function OrderForm() {
                 <span>Total</span>
                 <span>₹{calculateTotal().toLocaleString()}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-gray-600">Advance</span>
-                <input type="number" className="input-field w-32 text-right"
-                   value={formData.advanceAmount}
-                   onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
-                />
-              </div>
-              <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
-                <span>Balance Due</span>
-                <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
-              </div>
+               {!isEdit && (
+               <div className="flex items-center justify-between gap-4">
+                 <span className="text-sm text-gray-600">Advance</span>
+                 <input type="number" className="input-field w-32 text-right"
+                    value={formData.advanceAmount}
+                    onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
+                 />
+               </div>
+               )}
+               {!isEdit && (
+               <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
+                 <span>Balance Due</span>
+                 <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
+               </div>
+               )}
            </div>
          </div>
        </div>
@@ -436,6 +511,70 @@ export default function OrderForm() {
        </div>
 
 
-    </form>
+
+
+      </form>
+
+       {/* New Customer Modal */}
+       <Modal
+         isOpen={isCustomerModalOpen}
+         onClose={() => window.location.hash = ''}
+         title="Create New Customer"
+       >
+          <CustomerForm 
+             isModal={true}
+             initialData={{ name: tempCustomerName }}
+             onSuccess={(newCustomer) => {
+                 setFormData({
+                    ...formData,
+                    customerId: newCustomer.id,
+                    customerName: newCustomer.name,
+                    customerPhone: newCustomer.phone || '',
+                    customerAddress: newCustomer.address || ''
+                 });
+                 // Close modal
+                 window.location.hash = '';
+             }}
+          />
+       </Modal>
+
+       {/* Edit Customer Modal */}
+       <Modal
+         isOpen={isEditCustomerModalOpen}
+         onClose={() => setIsEditCustomerModalOpen(false)}
+         title="Edit Customer Details"
+       >
+          <CustomerForm 
+             isModal={true}
+             id={formData.customerId}
+             onSuccess={(updatedCustomer) => {
+                 setFormData({
+                    ...formData,
+                    customerName: updatedCustomer.name,
+                    customerPhone: updatedCustomer.phone || '',
+                    customerAddress: updatedCustomer.address || ''
+                 });
+                 setIsEditCustomerModalOpen(false);
+             }}
+          />
+       </Modal>
+
+       {/* New Product Modal */}
+       <Modal
+          isOpen={isProductModalOpen}
+          onClose={() => window.location.hash = ''}
+          title="Create New Product"
+       >
+          <ProductForm
+              initialData={{ name: tempProductName }}
+              onSuccess={(newProduct) => {
+                  if (activeProductRowIndex !== null) {
+                      handleProductSelect(activeProductRowIndex, newProduct);
+                  }
+                  window.location.hash = '';
+              }}
+          />
+       </Modal>
+    </div>
   );
 }

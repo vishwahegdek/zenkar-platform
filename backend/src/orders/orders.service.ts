@@ -287,6 +287,47 @@ export class OrdersService implements OnModuleInit {
     });
   }
 
+  async syncPayments(orderId: number, payments: { id?: number; amount: number; date: string; note?: string }[]) {
+     return this.prisma.$transaction(async (tx) => {
+        // 1. Get existing payment IDs
+        const existing = await tx.payment.findMany({ where: { orderId }, select: { id: true } });
+        const existingIds = new Set(existing.map(p => p.id));
+        
+        const incomingIds = new Set(payments.filter(p => p.id).map(p => p.id));
+
+        // 2. Delete payments not in incoming list
+        const toDelete = [...existingIds].filter(id => !incomingIds.has(id));
+        if (toDelete.length > 0) {
+            await tx.payment.deleteMany({ where: { id: { in: toDelete } } });
+        }
+
+        // 3. Upsert (Update existing, Create new)
+        for (const p of payments) {
+            const data = {
+                amount: Number(p.amount),
+                date: new Date(p.date),
+                note: p.note
+            };
+
+            if (p.id && existingIds.has(p.id)) {
+                await tx.payment.update({
+                    where: { id: p.id },
+                    data
+                });
+            } else {
+                await tx.payment.create({
+                    data: {
+                        ...data,
+                        orderId
+                    }
+                });
+            }
+        }
+        
+        return { success: true };
+     });
+  }
+
   remove(id: number) {
     return this.prisma.order.update({
       where: { id },

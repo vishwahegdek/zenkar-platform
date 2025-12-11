@@ -2,21 +2,23 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import { toast } from 'react-hot-toast';
 
-export default function ProductForm() {
-  const { id } = useParams();
+export default function ProductForm({ onSuccess, initialData }) {
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const id = paramId;
   const isEdit = Boolean(id);
 
   const [formData, setFormData] = useState({
-    name: '',
+    name: initialData?.name || '',
     defaultUnitPrice: 0,
     notes: '',
   });
 
   // Fetch Product Data if Edit
-  const { data: product, isLoading, refetch } = useQuery({
+  const { data: product, isLoading } = useQuery({
     queryKey: ['products', id],
     queryFn: () => api.get(`/products/${id}`),
     enabled: isEdit,
@@ -30,8 +32,10 @@ export default function ProductForm() {
         defaultUnitPrice: Number(product.defaultUnitPrice) || 0,
         notes: product.notes || '',
       });
+    } else if (initialData?.name && !isEdit) {
+       setFormData(prev => ({ ...prev, name: initialData.name }));
     }
-  }, [product]);
+  }, [product, initialData, isEdit]);
 
   // Mutations
   const mutation = useMutation({
@@ -42,14 +46,20 @@ export default function ProductForm() {
        };
        return isEdit ? api.patch(`/products/${id}`, payload) : api.post('/products', payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['products']);
-      navigate('/products');
+      toast.success(isEdit ? 'Product updated' : 'Product created');
+      
+      if (onSuccess) {
+          onSuccess(data);
+      } else {
+          navigate('/products');
+      }
     },
-    onError: (err) => alert('Failed to save product: ' + err.message)
+    onError: (err) => toast.error('Failed: ' + err.message)
   });
 
-  if (isEdit && isLoading) return <div className="p-8">Loading...</div>;
+  if (isEdit && isLoading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -59,26 +69,33 @@ export default function ProductForm() {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
-          <input type="text" className="input-field" 
+          <label htmlFor="productFormName" className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
+          <input 
+             id="productFormName"
+             type="text" className="input-field" 
              required
              value={formData.name} 
              onChange={e => setFormData({...formData, name: e.target.value})}
              placeholder="e.g. Wooden Chair"
+             autoFocus
           />
         </div>
 
         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">Default Price (₹)</label>
-           <input type="number" className="input-field" 
+           <label htmlFor="productFormPrice" className="block text-sm font-medium text-gray-700 mb-1">Default Price (₹)</label>
+           <input 
+              id="productFormPrice"
+              type="number" className="input-field" 
               value={formData.defaultUnitPrice} 
               onChange={e => setFormData({...formData, defaultUnitPrice: e.target.value})}
            />
         </div>
 
         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-           <textarea className="input-field" rows="3"
+           <label htmlFor="productFormNotes" className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+           <textarea 
+             id="productFormNotes"
+             className="input-field" rows="3"
              placeholder="Internal notes about this product..."
              value={formData.notes} 
              onChange={e => setFormData({...formData, notes: e.target.value})}
@@ -90,7 +107,13 @@ export default function ProductForm() {
         <div className="pt-4 flex gap-3 justify-end border-t border-gray-100">
            <button 
              type="button"
-             onClick={() => navigate('/products')}
+             onClick={() => {
+                 if (onSuccess) {
+                    window.location.hash = ''; // Close modal by clearing hash
+                 } else {
+                    navigate('/products');
+                 }
+             }}
              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
            >
              Cancel

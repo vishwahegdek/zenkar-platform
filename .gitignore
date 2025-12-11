@@ -37,3 +37,8 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Test Artifacts
+frontend/playwright-report/
+frontend/test-results/
+backend/test-results/

@@ -27,8 +27,8 @@ export default function ProductsList() {
   }, [searchTerm, searchParam, setSearchParams]);
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => api.get('/products'),
+    queryKey: ['products', searchParam],
+    queryFn: () => api.get('/products', { params: { query: searchParam } }),
   });
 
   const queryClient = useQueryClient();

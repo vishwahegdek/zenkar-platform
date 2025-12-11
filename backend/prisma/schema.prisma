@@ -17,8 +17,7 @@ model User {
   password  String
   createdAt DateTime @default(now()) @map("created_at")
   
-  // Future relation for contact sync
-  // customers Customer[]
+  customers Customer[]
 
   @@map("users")
 }
@@ -29,6 +28,8 @@ model Customer {
   phone     String?
   address   String?
   createdAt DateTime @default(now()) @map("created_at")
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
   orders    Order[]
 
   @@map("customers")

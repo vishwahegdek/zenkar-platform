@@ -10,7 +10,8 @@ export default function Autocomplete({
   endpoint, 
   placeholder, 
   displayKey = 'name',
-  subDisplayKey
+  subDisplayKey,
+  onCreate
 }) {
   const [query, setQuery] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
@@ -21,12 +22,16 @@ export default function Autocomplete({
     setQuery(value || '');
   }, [value]);
 
-  const { data: suggestions = [] } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: [endpoint, query],
     queryFn: () => api.get(`${endpoint}?query=${query}`),
     enabled: query.length > 1 && isOpen,
     staleTime: 60000,
   });
+
+  const suggestions = Array.isArray(response) ? response : (response?.data || []);
+  const showCreateOption = onCreate && query.length > 1 && suggestions.length === 0 && !isLoading;
+  const showDropdown = isOpen && (suggestions.length > 0 || showCreateOption);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -54,7 +59,7 @@ export default function Autocomplete({
 
   return (
     <div className="relative" ref={wrapperRef}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
       <input
         type="text"
         className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
@@ -64,8 +69,20 @@ export default function Autocomplete({
         onFocus={() => setIsOpen(true)}
       />
       
-      {isOpen && suggestions.length > 0 && (
+      {showDropdown && (
         <ul className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 max-h-60 overflow-auto py-1 text-sm">
+          {showCreateOption && (
+             <li
+              className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors text-blue-600 font-medium border-b border-gray-50 mb-1"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                  onCreate(query);
+                  setIsOpen(false);
+              }}
+            >
+              + Create "{query}"
+            </li>
+          )}
           {suggestions.map((item) => (
             <li
               key={item.id}

@@ -6,6 +6,7 @@ import { AppModule } from './../src/app.module';
 describe('OrdersSystem (e2e)', () => {
   let app: INestApplication;
   let createdOrderId: number;
+  let authToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -15,6 +16,12 @@ describe('OrdersSystem (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
     await app.init();
+
+    // Login for token
+    const loginRes = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ username: 'admin', password: 'admin123' });
+    authToken = loginRes.body.access_token;
   });
 
   afterAll(async () => {
@@ -43,6 +50,7 @@ describe('OrdersSystem (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .post('/orders')
+      .set('Authorization', `Bearer ${authToken}`)
       .send(orderData)
       .expect(201);
 
@@ -60,6 +68,7 @@ describe('OrdersSystem (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/orders/${createdOrderId}/payments`)
+      .set('Authorization', `Bearer ${authToken}`)
       .send(paymentData)
       .expect(201);
   });
@@ -67,6 +76,7 @@ describe('OrdersSystem (e2e)', () => {
   it('/orders/:id (GET) - Verify Balance', async () => {
     const response = await request(app.getHttpServer())
       .get(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
     // Total: 15000. Advance: 5000 (from create). Payment: 5000. Total Paid: 10000. Balance: 5000.
@@ -84,11 +94,13 @@ describe('OrdersSystem (e2e)', () => {
     // Closing order with 5000 balance should create 5000 discount
     await request(app.getHttpServer())
       .patch(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ status: 'closed' })
       .expect(200);
 
     const response = await request(app.getHttpServer())
       .get(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
     expect(response.body.status).toBe('closed');
@@ -99,6 +111,7 @@ describe('OrdersSystem (e2e)', () => {
   it('/orders/:id (DELETE) - Cleanup', async () => {
     await request(app.getHttpServer())
       .delete(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
   });
 });

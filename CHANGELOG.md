@@ -4,6 +4,33 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
 
+## [v1.4.0] - 2025-12-11 (Customer Search & UX)
+### 👥 Customer Experience
+- **Strict Selection**: Enforced strict customer selection in `OrderForm` (No more manual text entry).
+- **Search UI**: Cleaner Interface - Removed "Customer Name" label, improved dropdown with Name + Address.
+- **Locked Card**: Selected customer appears in a read-only card with "Edit" and "Change" actions.
+- **Contact Sync**: Instant mapping of Customer Phone/Address to the Locked Card upon selection.
+- **Edit Modal**: Unified "Edit Customer" experience via modal from both Order Form and Details page.
+
+### 🛍️ Product Experience
+- **Modal Integration**: `ProductForm` now supports `onSuccess` and `initialData` for seamless use within modals.
+- **Feedback**: Added Toast notifications for creation/updates.
+- **Accessibility**: Added unique IDs to input fields for better testing and accessibility.
+
+### ☁️ Google Integration (Foundation)
+- **Auth Strategy**: Added `GoogleStrategy` scaffolding for OAuth2.
+- **Schema**: Added `user_id` relation to `Customer` model (Migration: `add_user_customer_relation`) to support user-specific data/contacts.
+
+### 🛠️ Refactor
+- **Order Form**: Removed redundant input fields for Phone/Address (now derived solely from selected customer).
+- **Auto-Save**: Validation updated to require `customerId` before saving.
+- **Backend API**: Added `SyncPaymentsDto` for strict validation of payment synchronization.
+
+### 🧪 Tests
+- **E2E Stabilization**: Fixed Desktop/Mobile viewport conflicts using `:visible` selectors.
+- **Backend E2E**: Added `customers.e2e-spec.ts` for comprehensive backend testing.
+- **Coverage**: Verified new Customer creation and selection flow.
+
 ## [v1.3.0] - 2025-12-10 (Auth System)
 ### 🔒 Security
 - **Authentication**: Implemented JWT-based authentication for the entire platform.

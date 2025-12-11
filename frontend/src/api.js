@@ -50,7 +50,15 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('API Request Failed');
+    if (!res.ok) {
+      const errorText = await res.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorText || 'API Request Failed');
+      } catch (e) {
+        throw new Error(errorText || 'API Request Failed');
+      }
+    }
     return res.json();
   }
 };

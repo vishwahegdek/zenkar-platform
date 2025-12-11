@@ -2,24 +2,41 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import Modal from '../components/Modal';
+import CustomerForm from './CustomerForm';
 
 export default function OrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isManagePaymentsModalOpen, setIsManagePaymentsModalOpen] = useState(false);
+  const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['orders', id],
     queryFn: () => api.get(`/orders/${id}`),
   });
   
+  // Keep the quick record for convenience if needed, but managing everything via Manage is cleaner
   const paymentMutation = useMutation({
     mutationFn: (data) => api.post(`/orders/${id}/payments`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['orders', id]);
       setIsPaymentModalOpen(false);
     }
+  });
+
+  const managePaymentsMutation = useMutation({
+     mutationFn: (payments) => api.patch(`/orders/${id}/payments`, { payments }),
+     onSuccess: () => {
+        queryClient.invalidateQueries(['orders', id]);
+        setIsManagePaymentsModalOpen(false);
+     },
+     onError: (error) => {
+        console.error("Payment Save Failed:", error);
+        alert(`Failed to save payments: ${error.message}`);
+     }
   });
 
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading order details...</div>;
@@ -67,7 +84,14 @@ export default function OrderDetails() {
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* ... Customer ... */}
                 <div>
-                   <h3 className="px-4 md:px-0 text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 mt-4 md:mt-0">Customer</h3>
+                   <div className="flex justify-between items-center mb-3 mt-4 md:mt-0 px-4 md:px-0">
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Customer</h3>
+                      {order.customer && (
+                        <button onClick={() => setIsEditCustomerModalOpen(true)} className="text-xs font-medium text-blue-600 hover:underline">
+                            Edit
+                        </button>
+                      )}
+                   </div>
                    <div className="bg-gray-50 p-4 rounded-none md:rounded-lg border-y md:border border-gray-100 space-y-1 text-sm">
                       <div className="font-medium text-gray-900 text-base">{order.customer?.name}</div>
                       <div className="text-gray-600">{order.customer?.address || 'No Address'}</div>
@@ -90,16 +114,21 @@ export default function OrderDetails() {
                    </div>
 
                    {/* Payments List */}
-                   <h3 className="px-4 md:px-0 text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 mt-6">Payments</h3>
+                   <div className="flex justify-between items-center mb-3 mt-6 px-4 md:px-0">
+                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payments</h3>
+                       <button onClick={() => setIsManagePaymentsModalOpen(true)} className="text-xs font-medium text-blue-600 hover:underline">
+                          Edit
+                       </button>
+                   </div>
                    <div className="bg-gray-50 rounded-none md:rounded-lg border-y md:border border-gray-100 overflow-hidden text-sm">
                       {order.payments && order.payments.length > 0 ? (
                         <div className="divide-y divide-gray-200">
                           {order.payments.map(p => (
                              <div key={p.id} className="p-3 flex justify-between items-center bg-white/50">
                                 <div>
-                                   <div className="font-medium text-gray-900">₹{Number(p.amount).toLocaleString()}</div>
                                    <div className="text-xs text-gray-500">{new Date(p.date).toLocaleDateString()} {p.note ? `• ${p.note}` : ''}</div>
                                 </div>
+                                <div className="font-medium text-gray-900">₹{Number(p.amount).toLocaleString()}</div>
                              </div>
                           ))}
                           <div className="p-3 bg-gray-100 flex justify-between font-bold border-t border-gray-200">
@@ -166,7 +195,7 @@ export default function OrderDetails() {
           </div>
       </div>
       
-      {/* Payment Modal */}
+      {/* Payment Modal (Record) */}
       {isPaymentModalOpen && (
         <PaymentModal 
            onClose={() => setIsPaymentModalOpen(false)} 
@@ -174,11 +203,44 @@ export default function OrderDetails() {
            isLoading={paymentMutation.isPending}
         />
       )}
+
+      {/* Manage Payments Modal (Edit All) */}
+      {isManagePaymentsModalOpen && (
+        <ManagePaymentsModal
+           payments={order.payments} 
+           onClose={() => setIsManagePaymentsModalOpen(false)} 
+           onSubmit={managePaymentsMutation.mutate}
+           isLoading={managePaymentsMutation.isPending}
+           error={managePaymentsMutation.error}
+        />
+      )}
+
+      <Modal
+        isOpen={isEditCustomerModalOpen}
+        onClose={() => setIsEditCustomerModalOpen(false)}
+        title="Edit Customer Details"
+      >
+        <div className="p-4">
+           {order.customer && (
+             <CustomerForm 
+                isModal={true}
+                id={order.customer.id} // Pass ID to override URL params
+                onSuccess={() => {
+                   queryClient.invalidateQueries(['orders', id]); // Reload order to show updated customer info
+                   setIsEditCustomerModalOpen(false);
+                }}
+             />
+           )}
+        </div>
+      </Modal>
     </div>
   );
 }
 
 function PaymentModal({ onClose, onSubmit, isLoading }) {
+  // Keeping this for "Record Payment" quick action if needed, 
+  // but User asked for "Edit Payments" dialog to edit all. 
+  // I will implement ManagePaymentsModal below and use that for the 'Edit' action.
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
@@ -193,6 +255,7 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
           <h2 className="text-lg font-bold text-gray-900">Record Payment</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
+             {/* ... (keep existing fields) ... */}
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
                 <input 
@@ -235,6 +298,122 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
                 </button>
              </div>
           </form>
+       </div>
+    </div>
+  );
+}
+
+function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, error }) {
+  const [items, setItems] = useState(payments.map(p => ({
+     id: p.id,
+     amount: p.amount,
+     date: p.date ? new Date(p.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+     note: p.note || ''
+  })));
+
+  const addRow = () => {
+      setItems([...items, { amount: '', date: new Date().toISOString().split('T')[0], note: '' }]);
+  };
+
+  const removeRow = (index) => {
+      setItems(items.filter((_, i) => i !== index));
+  };
+
+  const updateRow = (index, field, val) => {
+      const newItems = [...items];
+      newItems[index] = { ...newItems[index], [field]: val };
+      setItems(newItems);
+  };
+
+  const handleSubmit = (e) => {
+      e.preventDefault();
+      // Filter out empty rows? Or validate?
+      // Assuming valid inputs or basic required check
+      const validItems = items.filter(i => i.amount).map(i => ({
+        ...i,
+        amount: Number(i.amount)
+      }));
+      onSubmit(validItems);
+  };
+
+  const total = items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 md:p-4 z-50">
+       <div className="bg-white rounded-xl shadow-xl p-3 md:p-6 w-full max-w-2xl space-y-4 max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-center">
+             <h2 className="text-lg font-bold text-gray-900">Manage Payments</h2>
+             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto min-h-0 border rounded-lg">
+             <table className="w-full text-sm text-left">
+                <thead className="bg-gray-50 text-gray-500 font-medium sticky top-0">
+                   <tr>
+                      <th className="px-1 md:px-3 py-2 w-28 md:w-32">Date</th>
+                      <th className="px-1 md:px-3 py-2 w-20 md:w-24 text-right">Amount</th>
+                      <th className="px-1 md:px-3 py-2">Note</th>
+                      <th className="px-1 py-2 w-8"></th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                   {items.map((item, idx) => (
+                      <tr key={idx}>
+                         <td className="p-1 md:p-2">
+                             <input type="date" className="input-field py-1 px-1 text-xs w-full" 
+                                value={item.date}
+                                onChange={e => updateRow(idx, 'date', e.target.value)}
+                             />
+                         </td>
+                         <td className="p-1 md:p-2">
+                             <input type="number" className="input-field py-1 px-1 text-xs text-right w-full" 
+                                value={item.amount}
+                                onChange={e => updateRow(idx, 'amount', e.target.value)}
+                                placeholder="0"
+                             />
+                         </td>
+                         <td className="p-1 md:p-2">
+                             <input type="text" className="input-field py-1 px-2 text-xs w-full" 
+                                value={item.note}
+                                onChange={e => updateRow(idx, 'note', e.target.value)}
+                                placeholder="Note"
+                             />
+                         </td>
+                         <td className="p-1 md:p-2 text-center">
+                             <button onClick={() => removeRow(idx)} className="text-gray-400 hover:text-red-500">×</button>
+                         </td>
+                      </tr>
+                   ))}
+                   {items.length === 0 && (
+                       <tr><td colSpan={4} className="p-4 text-center text-gray-400 italic">No payments</td></tr>
+                   )}
+                </tbody>
+             </table>
+          </div>
+
+          <button onClick={addRow} type="button" className="w-full py-2 text-sm text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50">
+             + Add Payment
+          </button>
+
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
+              Save Failed: {error.message || 'Unknown Error'}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+             <div className="font-bold text-gray-900">Total: ₹{total.toLocaleString()}</div>
+             <div className="flex gap-3">
+                <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium">Cancel</button>
+                <button 
+                   onClick={handleSubmit} 
+                   disabled={isLoading}
+                   className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+                >
+                   {isLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+             </div>
+          </div>
        </div>
     </div>
   );

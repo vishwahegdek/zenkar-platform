@@ -13,8 +13,12 @@ export class CustomersController {
   }
 
   @Get()
-  findAll(@Query('query') query: string) {
-    return this.customersService.findAll(query);
+  findAll(
+    @Query('query') query: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.customersService.findAll(query, page, limit);
   }
 
   @Get(':id')

@@ -2,17 +2,24 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Product Management Flow', () => {
 
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Username').fill('admin');
+    await page.getByLabel('Password').fill('admin123');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page).toHaveURL(/\/orders/);
+  });
+
   const productName = 'Test Product ' + Date.now();
   const productPrice = '1500';
   const productNotes = 'This is a test product note.';
 
   test('Create, Search, and Edit Product', async ({ page }) => {
-    // 1. Navigate to Products Page
+    // 1. Navigate to Products
     await page.goto('/products');
-    await expect(page).toHaveURL(/.*\/products/);
+    await page.locator('a[href="/products/new"]:visible').click();
 
-    // 2. Click New Product
-    await page.locator('a[href="/products/new"]').click();
+
     await expect(page.locator('h1')).toContainText('New Product');
 
     // 3. Fill Form

@@ -60,3 +60,10 @@ Future enhancements for the Zenkar Platform.
 - [ ] **Infrastructure**
     - [ ] **Telegram Bot Integration**: For notifications and server control (deploy/restart)through commands.
     - [x] **Schema Documentation**: maintaned in `backend/SCHEMA_CHANGELOG.md` and `backend/prisma/schema.prisma`.
+
+## ☁️ Google Integration
+- [ ] **Google Auth**: Finalize OAuth2 login strategy (Passport strategy configured).
+- [ ] **Contact Sync**: Two-way sync between Zenkar Customers and Google Contacts.
+- [ ] **Drive Backup**: Automated database backups to Google Drive.
+## 🧪 Quality Assurance
+- [ ] **Test Stability**: Enhance E2E tests with `data-testid` attributes to decouple testing logic from UI label text, ensuring long-term resilience against UI refactors.

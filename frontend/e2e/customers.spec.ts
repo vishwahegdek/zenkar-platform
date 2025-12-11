@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Customer Management Flow', () => {
 
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Username').fill('admin');
+    await page.getByLabel('Password').fill('admin123');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page).toHaveURL(/\/orders/);
+  });
+
   const customerName = 'Test Customer ' + Date.now();
   const customerPhone = '9876543210';
   const customerAddress = '123 Test St, Test City';
@@ -14,7 +22,7 @@ test.describe('Customer Management Flow', () => {
     // 2. Click New Customer
     // Handling mobile/desktop view - "New Customer" text might be hidden on mobile but the link is there.
     // The "New Customer" text is inside a span hidden on mobile, but there's a mobile FAB too.
-    // We can target the link with href="/customers/new"
+    // We use :visible to ensure we click the one active for the current viewport (Mobile vs Desktop)
     await page.locator('a[href="/customers/new"]:visible').click();
     
     // 3. Fill Form
@@ -34,6 +42,7 @@ test.describe('Customer Management Flow', () => {
     await page.fill('input[placeholder="Search customers..."]', customerName);
     
     // Wait for the list to filter
+    await expect(page.locator('text=Loading...')).toBeHidden();
     await expect(page.locator('body')).toContainText(customerName);
     
     // Verify details in the card/list
