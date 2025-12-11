@@ -53,3 +53,4 @@ This document serves as the **Single Source of Truth** for the deployment archit
 1.  **NEVER** delete `~/zenkar-platform-production/pgdata`. This is the production database.
 2.  **NEVER** run `docker-compose down -v` in Production (it deletes volumes).
 3.  **ALWAYS** check which folder you are in (`pwd`) before running docker commands.
+4.  **NEVER** hardcode secrets (API Keys, DB Passwords) in `docker-compose.yml`. Always use `.env` files and SCP the local `.env` to the server location relative to the compose file (e.g. `deploy/staging/.env`).
