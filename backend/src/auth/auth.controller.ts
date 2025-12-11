@@ -1,10 +1,12 @@
 
 import { Controller, Request, Post, UseGuards, Body, UnauthorizedException, Get, Query, Res } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CustomersService } from '../customers/customers.service';
 import { AuthService } from './auth.service';
 import { Public } from './public.decorator';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -14,6 +16,9 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @ApiOperation({ summary: 'Login with username/password (Basic)' })
+  @ApiResponse({ status: 200, description: 'JWT access token' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: any) {
     // Manually validating for now to keep it simple, or we could use LocalStrategy
     // But since the plan didn't explicitly mention LocalStrategy, I'll use AuthService.validateUser directly here 
@@ -30,6 +35,8 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google')
+  @ApiOperation({ summary: 'Initiate Google OAuth flow' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Optional User ID to bind to' })
   async googleAuth(@Request() req, @Query('userId') userId: string) {
     // Initiates the Google OAuth flow
   }
@@ -37,6 +44,7 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth Callback URL' })
   async googleAuthRedirect(@Request() req, @Res() res) {
     // req.user contains the user info and accessToken from strategy
     // We expect the 'state' or 'userId' to be passed through, 

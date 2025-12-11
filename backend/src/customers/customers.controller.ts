@@ -2,17 +2,26 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
+@ApiTags('customers')
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new customer' })
+  @ApiResponse({ status: 201, description: 'The customer has been successfully created.' })
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customersService.create(createCustomerDto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'Retrieve all customers with pagination' })
+  @ApiQuery({ name: 'query', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Paginated list of customers.' })
   findAll(
     @Query('query') query: string,
     @Query('page') page: number = 1,
@@ -22,16 +31,23 @@ export class CustomersController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Retrieve a specific customer by ID' })
+  @ApiResponse({ status: 200, description: 'The customer details.' })
+  @ApiResponse({ status: 404, description: 'Customer not found.' })
   findOne(@Param('id') id: string) {
     return this.customersService.findOne(+id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a customer' })
+  @ApiResponse({ status: 200, description: 'The updated customer.' })
   update(@Param('id') id: string, @Body() updateCustomerDto: UpdateCustomerDto) {
     return this.customersService.update(+id, updateCustomerDto);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a customer' })
+  @ApiResponse({ status: 200, description: 'Customer successfully deleted.' })
   remove(@Param('id') id: string) {
     return this.customersService.remove(+id);
   }

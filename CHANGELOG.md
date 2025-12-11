@@ -4,6 +4,8 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
 
+
+## Released Versions
 ## [v1.4.0] - 2025-12-11 (Customer Search & UX)
 ### 👥 Customer Experience
 - **Strict Selection**: Enforced strict customer selection in `OrderForm` (No more manual text entry).
