@@ -12,9 +12,9 @@ services:
       - "3000:3000" # Demo Backend on 3000 (Internal & Host)
     depends_on:
       - db
+    env_file: .env
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
-      GOOGLE_CALLBACK_URL: "https://orderdemo.zenkar.in/api/auth/google/callback"
     networks:
       - zenkar-network-demo
 
