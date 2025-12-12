@@ -164,7 +164,7 @@ export default function QuickSale() {
             status: 'closed', // Automatically closed
             orderDate: new Date().toISOString(),
             totalAmount: calculateTotal(),
-            totalAmount: calculateTotal(),
+
             // Logic for payments:
             // If Due -> payments = [] (balance remains)
             // If Custom -> payments = customPayments
