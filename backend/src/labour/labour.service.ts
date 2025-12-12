@@ -6,10 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LabourService {
   constructor(private prisma: PrismaService) {}
 
-  async getDailyView(userId: number, date: Date) {
+  async getDailyView(date: Date) {
     // 1. Get all labourers (Active only)
     const labourers = await this.prisma.labourer.findMany({
-      where: { userId, isDeleted: false },
+      where: { isDeleted: false },
       orderBy: { name: 'asc' },
     });
 
@@ -101,7 +101,7 @@ export class LabourService {
                 amount: update.amount,
                 date: date,
                 description: 'Daily Labour Wage',
-                createdById: userId
+                // createdById: userId // Optional: could still track who created it if passed in updates
               } as any
             });
           }
@@ -115,8 +115,8 @@ export class LabourService {
     return { success: true };
   }
 
-  async getReport(userId: number, from?: string, to?: string, labourerId?: number) {
-    const where: any = { userId, isDeleted: false };
+  async getReport(from?: string, to?: string, labourerId?: number) {
+    const where: any = { isDeleted: false };
     if (labourerId) {
         where.id = labourerId;
     }
@@ -195,19 +195,19 @@ export class LabourService {
     return reportData;
   }
 
-  async createLabourer(userId: number, data: { name: string; defaultDailyWage: number }) {
+  async createLabourer(data: { name: string; defaultDailyWage: number }) {
       return this.prisma.labourer.create({
           data: {
-              userId,
+              // userId,
               name: data.name,
               defaultDailyWage: data.defaultDailyWage
           }
       });
   }
 
-  async updateLabourer(userId: number, id: number, data: { name: string; defaultDailyWage: number }) {
-      // Ensure specific user owns it
-      const existing = await this.prisma.labourer.findFirst({ where: { id, userId } });
+  async updateLabourer(id: number, data: { name: string; defaultDailyWage: number }) {
+      // Ensure specific user owns it - REMOVED for shared access
+      const existing = await this.prisma.labourer.findFirst({ where: { id } });
       if (!existing) throw new Error("Labourer not found");
 
       return this.prisma.labourer.update({
@@ -219,8 +219,8 @@ export class LabourService {
       });
   }
 
-  async deleteLabourer(userId: number, id: number) {
-      const existing = await this.prisma.labourer.findFirst({ where: { id, userId } });
+  async deleteLabourer(id: number) {
+      const existing = await this.prisma.labourer.findFirst({ where: { id } });
       if (!existing) throw new Error("Labourer not found");
 
       // Soft Delete

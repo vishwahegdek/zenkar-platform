@@ -61,13 +61,13 @@ async function migrateData() {
 
       // 3a. Create/Find Labourer
       let labourer = await prisma.labourer.findFirst({
-        where: { userId: user.id, name: name }
+        where: { name: name }
       });
 
       if (!labourer) {
         labourer = await prisma.labourer.create({
           data: {
-            userId: user.id,
+            // userId: user.id, // Removed for shared access
             name: name,
             defaultDailyWage: emp.salary || 0,
             isDeleted: emp.active === false // Map active status

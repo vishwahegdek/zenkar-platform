@@ -19,7 +19,7 @@ model User {
   
   customers Customer[]
   contacts  Contact[] // Relation - user can own contacts
-  labourers Labourer[]
+  // labourers Labourer[] // Removed for shared access
   recipients Recipient[]
   auditLogs AuditLog[]
 
@@ -212,13 +212,13 @@ model Recipient {
 
 model Labourer {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  // userId    Int?     @map("user_id") // Removed for shared access
   name      String
   defaultDailyWage Decimal? @map("default_daily_wage") @db.Decimal(12, 2)
   isDeleted Boolean  @default(false) @map("is_deleted")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user      User?    @relation(fields: [userId], references: [id])
+  // userId    Int?     @map("user_id") // Removed for shared access
   attendance Attendance[]
   expenses   Expense[]
 

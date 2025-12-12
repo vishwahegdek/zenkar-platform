@@ -18,7 +18,7 @@ export class LabourController {
   @ApiOperation({ summary: 'Get daily labour view' })
   @ApiQuery({ name: 'date', required: false, type: Date })
   getDailyView(@Request() req, @Query('date') date: string) {
-    return this.labourService.getDailyView(req.user.userId, new Date(date || new Date()));
+    return this.labourService.getDailyView(new Date(date || new Date()));
   }
 
   @Post('daily')
@@ -28,12 +28,12 @@ export class LabourController {
 
   @Get('report')
   getReport(@Request() req, @Query('from') from?: string, @Query('to') to?: string, @Query('labourerId') labourerId?: string) {
-    return this.labourService.getReport(req.user.userId, from, to, labourerId ? Number(labourerId) : undefined);
+    return this.labourService.getReport(from, to, labourerId ? Number(labourerId) : undefined);
   }
 
   @Post()
   create(@Request() req, @Body() body: CreateLabourerDto) {
-      return this.labourService.createLabourer(req.user.userId, body);
+      return this.labourService.createLabourer(body);
   }
 
   @Get() 
@@ -44,16 +44,16 @@ export class LabourController {
       // Ideally separate method, but for speed let's just use getReport or add findAll in service.
       // Actually, LabourManage calls /contacts currently. We need to redirect it to /labour.
       // Let's add simple list method.
-      return this.labourService.getReport(req.user.userId); // Report returns list with details, heavy but works.
+      return this.labourService.getReport(); // Report returns list with details, heavy but works.
   }
 
   @Post(':id') // Using POST for update to avoid PATCH complexity/CORS sometimes
   update(@Request() req, @Param('id') id: string, @Body() body: CreateLabourerDto) {
-      return this.labourService.updateLabourer(req.user.userId, Number(id), body);
+      return this.labourService.updateLabourer(Number(id), body);
   }
 
   @Delete(':id')
   delete(@Request() req, @Param('id') id: string) {
-      return this.labourService.deleteLabourer(req.user.userId, Number(id));
+      return this.labourService.deleteLabourer(Number(id));
   }
 }
