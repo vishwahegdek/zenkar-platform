@@ -39,7 +39,7 @@ echo "📂 Project Dir: $PROJECT_DIR"
 echo "📥 Pulling latest code..."
 cd $PROJECT_DIR
 git fetch --all
-git reset --hard origin/deploy/staging-products # Assuming this is the deployment branch for now
+git reset --hard origin/master # Updated to use master
 
 # 2. Database Backup
 echo "💾 Creating Database Backup..."

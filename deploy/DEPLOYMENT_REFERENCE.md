@@ -13,7 +13,7 @@ This document serves as the **Single Source of Truth** for the deployment archit
 | **Server Path** | `~/zenkar-staging` | `~/zenkar-platform-production` |
 | **Data Volume** | `~/zenkar-staging/pgdata_demo` | `~/zenkar-platform-production/pgdata` (**REAL DATA**) |
 | **Compose File** | `deploy/staging/docker-compose.yml` | `deploy/production/docker-compose.yml` |
-| **Git Branch** | `deploy/staging-products` | `deploy/staging-products` |
+| **Git Branch** | `master` | `master` |
 
 ---
 
@@ -38,12 +38,12 @@ This document serves as the **Single Source of Truth** for the deployment archit
 ## 🔄 Deployment Workflows
 
 ### Deploying to Staging
-1.  **Code**: Push to `deploy/staging-products`.
+1.  **Code**: Push to `master`.
 2.  **Server**: SSH and `cd ~/zenkar-staging`.
 3.  **Command**: `git pull && docker-compose -f deploy/staging/docker-compose.yml up -d --build`
 
 ### Deploying to Production
-1.  **Code**: Push to `deploy/staging-products`.
+1.  **Code**: Push to `master`.
 2.  **Server**: SSH and `cd ~/zenkar-platform-production`.
 3.  **Command**: `git pull && docker-compose -f deploy/production/docker-compose.yml up -d --build`
 
