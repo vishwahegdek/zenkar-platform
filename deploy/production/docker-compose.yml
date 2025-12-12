@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
+    image: vishwahegdek/zenkar-backend:production
     container_name: zenkar-backend-prod
     restart: always
     ports:
@@ -16,9 +14,7 @@ services:
       - zenkar-network
 
   frontend:
-    build:
-      context: ../../
-      dockerfile: frontend/Dockerfile
+    image: vishwahegdek/zenkar-frontend:production
     container_name: zenkar-frontend-prod
     restart: always
     ports:

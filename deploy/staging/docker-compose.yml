@@ -2,10 +2,7 @@ services:
 
 
   backend:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
-    image: zenkar-backend:staging
+    image: vishwahegdek/zenkar-backend:staging
     container_name: zenkar-backend-demo
     restart: always
     ports:
@@ -19,10 +16,7 @@ services:
       - zenkar-network-demo
 
   frontend:
-    build:
-      context: ../../
-      dockerfile: frontend/Dockerfile
-    image: zenkar-frontend:staging
+    image: vishwahegdek/zenkar-frontend:staging
     container_name: zenkar-frontend-demo
     restart: always
     ports:

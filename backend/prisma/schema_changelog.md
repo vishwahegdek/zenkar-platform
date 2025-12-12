@@ -1,6 +1,6 @@
 # Schema Deployed Changes
 **Previous Version**: `v1.4.1`
-**Comparison**: `v1.4.1` vs `HEAD` (Current)
+**Comparison**: `v1.4.1` vs `v1.5.0`
 
 ## Changes Analysis
 The following changes have been applied since the last deployment (`v1.4.1`). These reflect the new features for **Auditing**, **Contact/User Relations**, and **Labour Module**.
