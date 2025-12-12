@@ -16,7 +16,9 @@ export default function QuickSale() {
 
   // Default to Walk-In, but allow changing
   // We don't have the ID yet, backend will handle "Walk-In" creation if name matches or we can just send name
-  const [customer, setCustomer] = useState({ name: 'Walk-In', id: null });
+  // Default to Walk-In, but allow changing
+  // We don't have the ID yet, backend will handle "Walk-In" creation if name matches or we can just send name
+  const [customer, setCustomer] = useState({ name: 'Walk-In', id: null, phone: '' });
   
   const [items, setItems] = useState([
     { productName: '', description: '', quantity: 1, unitPrice: 0, lineTotal: 0 }
@@ -156,6 +158,7 @@ export default function QuickSale() {
         const payload = {
             customerId: customer.id || 0, // 0 triggers new customer logic if needed, but we rely on isQuickSale + name
             customerName: customer.name,
+            customerPhone: customer.phone, // Send phone for creation from contact
             contactId: customer.contactId, // Pass contactId for linking
             isQuickSale: true,
             status: 'closed', // Automatically closed
@@ -230,6 +233,7 @@ export default function QuickSale() {
                <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-100">
                    <div>
                        <span className="text-lg font-bold text-blue-900">{customer.name}</span>
+                       <span className="block text-sm text-blue-700">{customer.phone}</span>
                        {customer.name === 'Walk-In' && <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">Default</span>}
                    </div>
                    <button 
@@ -245,20 +249,25 @@ export default function QuickSale() {
                      type="customer"
                      autoFocus={true}
                      initialValue={customer.name === 'Walk-In' ? '' : customer.name} // Don't prepopulate Walk-In if searching
-                     onSelect={(cust) => {
-                         if (cust.source === 'new') {
-                             setTempCustomerName(cust.name);
-                             window.location.hash = 'new-customer';
-                         } else {
-                             setCustomer({ 
-                                 name: cust.name, 
-                                 id: cust.id, 
-                                 contactId: cust.contactId, 
-                                 source: cust.source
-                             });
-                             setIsCustomerInvalid(false);
-                         }
-                     }}
+                      onSelect={(cust) => {
+                          console.log('QuickSale: onSelect triggered', cust);
+                          if (cust.source === 'new') {
+                              console.log('QuickSale: Opening New Customer Modal');
+                              setTempCustomerName(cust.name);
+                              window.location.hash = 'new-customer';
+                              setIsCustomerModalOpen(true);
+                          } else {
+                              console.log('QuickSale: Customer Selected', cust);
+                              setCustomer({ 
+                                  name: cust.name, 
+                                  id: cust.id, 
+                                  contactId: cust.contactId, 
+                                  phone: cust.phone,
+                                  source: cust.source
+                              });
+                              setIsCustomerInvalid(false);
+                          }
+                      }}
                  />
             )}
          </div>
@@ -315,6 +324,7 @@ export default function QuickSale() {
                                    setTempProductName(name);
                                    setActiveProductRowIndex(idx);
                                    window.location.hash = 'new-product';
+                                   setIsProductModalOpen(true); // Explicitly open
                                 }}
                                 onSelect={(p) => handleProductSelect(idx, p)}
                             />
@@ -332,6 +342,7 @@ export default function QuickSale() {
                           <div className="md:col-span-1">
                              <label className="md:hidden text-xs font-bold text-gray-500">Qty</label>
                              <input type="number" className="input-field text-center"
+                                aria-label="Quantity"
                                 value={item.quantity}
                                 onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
                              />
@@ -339,6 +350,7 @@ export default function QuickSale() {
                           <div className="md:col-span-2">
                              <label className="md:hidden text-xs font-bold text-gray-500">Price</label>
                              <input type="number" className="input-field text-right"
+                                aria-label="Price"
                                 value={item.unitPrice}
                                 onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                              />

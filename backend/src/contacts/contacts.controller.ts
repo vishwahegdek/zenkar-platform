@@ -1,5 +1,6 @@
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ContactsService } from './contacts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -21,8 +22,12 @@ export class ContactsController {
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.contactsService.findAll(req.user.userId);
+  @ApiQuery({ name: 'userId', required: false })
+  findAll(@Request() req, @Query('userId') userId?: string) {
+    // If userId query param provided, use it. Else return all (pass undefined).
+    // Note: req.user.userId is still available if we wanted to enforce default to "My Contacts" but allow "All".
+    // Instruction says "every user can access all contacts", implies default might be All.
+    return this.contactsService.findAll(userId ? Number(userId) : undefined);
   }
 
   @Patch(':id')

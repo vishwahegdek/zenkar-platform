@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import Modal from '../components/Modal';
 import Autocomplete from '../components/Autocomplete';
+import SmartSelector from '../components/SmartSelector';
 import CustomerForm from './CustomerForm';
 import ProductForm from './ProductForm';
 import { toast } from 'react-hot-toast';
@@ -47,6 +48,7 @@ export default function OrderForm() {
 
   const [formData, setFormData] = useState({
     customerId: null,
+    contactId: null, // Add contactId for linking
     customerName: '',
     customerPhone: '',
     customerAddress: '',
@@ -107,7 +109,8 @@ export default function OrderForm() {
 
   // Generic Save Function
   const saveOrder = async (data) => {
-    if (!data.customerId) {
+    // Allow 0 for contact-based creation
+    if (data.customerId === null || data.customerId === undefined) {
         return toast.error("Please select a customer before saving.");
     }
     // Validate Product IDs (Strict Selection)
@@ -119,6 +122,7 @@ export default function OrderForm() {
     const payload = {
       ...data,
       customerId: Number(data.customerId) || 0,
+      contactId: data.contactId, // Include in payload
       customerPhone: data.customerPhone || '',
       customerAddress: data.customerAddress || '',
       orderDate: data.orderDate ? new Date(data.orderDate).toISOString() : new Date().toISOString(),
@@ -242,7 +246,7 @@ export default function OrderForm() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-6">
         {/* Customer Card */}
         <div className="md:col-span-2 bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-y md:border border-gray-200 space-y-4">
-          {formData.customerId ? (
+          {formData.customerId !== null ? (
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
                 <div className="flex justify-between items-start">
                     <div>
@@ -276,28 +280,27 @@ export default function OrderForm() {
             </div>
           ) : (
             <div>
-                <Autocomplete 
-                    endpoint="/customers"
+                <SmartSelector 
+                    label="Customer"
+                    type="customer"
                     autoFocus={true}
-                    placeholder="Search customer..."
-                    value={formData.customerName}
-                    onChange={(val) => {
-                        setFormData({...formData, customerName: val, customerId: null});
-                    }} 
-                    onCreate={(name) => {
-                        setTempCustomerName(name);
-                        window.location.hash = 'new-customer';
+                    initialValue={formData.customerName}
+                    onSelect={(cust) => {
+                         if (cust.source === 'new') {
+                             setTempCustomerName(cust.name);
+                             window.location.hash = 'new-customer';
+                             setIsCustomerModalOpen(true);
+                         } else {
+                             setFormData({
+                                 ...formData, 
+                                 customerId: cust.id || 0, // 0 for contacts to trigger creation
+                                 contactId: cust.contactId,
+                                 customerName: cust.name,
+                                 customerPhone: cust.phone || '',
+                                 customerAddress: cust.address || ''
+                             });
+                         }
                     }}
-                    onSelect={(customer) => {
-                        setFormData({
-                        ...formData, 
-                        customerId: customer.id, 
-                        customerName: customer.name,
-                        customerPhone: customer.phone || '',
-                        customerAddress: customer.address || ''
-                        });
-                    }}
-                    subDisplayKey="address"
                 />
             </div>
           )}

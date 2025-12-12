@@ -11,16 +11,24 @@ test.describe('Quick Sale Flow', () => {
     await page.goto('/quick-sale');
   });
 
-  test('Perform Quick Sale (Walk-In)', async ({ page, request }) => {
+  test('Perform Quick Sale (Walk-In)', async ({ page }) => {
     // 0. Pre-requisite: Create a known product via API to ensure it exists
+    // Use page.request to share auth state from UI login
+    // Retrieve token from localStorage (set during login)
+    const token = await page.evaluate(() => localStorage.getItem('token'));
+    
     const testProductName = 'Test Sale Product ' + Date.now();
-    await request.post('/api/products', {
+    const createRes = await page.request.post('/api/products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       data: {
         name: testProductName,
         defaultUnitPrice: 500,
         notes: 'E2E Test Product'
       }
     });
+    expect(createRes.ok()).toBeTruthy();
 
     // 1. Verify Default State
     await expect(page.locator('h1')).toContainText('Quick Sale');
@@ -35,14 +43,18 @@ test.describe('Quick Sale Flow', () => {
     // Wait for the search request to complete explicitly
     await page.waitForResponse(resp => resp.url().includes('/products?query=') && resp.status() === 200);
     
-    // Select the existing product from list
-    await page.click(`li:has-text("${testProductName}")`);
+    // Wait for list item to be visible and stable
+    // Ensure we select the actual product, not the "Create" option
+    const productOption = page.locator('li').filter({ hasText: testProductName }).filter({ hasNotText: 'Create' });
+    await expect(productOption).toBeVisible();
+    await page.waitForTimeout(500); // Debounce stability
+    await productOption.click();
     
     // Auto-filled price should be 500
-    await expect(page.locator('input[className*="text-right"]').first()).toHaveValue('500');
+    await expect(page.getByLabel('Price').first()).toHaveValue('500');
 
     // 3. Update Quantity
-    const qtyInput = page.locator('input[type="number"]').first(); // Qty is first number input in row
+    const qtyInput = page.getByLabel('Quantity').first(); // Qty is first number input in row
     await qtyInput.fill('2');
 
     // 4. Verify Total
@@ -57,30 +69,33 @@ test.describe('Quick Sale Flow', () => {
     await expect(upiBtn).toHaveClass(/bg-blue-600/);
 
     // 6. Add Internal Note
-    await page.fill('textarea[placeholder="Optional notes..."]', 'E2E Test Note');
+    await page.getByPlaceholder('Add note...').fill('E2E Test Note');
 
     // 7. Complete Sale
     // Desktop button or Mobile FAB
     await page.locator('button:visible').filter({ hasText: /Complete Sale|✓/ }).first().click();
 
     // 8. Verify Success and Redirect
-    await expect(page).toHaveURL(/\/orders$/);
+    await expect(page).toHaveURL(/\/orders/);
     
     // 9. Verify Order in List
+    // Ensure loading is done
+    await expect(page.getByText('Loading orders...')).toBeHidden();
     // Should be "Walk-In"
     await expect(page.locator('body')).toContainText('Walk-In');
     
     // 10. Verify Order Details (Closed status)
     // Click on the matching row
-    await page.locator('tr, div').filter({ hasText: 'Walk-In' }).first().click();
+    // Use visible text match to handle Mobile (first in DOM) vs Desktop (second in DOM, first hidden)
+    await page.locator(':text("Walk-In"):visible').first().click();
     await expect(page).toHaveURL(/\/orders\/\d+/);
     
     // Status should be Closed
     // Note: Quick Sale sets status='closed'
     // Depending on logic, it might not show status dropdown or it might show 'Closed'
     // Let's check for 'Closed' text
-    const statusSelect = page.locator('select').first();
-    await expect(statusSelect).toHaveValue('closed');
+    // Let's check for 'Closed' text (OrderDetails uses a StatusBadge span, not select)
+    await expect(page.locator('span').filter({ hasText: /^closed$/i })).toBeVisible();
     
     // Verify Payment Note
     await expect(page.locator('body')).toContainText('UPI'); // Method stored

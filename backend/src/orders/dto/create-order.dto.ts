@@ -64,8 +64,8 @@ export class CreateOrderDto {
   @ApiProperty({ example: 1000 })
   @IsNumber() totalAmount: number;
 
-  @ApiProperty({ example: 0, description: 'Legacy advance amount field' })
-  @IsNumber() advanceAmount: number;
+  @ApiPropertyOptional({ example: 0, description: 'Legacy advance amount field (Virtual)' })
+  @IsOptional() @IsNumber() advanceAmount?: number;
 
   @ApiPropertyOptional({ example: 'Urgent order' })
   @IsOptional() @IsString() notes?: string;

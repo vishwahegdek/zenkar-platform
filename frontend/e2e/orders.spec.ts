@@ -25,7 +25,9 @@ test.describe('Order Management Flow', () => {
     // 2. Fill Customer Details
     await page.getByPlaceholder('Search customer...').fill(customerName);
     // Click explicit create option -> Opens Modal
-    await page.locator('li', { hasText: `Create "${customerName}"` }).click();
+    // Click explicit create option -> Opens Modal
+    // SmartSelector uses divs, Autocomplete used li
+    await page.getByText(`Create "${customerName}"`).click();
     
     // Check Modal is open
     await expect(page.locator('h3:has-text("Create New Customer")')).toBeVisible();

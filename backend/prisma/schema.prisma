@@ -95,7 +95,6 @@ model Order {
   deliveryDate  DateTime?   @map("delivery_date") @db.Date
   status        String      @default("confirmed") // enquired, confirmed, production, ready, delivered, cancelled
   totalAmount   Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
-  advanceAmount Decimal     @default(0) @map("advance_amount") @db.Decimal(12, 2)
   discount      Decimal     @default(0) @db.Decimal(12, 2)
   notes         String?
   createdAt     DateTime    @default(now()) @map("created_at")
@@ -123,6 +122,7 @@ model Payment {
   date      DateTime @default(now()) @db.Date // Payment date
   note      String?
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -185,6 +185,7 @@ model Contact {
   name      String
   phone     String?
   group     String?  
+  googleId  String?  @map("google_id")
   createdAt DateTime @default(now()) @map("created_at")
 
   user      User?    @relation(fields: [userId], references: [id])
@@ -249,6 +250,7 @@ model Expense {
   date        DateTime @db.Date // Changed to date only
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   category    ExpenseCategory @relation(fields: [categoryId], references: [id])
   recipient   Recipient?      @relation(fields: [recipientId], references: [id])

@@ -19,45 +19,11 @@ export class OrdersService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.migrateAdvanceToPayments();
+    // Migration deprecated
   }
 
-  private async migrateAdvanceToPayments() {
-    // Find orders with advanceAmount > 0 and NO payments
-    const ordersToMigrate = await this.prisma.order.findMany({
-      where: {
-        AND: [
-          { advanceAmount: { gt: 0 } },
-          { payments: { none: {} } }
-        ]
-      }
-    });
+  // Migration function removed as advanceAmount column is deleted
 
-    if (ordersToMigrate.length > 0) {
-      this.logger.log(`Migrating ${ordersToMigrate.length} orders with legacy advanceAmount...`);
-      for (const order of ordersToMigrate) {
-        await this.prisma.$transaction([
-          this.prisma.payment.create({
-            data: {
-              orderId: order.id,
-              amount: order.advanceAmount,
-              date: order.createdAt, // Use creation date for initial advance
-              note: 'Migrated Advance'
-            }
-          }),
-          // Optional: Zero out advanceAmount? 
-          // For safety, we can keep it for now but key logic off payments.
-          // Or zero it to avoid double counting if logic sums both.
-          // Let's zero it to enforce single source of truth.
-          this.prisma.order.update({
-            where: { id: order.id },
-            data: { advanceAmount: 0 }
-          })
-        ]);
-      }
-      this.logger.log('Migration completed.');
-    }
-  }
 
   async create(createOrderDto: CreateOrderDto, userId?: number) {
     const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, paymentMethod, discount, advanceAmount, payments, contactId, isQuickSale, ...rest } = createOrderDto;
@@ -68,8 +34,9 @@ export class OrdersService implements OnModuleInit {
 
     // Capture initial advance if any
     const initialAdvance = advanceAmount ? Number(advanceAmount) : 0;
-    // Set advanceAmount to 0 in DB, create Payment instead
-    if (orderData.advanceAmount) orderData.advanceAmount = 0;
+    
+    // Remove advanceAmount from orderData as it's no longer a column
+    delete orderData.advanceAmount;
 
     const result = await this.prisma.$transaction(async (tx) => {
       let finalCustomerId = createOrderDto.customerId;
@@ -100,7 +67,7 @@ export class OrdersService implements OnModuleInit {
       }
       
       // Clean up orderData to remove fields not in Order model
-      delete orderData.customerId; // We use connect syntax or just ensure it's removed if using stricter types
+      delete orderData.customerId; 
 
       // 2. Process Items
       const processedItems = await this.processItems(items, tx);
@@ -111,7 +78,7 @@ export class OrdersService implements OnModuleInit {
         data: {
           ...orderData,
           createdBy: userId ? { connect: { id: userId } } : undefined,
-          customer: { connect: { id: finalCustomerId } }, // Connect syntax is safer
+          customer: { connect: { id: finalCustomerId } }, 
           isQuickSale: createOrderDto.isQuickSale || false,
           items: {
             create: processedItems.map((item) => ({
@@ -156,7 +123,6 @@ export class OrdersService implements OnModuleInit {
             date: new Date(),
             note: paymentNote,
             createdById: userId,
-            // updatedById: userId // Optional for creation
           }
         });
       }
@@ -252,6 +218,7 @@ export class OrdersService implements OnModuleInit {
     return {
       ...order,
       paidAmount: totalPayments,
+      advanceAmount: totalPayments, // Backward compatibility for Frontend
       remainingBalance: totalAmount - totalPayments - discount
     };
   }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format, addDays, subDays } from 'date-fns';
@@ -108,8 +109,10 @@ export default function Dashboard() {
                         </div>
                         <div className="flex justify-between items-center text-xs text-gray-500 mt-0.5">
                              <div className="flex gap-2">
-                                 <span>#{payment.orderNo || payment.orderId}</span>
-                                 <span>{format(new Date(payment.date), 'hh:mm a')}</span>
+                                 <Link to={`/orders/${payment.orderId}`} className="text-indigo-600 hover:text-indigo-800 font-medium">
+                                    #{payment.orderNo || payment.orderId}
+                                 </Link>
+                                 <span>{format(new Date(payment.timestamp || payment.date), 'hh:mm a')}</span>
                              </div>
                              <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-none
                                 ${payment.method === 'UPI' ? 'bg-purple-50 text-purple-700' : 
@@ -140,11 +143,13 @@ export default function Dashboard() {
                         {payments?.map((payment) => (
                             <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3 text-sm text-gray-600">
-                                    {format(new Date(payment.date), 'dd/MM/yyyy HH:mm')}
+                                    {format(new Date(payment.timestamp || payment.date), 'dd/MM/yyyy HH:mm')}
                                 </td>
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                     {payment.customerName}
-                                    <span className="block text-xs text-gray-400">Order #{payment.orderNo}</span>
+                                    <Link to={`/orders/${payment.orderId}`} className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline mt-0.5">
+                                        Order #{payment.orderNo}
+                                    </Link>
                                 </td>
                                 <td className="px-4 py-3">
                                     <span className={`px-2 py-1 text-xs font-semibold rounded-none 

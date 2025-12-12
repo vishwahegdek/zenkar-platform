@@ -1,26 +1,74 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function ContactsManager() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  
+  // Filter state for Owner
+  const [filterUserId, setFilterUserId] = useState('all');
 
   const { data: contacts, isLoading } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts', filterUserId],
     queryFn: async () => {
-      const res = await api.get('/contacts');
+      // Backend creates contacts with userId, but findAll returns based on userId arg
+      // Since user requirements say "every user can access all contacts", the backend `findAll` 
+      // might need adjustment if it was strictly filtering by `userId`.
+      // Let's assume for now we fetch all and filter client side OR 
+      // we need a new endpoint to fetch ALL contacts if filtering logic dictates.
+      // However, current `ContactsService.findAll` takes `userId` arg. 
+      // If we want everyone to see everything, we might need to modify backend or pass a specal flag?
+      // Or maybe `userId` in `findAll` is just a filter?
+      // Re-reading service: `where: { userId }`. This is strict.
+      // Instructions: "every user can access all the contacts, he should be ablt filter based on owner."
+      // This implies the Default View should probably be "All".
+      // I should update the Backend `findAll` to be looser, or implement search params.
+      
+      // For now, let's keep it simple: If `filterUserId` is 'all', we might miss data if backend restricts.
+      // I will update backend service to handle 'all'.
+      
+      const res = await api.get('/contacts', { params: { userId: filterUserId === 'all' ? undefined : filterUserId } });
       return res;
     }
   });
 
+  const handleImport = () => {
+     if (!user || !user.id) return toast.error("User not found");
+     
+    const width = 500;
+    const height = 600;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    
+    // Pass userId to backend
+    const popup = window.open(
+      `/api/auth/google?userId=${user.id}`,
+      'google_import',
+      `width=${width},height=${height},top=${top},left=${left}`
+    );
+    
+    // Poll to check if popup is closed, then refresh
+    const timer = setInterval(() => {
+        if (popup && popup.closed) {
+            clearInterval(timer);
+            queryClient.invalidateQueries(['contacts']);
+            toast.success('Import check complete.');
+        }
+    }, 1000);
+  };
+
   const mutation = useMutation({
-    mutationFn: (data) => api.post('/contacts', data),
+    mutationFn: (data) => api.post('/contacts', { ...data, userId: user?.id }), // Ensure explicit ownership on manual create too
     onSuccess: () => {
       queryClient.invalidateQueries(['contacts']);
       reset();
+      toast.success('Contact added');
     }
   });
 
@@ -29,6 +77,7 @@ export default function ContactsManager() {
     mutationFn: (id) => api.delete(`/contacts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(['contacts']);
+      toast.success('Contact deleted');
     }
   });
 
@@ -37,8 +86,16 @@ export default function ContactsManager() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">My Contacts</h1>
+    <div className="max-w-6xl mx-auto p-4 md:p-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">My Contacts</h1>
+        <button 
+           onClick={handleImport}
+           className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 flex items-center gap-2 shadow-sm"
+        >
+           <span className="text-xl">☁️</span> Sync from Google
+        </button>
+      </div>
       
       <div className="grid md:grid-cols-3 gap-6">
         {/* Form Section */}
@@ -99,6 +156,7 @@ export default function ContactsManager() {
                       <div className="text-sm text-gray-500 flex gap-2">
                         {contact.phone && <span>📞 {contact.phone}</span>}
                         {contact.group && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs text-gray-600">{contact.group}</span>}
+                        {contact.user?.username && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">Owner: {contact.user.username}</span>}
                       </div>
                     </div>
                     <button 

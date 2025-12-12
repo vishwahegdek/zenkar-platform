@@ -65,11 +65,9 @@ describe('LabourSystem (e2e)', () => {
         date: today,
         updates: [
           {
-            labourerId: createdLabourerId,
-            isPresent: true,
-            wage: 500,
-            paid: 0,
-            notes: 'Present'
+            contactId: createdLabourerId,
+            attendance: 1,
+            amount: 500
           }
         ]
       })

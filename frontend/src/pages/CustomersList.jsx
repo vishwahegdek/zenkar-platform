@@ -107,12 +107,7 @@ export default function CustomersList() {
             {/* Show tiny spinner if fetching in background and not placeholder (or initial load) */}
             {(isLoading && !customers) && <span className="text-xs text-gray-400 self-center">Loading...</span>}
             
-            <button 
-              onClick={handleImport}
-              className="hidden md:inline-flex bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 items-center gap-2"
-            >
-              ☁️ Import Google
-            </button>
+            {/* Import Button Moved to Contacts */}
 
             <Link to="/customers/new" className="hidden md:inline-flex bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 items-center gap-2">
               + New Customer

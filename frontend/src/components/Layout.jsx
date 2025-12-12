@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import { useMobileAutoScroll } from '../hooks/useMobileAutoScroll';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
+  const { logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Activate global mobile auto-scroll for all inputs
@@ -33,6 +35,7 @@ export default function Layout() {
               <NavLink to="/labour">Labour</NavLink>
               <NavLink to="/customers">Customers</NavLink>
               <NavLink to="/products">Products</NavLink>
+              <button onClick={logout} className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700">Logout</button>
             </nav>
           </div>
 
@@ -66,6 +69,13 @@ export default function Layout() {
               <NavLink to="/labour" mobile>Labour</NavLink>
               <NavLink to="/customers" mobile>Customers</NavLink>
               <NavLink to="/products" mobile>Products</NavLink>
+              <div className="border-t border-gray-100 my-1"></div>
+              <button 
+                onClick={logout} 
+                className="text-left w-full block px-3 py-2 text-base font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}

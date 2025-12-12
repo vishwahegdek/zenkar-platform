@@ -15,14 +15,17 @@ export class ContactsService {
     });
   }
 
-  async findAll(userId: number) {
+  async findAll(userId?: number) {
     return this.prisma.contact.findMany({
-      where: {
-        userId,
-      },
+      where: userId ? { userId } : {}, // If userId is provided, filter. Else return all.
       orderBy: {
         name: 'asc',
       },
+      include: {
+        user: {
+             select: { username: true } // Include owner name for display
+        }
+      }
     });
   }
 
@@ -68,7 +71,7 @@ export class ContactsService {
       try {
         const res = await people.people.connections.list({
           resourceName: 'people/me',
-          personFields: 'names,phoneNumbers,addresses',
+          personFields: 'names,phoneNumbers,addresses,metadata', // Request metadata
           pageSize: 1000, 
           pageToken: nextPageToken
         });
@@ -79,26 +82,47 @@ export class ContactsService {
         for (const person of connections) {
           const name = person.names?.[0]?.displayName;
           const phone = person.phoneNumbers?.[0]?.value;
-          // const address = person.addresses?.[0]?.formattedValue; // Contact model doesn't have address?
-          // Schema Check: Contact model: name, phone, group. No address.
-          // Ignoring address for now or I should add it? User didn't request address change.
+          const googleId = person.resourceName; // Get the unique ID (e.g., people/c123...)
 
           if (name) {
-            const exists = await this.prisma.contact.findFirst({
-                where: { 
-                    AND: [
-                        { userId: userId },
-                        { name: name }
-                    ]
-                }
-            });
+            // Priority 1: Check by Google ID (Robust)
+            let existing: any = null;
+            
+            if (googleId) {
+                existing = await this.prisma.contact.findFirst({
+                    where: { 
+                        userId: userId,
+                        googleId: googleId
+                    }
+                });
+            }
 
-            if (!exists) {
+            // Priority 2: Check by Name (Legacy/Fallback) if no ID match found
+            if (!existing) {
+                existing = await this.prisma.contact.findFirst({
+                    where: { 
+                        userId: userId,
+                        name: name
+                    }
+                });
+                
+                // If found by name but missing googleId, update it!
+                if (existing && !existing.googleId && googleId) {
+                     await this.prisma.contact.update({
+                         where: { id: existing.id },
+                         data: { googleId: googleId }
+                     });
+                     // Treated as "existing", so we don't create new.
+                }
+            }
+
+            if (!existing) {
                await this.prisma.contact.create({
                  data: {
                    name,
                    phone: phone || null,
-                   userId
+                   userId,
+                   googleId: googleId || null
                  }
                });
                count++;

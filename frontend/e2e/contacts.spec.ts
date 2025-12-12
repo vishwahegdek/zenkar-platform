@@ -17,6 +17,11 @@ test.describe('Contacts Management', () => {
         
         await page.goto('/contacts');
         
+        await page.goto('/contacts');
+        
+        // Verify Import Button is present
+        await expect(page.getByRole('button', { name: 'Sync from Google' })).toBeVisible();
+
         // Add Contact
         await page.getByPlaceholder('e.g. Ramesh (Labour)').fill(contactName);
         await page.getByPlaceholder('Optional').fill(phone);

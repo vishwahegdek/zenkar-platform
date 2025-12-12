@@ -3,6 +3,36 @@
 All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
+ 
+## [v1.6.0] - 2025-12-12 (Contacts, Import & Deduplication)
+### 👥 Contacts & Google Import
+- **Google Integration**:
+    - **Move**: Moved "Sync from Google" action from Customers List to **Contacts Manager** for better logical grouping.
+    - **Strict Ownership**: Implemented `GoogleAuthGuard` to strictly assign imported contacts to the user initiating the sync.
+    - **Deduplication**: Added `googleId` column to `contacts` table. Import logic now checks Google's unique `resourceName` first, then falls back to Name match, ensuring robust deduplication and self-healing of existing records.
+- **Global Access**:
+    - **Visibility**: Updated Contacts API to allow searching/viewing **all** contacts in the system, promoting collaboration.
+    - **Ownership Check**: Added "Owner: [Username]" tag to contact cards to identify the creator.
+
+### 📱 UI Improvements
+- **Menu**: Added **Logout** button to both Mobile (HAM) menu and Desktop navigation bar.
+- **Cleanup**: Removed legacy import buttons from Customer views.
+
+### 🐛 Bug Fixes
+- **Customer Dropdown**: Fixed `OrderForm` search not finding contacts in the fallback list.
+- **Quick Sale**: Fixed issue where selecting a Contact didn't populate the Phone Number in the sale payload.
+- **Feedback**: Added explicit phone number display in "Locked" customer cards.
+- **Dashboard**: Fixed Payments list sorting to strictly follow transaction timestamp (`createdAt`) instead of just date, ensuring correct chronological order.
+
+### � Dashboard Enhancements
+- **Quick Navigation**: Made Order Numbers in the Dashboard payment list clickable, taking you directly to the Order Details page.
+
+### �🛠️ Refactor
+- **Order Model**: Removed `advanceAmount` column from data schema. Total Paid is now dynamically calculated from the `payments` table, ensuring a single source of truth.
+- **Audit Fields**: Added `updatedAt` timestamp to both **Payments** and **Expense** tables for better tracking of modifications.
+
+
+
 
 ## [v1.5.0] - 2025-12-12 (Quick Sale V2 & Audit System)
 ### ⚡ Quick Sale V2

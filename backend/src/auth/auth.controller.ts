@@ -1,11 +1,13 @@
 
 import { Controller, Request, Post, UseGuards, Body, UnauthorizedException, Get, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
+// import { AuthGuard } from '@nestjs/passport'; // Removed generic
 import { CustomersService } from '../customers/customers.service';
 import { ContactsService } from '../contacts/contacts.service';
 import { AuthService } from './auth.service';
 import { Public } from './public.decorator';
+import { GoogleAuthGuard } from './google.guard'; // Import custom guard
+import { AuthGuard } from '@nestjs/passport';
 
 import { LoginDto } from './dto/login.dto';
 
@@ -36,7 +38,7 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard) // Use custom guard
   @Get('google')
   @ApiOperation({ summary: 'Initiate Google OAuth flow' })
   @ApiQuery({ name: 'userId', required: false, description: 'Optional User ID to bind to' })
@@ -45,48 +47,40 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGuard('google')) // Callback still uses standard guard to verify token? Or custom?
+  // Actually, standard guard verifies the code and gets the profile. 
+  // State is passed back in query. We need to read it.
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth Callback URL' })
-  async googleAuthRedirect(@Request() req, @Res() res) {
+  async googleAuthRedirect(@Request() req, @Res() res, @Query('state') state: string) {
     // req.user contains the user info and accessToken from strategy
-    // We expect the 'state' or 'userId' to be passed through, 
-    // BUT passport-google-oauth20 usage with dynamic state requires options in Strategy or overwriting 'authenticate'.
-    // SIMPLIFICATION: Since we only have a family app with 'admin' or 'family',
-    // We will cheat slightly: The browser cookie (if we had sessions) would track it, but we are using JWT.
-    // 
-    // ACTUAL PLAN: We'll use a hardcoded or simple approach:
-    // The previous plan said: "Popup from Frontend -> Backend OAuth".
-    // Since we can't easily pass the 'userId' through the strict Passport flow without session/state management,
-    // AND the user is likely logged in on the main window.
-    //
-    // ALTERNATIVE: Use a simple "redirect back to frontend with token" approach, 
-    // and let frontend call "import" separately? No, backend has the access token HERE.
-    //
-    // SOLUTION: Use a temporary query param or cookie for the userId?
-    // Let's assume for this family app, we are importing for the user "admin" (ID 1) if not specified, 
-    // OR best effort:
-    // Pass 'state' parameter with userId.
     
-    // Changing approach slightly to be robust:
-    // We will just return an HTML page saying "Import Successful" after calling the service.
-    // But WHICH userId?
-    // We will extract it from the 'state' if possible.
-    // For simplicity now: We will default to userId: 1 (as we only have admin) OR 
-    // we can try to rely on a cookie if we set one.
-    //
-    // BETTER: The prompt instructions are "simple". 
-    // I will try to read a query param if Passport passes it back, or just use ID 1 for now if failing.
-    // Wait, I can pass `state` in the initial request!
+    let userId = 1; // Default fallback (Admin)
     
-    // For now, let's just grab the token and assume User ID 1 (Admin) for demonstration 
-    // unless I add the custom state logic which is verbose.
-    // Actually, I'll try to pass `userId` in the state.
+    if (state) {
+      try {
+        const decoded = JSON.parse(state);
+        if (decoded.userId) {
+          userId = Number(decoded.userId);
+        }
+      } catch (e) {
+        console.error('Failed to parse OAuth state:', e);
+      }
+    }
     
-    const userId = 1; // Default to admin for MVP family app
+    console.log(`Importing contacts for User ID: ${userId}`);
     
-    await this.contactsService.importContacts(userId, req.user.accessToken);
+    const result = await this.contactsService.importContacts(userId, req.user.accessToken);
     
-    res.send('<h1>Contacts Imported Successfully! You can close this window.</h1><script>setTimeout(() => window.close(), 2000);</script>');
+    res.send(`
+      <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+        <h1>Import Successful!</h1>
+        <p>Imported ${result.imported} new contacts (Found ${result.totalFound}).</p>
+        <p>No duplicates were added.</p>
+        <script>
+          setTimeout(() => window.close(), 2000);
+        </script>
+      </div>
+    `);
   }
 }

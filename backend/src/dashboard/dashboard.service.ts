@@ -79,7 +79,7 @@ export class DashboardService {
                 lt: endOfDay
             }
         },
-        orderBy: { date: 'desc' }, // Latest first within the day
+        orderBy: { createdAt: 'desc' }, // Latest entry first
         include: {
             order: {
                 select: { 
@@ -94,6 +94,7 @@ export class DashboardService {
     return payments.map(p => ({
         id: p.id,
         date: p.date,
+        timestamp: p.createdAt, // Use for display time
         amount: p.amount,
         method: p.note, // We store method in note
         customerName: p.order?.customer?.name || 'Unknown',

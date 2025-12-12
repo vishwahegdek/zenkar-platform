@@ -64,11 +64,11 @@ export class LabourService {
          
          if (existing) {
            if (Number(existing.value) !== update.attendance) {
-              await this.prisma.attendance.update({ where: { id: existing.id }, data: { value: update.attendance, updatedById: userId } as any});
+              await this.prisma.attendance.update({ where: { id: existing.id }, data: { value: update.attendance } as any});
            }
          } else {
            await this.prisma.attendance.create({
-             data: { labourerId, date, value: update.attendance, createdById: userId } as any
+             data: { labourerId, date, value: update.attendance } as any
            });
          }
        } else {
@@ -79,8 +79,11 @@ export class LabourService {
 
        // B. Expense (Payment)
        if (update.amount > 0) {
-          const labourCategory = await this.prisma.expenseCategory.findUnique({ where: { name: 'Labour' } });
-          const categoryId = labourCategory ? labourCategory.id : 1; 
+          let labourCategory = await this.prisma.expenseCategory.findUnique({ where: { name: 'Labour' } });
+          if (!labourCategory) {
+             labourCategory = await this.prisma.expenseCategory.create({ data: { name: 'Labour' } });
+          }
+          const categoryId = labourCategory.id; 
 
           const existingExp = await this.prisma.expense.findFirst({
              where: { labourerId, date: { equals: date } } 

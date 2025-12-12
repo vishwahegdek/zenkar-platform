@@ -98,8 +98,9 @@ const ExpenseForm = () => {
         
         {/* Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Date</label>
+          <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
           <input
+            id="date"
             type="date"
             {...register('date', { required: 'Date is required' })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"
@@ -109,12 +110,13 @@ const ExpenseForm = () => {
 
         {/* Amount */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Amount</label>
+          <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Amount</label>
           <div className="relative mt-1 rounded-md shadow-sm">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <span className="text-gray-500 sm:text-sm">₹</span>
             </div>
             <input
+              id="amount"
               type="number"
               step="0.01"
               {...register('amount', { required: 'Amount is required' })}
@@ -138,8 +140,9 @@ const ExpenseForm = () => {
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Category</label>
+          <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">Category</label>
           <select
+            id="categoryId"
             {...register('categoryId', { required: 'Category is required' })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"
           >
@@ -155,8 +158,9 @@ const ExpenseForm = () => {
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
           <textarea
+            id="description"
             {...register('description')}
             rows={3}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"

@@ -87,8 +87,8 @@ export default function Autocomplete({
           {showCreateOption && (
              <li
               className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors text-blue-600 font-medium border-b border-gray-50 mb-1"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
+              onMouseDown={(e) => {
+                  e.preventDefault(); 
                   onCreate(query);
                   setIsOpen(false);
               }}
@@ -100,7 +100,7 @@ export default function Autocomplete({
             <li
               key={item.id}
               className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
-              onClick={() => handleSelect(item)}
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }}
             >
               <div className="font-medium text-gray-900">{item[displayKey]}</div>
               {subDisplayKey && item[subDisplayKey] && (

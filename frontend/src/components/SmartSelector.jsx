@@ -83,6 +83,8 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
             name: item.name,
             id: source === 'primary' ? item.id : null, 
             contactId: source === 'contact' ? item.id : (item.contactId || null),
+            phone: item.phone || '',
+            address: item.address || '',
             source
         });
     };
@@ -133,7 +135,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                                         <div
                                             key={`primary-${item.id}`}
                                             className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
-                                            onClick={() => handleSelect(item, 'primary')}
+                                            onMouseDown={(e) => { e.preventDefault(); handleSelect(item, 'primary'); }}
                                         >
                                             <div className="font-medium text-gray-900">{item.name}</div>
                                         </div>
@@ -151,7 +153,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                                         <div
                                             key={`contact-${contact.id}`}
                                             className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
-                                            onClick={() => handleSelect(contact, 'contact')}
+                                            onMouseDown={(e) => { e.preventDefault(); handleSelect(contact, 'contact'); }}
                                         >
                                             <div className="font-medium text-gray-900">{contact.name}</div>
                                             {contact.phone && <div className="text-xs text-gray-500">{contact.phone}</div>}
@@ -164,7 +166,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                             {results.length === 0 && contacts.length === 0 && !isSearching && (
                                 <div
                                     className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors text-blue-600 font-medium border-b border-gray-50 mb-1"
-                                    onClick={handleCreateNew}
+                                    onMouseDown={(e) => { e.preventDefault(); handleCreateNew(); }}
                                 >
                                     + Create "{query}"
                                 </div>
