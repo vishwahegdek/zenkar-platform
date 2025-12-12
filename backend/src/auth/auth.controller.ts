@@ -3,15 +3,18 @@ import { Controller, Request, Post, UseGuards, Body, UnauthorizedException, Get,
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CustomersService } from '../customers/customers.service';
+import { ContactsService } from '../contacts/contacts.service';
 import { AuthService } from './auth.service';
 import { Public } from './public.decorator';
+
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
-    private customersService: CustomersService
+    private contactsService: ContactsService
   ) {}
 
   @Public()
@@ -19,7 +22,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with username/password (Basic)' })
   @ApiResponse({ status: 200, description: 'JWT access token' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: any) {
+  async login(@Body() loginDto: LoginDto) {
     // Manually validating for now to keep it simple, or we could use LocalStrategy
     // But since the plan didn't explicitly mention LocalStrategy, I'll use AuthService.validateUser directly here 
     // or standard pattern is Guard -> Request -> Login.
@@ -82,7 +85,7 @@ export class AuthController {
     
     const userId = 1; // Default to admin for MVP family app
     
-    await this.customersService.importContacts(userId, req.user.accessToken);
+    await this.contactsService.importContacts(userId, req.user.accessToken);
     
     res.send('<h1>Contacts Imported Successfully! You can close this window.</h1><script>setTimeout(() => window.close(), 2000);</script>');
   }

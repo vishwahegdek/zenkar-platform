@@ -18,7 +18,7 @@ export default function OrderForm() {
   const activeId = paramId || createdOrderId;
   const isEdit = Boolean(activeId);
 
-  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // idle, saving, saved, error
+
   
   // Customer Modal State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -89,7 +89,7 @@ export default function OrderForm() {
            lineTotal: Number(i.lineTotal)
         })),
         notes: order.notes || '',
-        advanceAmount: Number(order.advanceAmount),
+        advanceAmount: Number(order.advanceAmount || 0),
       });
       initialLoadDone.current = true;
     } else if (!isEdit && !initialLoadDone.current) {
@@ -103,35 +103,18 @@ export default function OrderForm() {
     return formData.items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
   };
 
-  const validateForAutoSave = (data) => {
-    // 1. Must have a selected Customer ID (Locked)
-    if (!data.customerId) return false;
-    
-    // 2. At least one valid item
-    const hasValidItem = data.items.some(
-      i => i.productName && Number(i.quantity) > 0 && Number(i.unitPrice) > 0 && 
-      (i.productId || i.isNewProductConfirmed)
-    );
-    
-    return hasValidItem;
-  };
+
 
   // Generic Save Function
-  const saveOrder = async (data, isAuto = false) => {
-    if (isAuto && !validateForAutoSave(data)) return;
-
-    // Manual Validation
-    if (!isAuto) {
-        if (!data.customerId) {
-            return toast.error("Please select a customer before saving.");
-        }
-        const unconfirmedProduct = data.items.find(i => i.productName && !i.productId && !i.isNewProductConfirmed);
-        if (unconfirmedProduct) {
-            return toast.error(`Product '${unconfirmedProduct.productName}' not found. Please select existing or create new.`);
-        }
+  const saveOrder = async (data) => {
+    if (!data.customerId) {
+        return toast.error("Please select a customer before saving.");
     }
-
-    if (isAuto) setAutoSaveStatus('saving');
+    // Validate Product IDs (Strict Selection)
+    const invalidProducts = data.items.filter(i => i.productName && !i.productId);
+    if (invalidProducts.length > 0) {
+        return toast.error(`Please select a valid product from the list for: ${invalidProducts.map(i => i.productName).join(', ')}`);
+    }
 
     const payload = {
       ...data,
@@ -162,70 +145,23 @@ export default function OrderForm() {
       } else {
          result = await api.post('/orders', payload);
       }
-      
-      if (isAuto) {
-         setAutoSaveStatus('saved');
-         setTimeout(() => setAutoSaveStatus('idle'), 2000);
-         
-         // If we just created a new order via auto-save, handle transition
-         if (!isEdit && result.id) {
-            setCreatedOrderId(result.id);
-            // Update URL without remounting
-            window.history.replaceState(null, '', `/orders/${result.id}/edit`);
-            // Mark initial load as done so we don't overwrite user data with server response later
-            initialLoadDone.current = true; 
-         }
-      } else {
-         // Manual Save
-         toast.success(isEdit ? 'Order updated!' : 'New order added successfully');
-         navigate('/orders');
-      }
+            toast.success(isEdit ? 'Order updated!' : 'New order added successfully');
+       navigate('/orders');
       
       queryClient.invalidateQueries(['orders']);
       
     } catch (err) {
-       if (isAuto) setAutoSaveStatus('error');
-       else toast.error('Failed to save order: ' + err.message);
+       toast.error('Failed to save order: ' + err.message);
        console.error(err);
     }
   };
 
-  // Debounced Auto-Save Effect
-  useEffect(() => {
-    // Skip if confirming delete or other modal actions?
-    const timer = setTimeout(() => {
-      saveOrder(formData, true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [formData, activeId]); 
-
-  // Visibility Change / Blur Effect
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-         saveOrder(formData, true);
-      }
-    };
-    
-    // Also save on window blur?
-    const handleBlur = () => {
-      saveOrder(formData, true);
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [formData, activeId]); 
+ 
 
   // Handlers
   const handleSubmit = (e) => {
     e.preventDefault();
-    saveOrder(formData, false); // Manual save
+    saveOrder(formData); // Manual save
   };
 
   const handleItemChange = (index, field, val) => {
@@ -237,13 +173,22 @@ export default function OrderForm() {
       item.lineTotal = Number(item.quantity || 0) * Number(item.unitPrice || 0);
     }
 
-    // Clear productId if name changes (implies new product or search started)
-    if (field === 'productName') {
-      item.productId = null;
-      item.isNewProductConfirmed = false;
-    }
+    // If field is productName, we don't clear productId here anymore because input is locked if ID exists.
+    // If we are here, it means ID is likely null or we are typing in Autocomplete.
     
     newItems[index] = item;
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const handleChangeProduct = (index) => {
+    const newItems = [...formData.items];
+    newItems[index] = {
+        ...newItems[index],
+        productId: null,
+        productName: '',
+        unitPrice: 0,
+        lineTotal: 0
+    };
     setFormData({ ...formData, items: newItems });
   };
 
@@ -282,27 +227,21 @@ export default function OrderForm() {
       <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
         <div className="flex items-center gap-3">
            <h1 className="text-2xl font-bold">{isEdit ? 'Edit Order' : 'New Order'}</h1>
-           {/* Auto Save Status Indicator */}
-           {autoSaveStatus === 'saving' && <span className="text-xs text-gray-500 animate-pulse">Saving...</span>}
-           {autoSaveStatus === 'saved' && <span className="text-xs text-green-600 font-medium">Saved</span>}
-           {autoSaveStatus === 'error' && <span className="text-xs text-red-500">Save Failed</span>}
+            {/* Auto Save Status Removed */}
         </div>
         
         <button 
           type="button" 
-          onClick={() => saveOrder(formData, false)}
+          onClick={() => saveOrder(formData)}
           className="hidden md:block bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
-          disabled={autoSaveStatus === 'saving'}
         >
-          {autoSaveStatus === 'saving' ? 'Saving...' : 'Save Order'}
+          Save Order
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-6">
         {/* Customer Card */}
         <div className="md:col-span-2 bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-y md:border border-gray-200 space-y-4">
-          <h2 className="font-semibold text-gray-900">Customer Details</h2>
-          
           {formData.customerId ? (
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
                 <div className="flex justify-between items-start">
@@ -339,6 +278,7 @@ export default function OrderForm() {
             <div>
                 <Autocomplete 
                     endpoint="/customers"
+                    autoFocus={true}
                     placeholder="Search customer..."
                     value={formData.customerName}
                     onChange={(val) => {
@@ -420,24 +360,37 @@ export default function OrderForm() {
 
                  <div className="md:col-span-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Product</label>
-                    <Autocomplete 
-                       value={item.productName}
-                       placeholder="Product Name"
-                       endpoint="/products"
-                       displayKey="name"
-                       subDisplayKey="defaultUnitPrice"
-                       onChange={(val) => handleItemChange(idx, 'productName', val)}
-                       onCreate={(name) => {
-                           setTempProductName(name);
-                           setActiveProductRowIndex(idx);
-                           window.location.hash = 'new-product';
-                       }}
-                       onSelect={(p) => {
-                           handleProductSelect(idx, p);
-                           // handleProductSelect handles setting ID/price.
-                           // We just ensure confirmed is false (it probably is undefined or ignored if ID is set)
-                       }}
-                    />
+                    
+                    {item.productId ? (
+                       <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                           <span className="font-medium text-gray-800 truncate pr-2">{item.productName}</span>
+                           <button 
+                               type="button"
+                               onClick={() => handleChangeProduct(idx)}
+                               className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide"
+                           >
+                               Change
+                           </button>
+                       </div>
+                    ) : (
+                       <Autocomplete 
+                          value={item.productName}
+                          placeholder="Product Name"
+                          endpoint="/products"
+                          displayKey="name"
+                          subDisplayKey="defaultUnitPrice"
+                          onChange={(val) => handleItemChange(idx, 'productName', val)}
+                          onCreate={(name) => {
+                              setTempProductName(name);
+                              setActiveProductRowIndex(idx);
+                              window.location.hash = 'new-product';
+                          }}
+                          onSelect={(p) => {
+                              handleProductSelect(idx, p);
+                          }}
+                       />
+                    )}
+                    {/* Validation Error Highlight Logic if needed, currently toast blocks save */}
                  </div>
                  <div className="md:col-span-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Description</label>
@@ -482,7 +435,8 @@ export default function OrderForm() {
                 <span>Total</span>
                 <span>₹{calculateTotal().toLocaleString()}</span>
               </div>
-               {!isEdit && (
+
+               {/* {!isEdit && ( */}
                <div className="flex items-center justify-between gap-4">
                  <span className="text-sm text-gray-600">Advance</span>
                  <input type="number" className="input-field w-32 text-right"
@@ -490,13 +444,13 @@ export default function OrderForm() {
                     onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
                  />
                </div>
-               )}
-               {!isEdit && (
+               {/* )} */}
+               {/* {!isEdit && ( */}
                <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
                  <span>Balance Due</span>
                  <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
                </div>
-               )}
+               {/* )} */}
            </div>
          </div>
        </div>
@@ -566,6 +520,7 @@ export default function OrderForm() {
           title="Create New Product"
        >
           <ProductForm
+              isModal={true}
               initialData={{ name: tempProductName }}
               onSuccess={(newProduct) => {
                   if (activeProductRowIndex !== null) {
@@ -577,13 +532,12 @@ export default function OrderForm() {
        </Modal>
 
         {/* Mobile FAB for Save Order */}
-        <button 
-           onClick={() => saveOrder(formData, false)}
-           disabled={autoSaveStatus === 'saving'}
-           className="md:hidden fixed bottom-6 right-6 bg-primary text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 z-50 text-2xl disabled:opacity-50"
-        >
-           {autoSaveStatus === 'saving' ? '...' : '✓'}
-        </button>
+         <button 
+            onClick={() => saveOrder(formData)}
+            className="md:hidden fixed bottom-6 right-6 bg-primary text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 z-50 text-2xl disabled:opacity-50"
+         >
+            ✓
+         </button>
     </div>
   );
 }

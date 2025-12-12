@@ -7,12 +7,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './google.strategy';
-import { CustomersModule } from '../customers/customers.module';
+import { ContactsModule } from '../contacts/contacts.module';
 
 @Module({
   imports: [
     UsersModule,
-    CustomersModule,
+    ContactsModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dev_secret_key_change_me', // TODO: Use ConfigService

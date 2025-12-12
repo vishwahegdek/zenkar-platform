@@ -8,7 +8,8 @@ test.describe('Order Management Flow', () => {
     await page.getByLabel('Username').fill('admin');
     await page.getByLabel('Password').fill('admin123');
     await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(/\/orders/);
+    // Default is now Orders at /
+    await expect(page).toHaveURL(/\/$|\/orders/); 
   });
   
   test('Create Order, Add Payment, and Close', async ({ page }) => {
@@ -82,7 +83,9 @@ test.describe('Order Management Flow', () => {
     await page.locator('div', { hasText: 'Advance' }).locator('input[type="number"]').last().fill('5000');
     
     // 5. Save
-    await page.click('button:has-text("Save Order")');
+    // 5. Save
+    // Desktop: "Save Order", Mobile: "✓" (FAB). Use :visible to click the correct one.
+    await page.locator('button:visible').filter({ hasText: /Save Order|✓/ }).first().click();
     
     // 6. Verify Redirection and List Presence
     await page.waitForTimeout(1000); // Wait for modal/nav

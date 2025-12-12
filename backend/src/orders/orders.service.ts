@@ -3,12 +3,19 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
+import { AuditService } from '../audit/audit.service';
+import { ProductsService } from '../products/products.service';
+import { CustomersService } from '../customers/customers.service';
+
 @Injectable()
 export class OrdersService implements OnModuleInit {
   private readonly logger = new Logger(OrdersService.name);
 
   constructor(
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private productsService: ProductsService,
+    private customersService: CustomersService,
+    private auditService: AuditService,
   ) {}
 
   async onModuleInit() {
@@ -52,18 +59,19 @@ export class OrdersService implements OnModuleInit {
     }
   }
 
-  async create(createOrderDto: CreateOrderDto) {
-    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, paymentMethod, ...rest } = createOrderDto;
+  async create(createOrderDto: CreateOrderDto, userId?: number) {
+    const { items, customerName, customerPhone, customerAddress, orderDate, dueDate, paymentMethod, discount, advanceAmount, payments, contactId, isQuickSale, ...rest } = createOrderDto;
     let orderData: any = { ...rest };
     if (orderDate) orderData.orderDate = new Date(orderDate);
     if (dueDate) orderData.dueDate = new Date(dueDate);
+    if (discount) orderData.discount = Number(discount);
 
     // Capture initial advance if any
-    const initialAdvance = rest.advanceAmount ? Number(rest.advanceAmount) : 0;
+    const initialAdvance = advanceAmount ? Number(advanceAmount) : 0;
     // Set advanceAmount to 0 in DB, create Payment instead
     if (orderData.advanceAmount) orderData.advanceAmount = 0;
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       let finalCustomerId = createOrderDto.customerId;
 
       // 1. Handle New Customer Creation or Walk-In
@@ -84,6 +92,8 @@ export class OrdersService implements OnModuleInit {
             name: customerName,
             phone: customerPhone,
             address: customerAddress,
+            userId: userId || null,
+            contactId: createOrderDto.contactId || undefined,
           },
         });
         finalCustomerId = newCustomer.id;
@@ -97,8 +107,10 @@ export class OrdersService implements OnModuleInit {
 
       // 3. Create Order
       const order = await tx.order.create({
+
         data: {
           ...orderData,
+          createdBy: userId ? { connect: { id: userId } } : undefined,
           customer: { connect: { id: finalCustomerId } }, // Connect syntax is safer
           isQuickSale: createOrderDto.isQuickSale || false,
           items: {
@@ -115,8 +127,23 @@ export class OrdersService implements OnModuleInit {
         include: { items: true, customer: true },
       });
 
-      // 4. Create Initial Payment if advance was provided
-      if (initialAdvance > 0) {
+      // 4. Handle Payments (New Array Logic vs Legacy Advance)
+      if (createOrderDto.payments && createOrderDto.payments.length > 0) {
+          for (const p of createOrderDto.payments) {
+              if (p.amount > 0) {
+                  await tx.payment.create({
+                      data: {
+                          orderId: order.id,
+                          amount: p.amount,
+                          date: new Date(),
+                          note: p.note || p.method || 'Initial Payment',
+                          createdById: userId
+                      }
+                  });
+              }
+          }
+      } else if (initialAdvance > 0) {
+        // Fallback for legacy calls using advanceAmount
         let paymentNote = createOrderDto.isQuickSale ? 'Quick Sale Payment' : 'Initial Advance';
         if (createOrderDto.paymentMethod) {
             paymentNote = createOrderDto.paymentMethod;
@@ -127,13 +154,20 @@ export class OrdersService implements OnModuleInit {
             orderId: order.id,
             amount: initialAdvance,
             date: new Date(),
-            note: paymentNote
+            note: paymentNote,
+            createdById: userId,
+            // updatedById: userId // Optional for creation
           }
         });
       }
 
       return order;
     });
+
+    if (userId) {
+        await this.auditService.log(userId, 'CREATE', 'Order', result.id, { totalAmount: result.totalAmount });
+    }
+    return result;
   }
 
   // Helper handling new product creation
@@ -222,10 +256,10 @@ export class OrdersService implements OnModuleInit {
     };
   }
 
-  async update(id: number, dto: UpdateOrderDto) {
-    const { items, customerId, customerName, customerPhone, customerAddress, status, ...orderData } = dto;
+  async update(id: number, dto: UpdateOrderDto, userId?: number) {
+    const { items, customerId, customerName, customerPhone, customerAddress, status, payments, advanceAmount, ...orderData } = dto;
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Logic: If status changing to 'closed', calculate balance and set discount
       let discountUpdate = {};
       if (status === 'closed') {
@@ -263,6 +297,7 @@ export class OrdersService implements OnModuleInit {
           status,
           ...discountUpdate,
           customer: customerId ? { connect: { id: customerId } } : undefined,
+          updatedBy: userId ? { connect: { id: userId } } : undefined
         },
       });
 
@@ -297,21 +332,32 @@ export class OrdersService implements OnModuleInit {
       });
       return this.calculateOrderTotals(updated);
     });
+
+    if (userId) {
+        await this.auditService.log(userId, 'UPDATE', 'Order', id, { status: dto.status });
+    }
+    return result;
   }
 
-  async addPayment(orderId: number, amount: number, date: Date, note?: string) {
-    return this.prisma.payment.create({
+  async addPayment(orderId: number, amount: number, date: Date, note?: string, userId?: number) {
+    const payment = await this.prisma.payment.create({
+
       data: {
         orderId,
         amount,
         date,
-        note
+        note,
+        createdById: userId
       }
     });
+    if (userId) {
+        await this.auditService.log(userId, 'CREATE', 'Payment', payment.id, { orderId, amount });
+    }
+    return payment;
   }
 
-  async syncPayments(orderId: number, payments: { id?: number; amount: number; date: string; note?: string }[]) {
-     return this.prisma.$transaction(async (tx) => {
+  async syncPayments(orderId: number, payments: { id?: number; amount: number; date: string; note?: string }[], userId?: number) {
+     const result = await this.prisma.$transaction(async (tx) => {
         // 1. Get existing payment IDs
         const existing = await tx.payment.findMany({ where: { orderId }, select: { id: true } });
         const existingIds = new Set(existing.map(p => p.id));
@@ -335,13 +381,14 @@ export class OrdersService implements OnModuleInit {
             if (p.id && existingIds.has(p.id)) {
                 await tx.payment.update({
                     where: { id: p.id },
-                    data
+                    data: { ...data, updatedById: userId }
                 });
             } else {
                 await tx.payment.create({
                     data: {
                         ...data,
-                        orderId
+                        orderId,
+                        createdById: userId
                     }
                 });
             }
@@ -349,12 +396,20 @@ export class OrdersService implements OnModuleInit {
         
         return { success: true };
      });
+     if (userId) {
+        await this.auditService.log(userId, 'UPDATE', 'Payment', orderId, { action: 'SYNC_PAYMENTS' });
+     }
+     return result;
   }
 
-  remove(id: number) {
-    return this.prisma.order.update({
+  async remove(id: number, userId?: number) {
+    const result = await this.prisma.order.update({
       where: { id },
       data: { isDeleted: true, deletedAt: new Date() },
     });
+    if (userId) {
+        await this.auditService.log(userId, 'DELETE', 'Order', id);
+    }
+    return result;
   }
 }

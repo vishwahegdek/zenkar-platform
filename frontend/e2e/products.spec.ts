@@ -7,7 +7,8 @@ test.describe('Product Management Flow', () => {
     await page.getByLabel('Username').fill('admin');
     await page.getByLabel('Password').fill('admin123');
     await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(/\/orders/);
+    await expect(page).toHaveURL(/\/$|\/orders/);
+    await page.goto('/products');
   });
 
   const productName = 'Test Product ' + Date.now();
@@ -58,10 +59,12 @@ test.describe('Product Management Flow', () => {
     // We can look for the row/card with the product name.
     
     // Wait for the element to potentially stabilize
-    const productContainer = page.locator('tr, div.space-y-2', { hasText: productName }).first();
-    
-    // Click edit. The link href contains /edit
-    await productContainer.locator('a[href*="/edit"]').click();
+    // Click product name (which is also an edit link) to avoid hover issues with pencil icon
+    // Wait for the element to potentially stabilize
+    // Click edit link (Desktop: Name Link, Mobile: Edit Button)
+    // Both are 'a' tags with href containing /edit inside the container
+    // Use :visible to ensure we click the one available in current viewport (Name link on Desktop, Edit button on Mobile)
+    await page.locator('tr, div.space-y-2').filter({ hasText: productName }).locator('a[href*="/edit"]:visible').first().click();
 
     await expect(page.locator('h1')).toContainText('Edit Product');
     

@@ -4,7 +4,29 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
 
+## [v1.5.0] - 2025-12-12 (Quick Sale V2 & Audit System)
+### ⚡ Quick Sale V2
+- **Split Payments**: Added powerful "Custom" payment mode allowing mix of Cash, UPI, Card, and Cheque in a single order.
+- **Inline Creation**:
+    - **New Product**: Create products on-the-fly via a modal without leaving the sale screen.
+    - **New Customer**: Create customers instantly via a modal; automatically selects them upon creation.
+- **Smart Autocomplete**: 
+    - Added "Change" button for quick product swapping.
+    - Improved mobile keyboard handling with robust auto-focus.
+- **Notes**: Added dedicated "Internal Notes" section for order-specific remarks.
+- **Validation**: Real-time "Remaining Balance" indicator (Green for balanced, Red for mismatch).
 
+### 📱 UI/UX Enhancements
+- **Orders List**: Standardized date formatting to `dd/MM/yyyy` for better readability.
+- **Mobile Experience**: Fixed keyboard focus issues in Autocomplete components.
+- **Input Handling**: improved `advanceAmount` handling to support legacy vs new payment array structures.
+
+### 🛡️ Backend & Security
+- **Audit System**: Integrated `AuditService` to log all critical operations (Create, Update, Delete) with User ID.
+- **User Tracking**:
+    - Added `createdById` and `updatedById` fields to Orders and Payments for granular accountability.
+- **Registration**: Opened User Registration endpoint for easier onboarding (`@Public`).
+- **Payment Sync**: Enhanced `syncPayments` logic to handle split payment updates reliably.
 ## Released Versions
 ## [v1.4.1] - 2025-12-11 (Quick Sale Feature)
 ### ⚡ Quick Sale

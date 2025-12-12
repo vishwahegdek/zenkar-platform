@@ -7,7 +7,8 @@ test.describe('Customer Management Flow', () => {
     await page.getByLabel('Username').fill('admin');
     await page.getByLabel('Password').fill('admin123');
     await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(/\/orders/);
+    await expect(page).toHaveURL(/\/$|\/orders/);
+    await page.goto('/customers');
   });
 
   const customerName = 'Test Customer ' + Date.now();
@@ -54,8 +55,9 @@ test.describe('Customer Management Flow', () => {
     // The card structure: 
     // <div ...> <h3>Name</h3> ... <a href=".../edit">✏️</a> </div>
     // We filter by text then find the edit link
-    const customerCard = page.locator('div', { hasText: customerName }).last();
-    await customerCard.locator('a[href*="/edit"]').click();
+    // Find the card/row that is visible and contains the name
+    const customerCard = page.locator('div.bg-white').filter({ hasText: customerName }).first();
+    await customerCard.locator('a[href*="/edit"]').first().click();
     
     await expect(page.locator('h1')).toContainText('Edit Customer');
     

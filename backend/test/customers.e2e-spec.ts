@@ -53,5 +53,35 @@ describe('CustomersSystem (e2e)', () => {
         expect(response.body.data.length).toBeLessThanOrEqual(5);
         expect(Number(response.body.meta.page)).toBe(1);
     });
+
+    it('should filter by search query', async () => {
+        // First create a unique customer to search for
+        const uniqueName = `SearchTarget_${Date.now()}`;
+        await request(app.getHttpServer())
+          .post('/customers')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ name: uniqueName, mobile: '1122334455', place: 'SearchCity' })
+          .expect(201);
+
+        const response = await request(app.getHttpServer())
+          .get(`/customers?query=${uniqueName}`)
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
+        
+        expect(response.body.data.length).toBeGreaterThan(0);
+        expect(response.body.data[0].name).toBe(uniqueName);
+    });
+  });
+
+  describe('POST /customers', () => {
+    it('should fail if required fields are missing', async () => {
+      await request(app.getHttpServer())
+        .post('/customers')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          place: 'Bangalore'
+        })
+        .expect(400);
+    });
   });
 });

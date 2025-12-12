@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
+import { format } from 'date-fns';
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export default function OrderDetails() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isManagePaymentsModalOpen, setIsManagePaymentsModalOpen] = useState(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['orders', id],
@@ -37,6 +39,17 @@ export default function OrderDetails() {
         console.error("Payment Save Failed:", error);
         alert(`Failed to save payments: ${error.message}`);
      }
+  });
+
+  const discountMutation = useMutation({
+    mutationFn: (val) => api.patch(`/orders/${id}`, { discount: Number(val) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders', id]);
+      setIsDiscountModalOpen(false);
+    },
+    onError: (err) => {
+        alert(err.message);
+    }
   });
 
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading order details...</div>;
@@ -67,7 +80,7 @@ export default function OrderDetails() {
           <div className="p-4 md:p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
              <div>
                 <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNo || order.id}</h1>
-                <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-500">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
              </div>
              <StatusBadge status={order.status} />
           </div>
@@ -104,13 +117,13 @@ export default function OrderDetails() {
                    <h3 className="px-4 md:px-0 text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Dates & Status</h3>
                    <div className="bg-gray-50 p-4 rounded-none md:rounded-lg border-y md:border border-gray-100 space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Order Date:</span>
-                        <span className="font-medium">{new Date(order.orderDate).toLocaleDateString()}</span>
+                        <dt className="text-gray-500">Order Date</dt>
+                        <dd className="font-semibold">{format(new Date(order.orderDate), 'dd/MM/yyyy')}</dd>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Due Date:</span>
-                        <span className="font-medium">{order.dueDate ? new Date(order.dueDate).toLocaleDateString() : '—'}</span>
-                      </div>
+                       <div className="flex justify-between">
+                         <span className="text-gray-600">Due Date:</span>
+                         <span className="font-medium">{order.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}</span>
+                       </div>
                    </div>
 
                    {/* Payments List */}
@@ -126,7 +139,7 @@ export default function OrderDetails() {
                           {order.payments.map(p => (
                              <div key={p.id} className="p-3 flex justify-between items-center bg-white/50">
                                 <div>
-                                   <div className="text-xs text-gray-500">{new Date(p.date).toLocaleDateString()} {p.note ? `• ${p.note}` : ''}</div>
+                                   <div className="text-xs text-gray-500">{format(new Date(p.date), 'dd/MM/yyyy')} {p.note ? `• ${p.note}` : ''}</div>
                                 </div>
                                 <div className="font-medium text-gray-900">₹{Number(p.amount).toLocaleString()}</div>
                              </div>
@@ -178,12 +191,19 @@ export default function OrderDetails() {
                             <td colSpan={3} className="px-3 md:px-4 py-2 text-right text-green-600 font-normal">Paid</td>
                             <td className="px-3 md:px-4 py-2 text-right text-green-600 font-normal">−₹{(order.paidAmount || 0).toLocaleString()}</td>
                          </tr>
-                         {Number(order.discount) > 0 && (
-                            <tr>
-                               <td colSpan={3} className="px-3 md:px-4 py-2 text-right text-orange-600 font-normal">Discount</td>
-                               <td className="px-3 md:px-4 py-2 text-right text-orange-600 font-normal">−₹{Number(order.discount).toLocaleString()}</td>
-                            </tr>
-                         )}
+                         <tr>
+                            <td colSpan={3} className="px-3 md:px-4 py-2 text-right">
+                                <button 
+                                    onClick={() => setIsDiscountModalOpen(true)}
+                                    className="text-orange-600 font-medium hover:underline text-xs uppercase tracking-wide"
+                                >
+                                    {Number(order.discount) > 0 ? 'Discount' : '+ Add Discount'}
+                                </button>
+                            </td>
+                            <td className="px-3 md:px-4 py-2 text-right text-orange-600 font-normal">
+                                {Number(order.discount) > 0 ? `-₹${Number(order.discount).toLocaleString()}` : '—'}
+                            </td>
+                         </tr>
                          <tr className="text-red-600">
                             <td colSpan={3} className="px-3 md:px-4 py-2 text-right">Balance Due</td>
                             <td className="px-3 md:px-4 py-2 text-right">₹{Number(order.remainingBalance).toLocaleString()}</td>
@@ -233,6 +253,16 @@ export default function OrderDetails() {
            )}
         </div>
       </Modal>
+
+      {/* Discount Modal */}
+      {isDiscountModalOpen && (
+        <DiscountModal
+            initialValue={order.discount}
+            onClose={() => setIsDiscountModalOpen(false)}
+            onSubmit={discountMutation.mutate}
+            isLoading={discountMutation.isPending}
+        />
+      )}
     </div>
   );
 }
@@ -418,6 +448,45 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
     </div>
   );
 }
+
+function DiscountModal({ initialValue, onClose, onSubmit, isLoading }) {
+    const [val, setVal] = useState(initialValue || '');
+  
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      onSubmit(val);
+    };
+  
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+         <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">Edit Discount</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+               <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Discount Amount (₹)</label>
+                  <input 
+                    type="number" 
+                    autoFocus
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    value={val}
+                    onChange={e => setVal(e.target.value)}
+                  />
+               </div>
+               <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={onClose} className="flex-1 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+                  <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="flex-1 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </button>
+               </div>
+            </form>
+         </div>
+      </div>
+    );
+  }
 
 function StatusBadge({ status }) {
   const styles = {

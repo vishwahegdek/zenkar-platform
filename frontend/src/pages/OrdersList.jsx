@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
+import { format } from 'date-fns';
 
 export default function OrdersList() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -287,9 +288,9 @@ export default function OrdersList() {
                    <td className="px-6 py-4 text-right font-medium text-red-600">
                      ₹{Number(order.remainingBalance || 0).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {order.dueDate ? new Date(order.dueDate).toLocaleDateString() : '—'}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {format(new Date(order.orderDate), 'dd/MM/yyyy')}
+                </td>
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 

@@ -2,8 +2,13 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 
+import { useMobileAutoScroll } from '../hooks/useMobileAutoScroll';
+
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Activate global mobile auto-scroll for all inputs
+  useMobileAutoScroll();
   const location = useLocation();
 
   // Close menu when route changes
@@ -21,7 +26,11 @@ export default function Layout() {
             
             {/* Desktop Nav */}
             <nav className="hidden md:flex gap-1">
+              <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/orders">Orders</NavLink>
+              <NavLink to="/expenses">Expenses</NavLink>
+              <NavLink to="/contacts">Contacts</NavLink>
+              <NavLink to="/labour">Labour</NavLink>
               <NavLink to="/customers">Customers</NavLink>
               <NavLink to="/products">Products</NavLink>
             </nav>
@@ -50,7 +59,11 @@ export default function Layout() {
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white">
             <div className="px-4 py-2 flex flex-col gap-1">
+              <NavLink to="/dashboard" mobile>Dashboard</NavLink>
               <NavLink to="/orders" mobile>Orders</NavLink>
+              <NavLink to="/expenses" mobile>Expenses</NavLink>
+              <NavLink to="/contacts" mobile>Contacts</NavLink>
+              <NavLink to="/labour" mobile>Labour</NavLink>
               <NavLink to="/customers" mobile>Customers</NavLink>
               <NavLink to="/products" mobile>Products</NavLink>
             </div>

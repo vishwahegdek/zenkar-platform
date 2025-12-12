@@ -108,10 +108,50 @@ describe('OrdersSystem (e2e)', () => {
     expect(Number(response.body.discount)).toBe(5000);
   });
 
-  it('/orders/:id (DELETE) - Cleanup', async () => {
-    await request(app.getHttpServer())
-      .delete(`/orders/${createdOrderId}`)
+  let largeOrderId: number;
+
+  it('/orders (POST) - Create Large Order', async () => {
+    const items: any[] = [];
+    for (let i = 0; i < 20; i++) {
+        items.push({
+            productName: `Bulk Item ${i}`,
+            quantity: 1,
+            unitPrice: 100,
+            lineTotal: 100
+        });
+    }
+
+    const response = await request(app.getHttpServer())
+      .post('/orders')
       .set('Authorization', `Bearer ${authToken}`)
-      .expect(200);
+      .send({
+        customerId: 0,
+        customerName: 'Bulk Buyer',
+        customerPhone: '9988776655',
+        customerAddress: 'Bulk Address',
+        orderDate: new Date().toISOString(),
+        totalAmount: 2000,
+        advanceAmount: 0,
+        items: items
+      })
+      .expect(201);
+      
+    largeOrderId = response.body.id;
+  });
+
+  it('/orders/:id (DELETE) - Cleanup', async () => {
+    if (createdOrderId) {
+        await request(app.getHttpServer())
+        .delete(`/orders/${createdOrderId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+    }
+    
+    if (largeOrderId) {
+        await request(app.getHttpServer())
+        .delete(`/orders/${largeOrderId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+    }
   });
 });

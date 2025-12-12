@@ -7,81 +7,25 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CustomersService {
   constructor(private prisma: PrismaService) {}
 
-  async importContacts(userId: number, accessToken: string) {
-    const { google } = require('googleapis');
-    const people = google.people({ version: 'v1', headers: { Authorization: `Bearer ${accessToken}` } });
-    
-    let nextPageToken = undefined;
-    let count = 0;
-    let totalFound = 0;
-
-    do {
-      try {
-        const res = await people.people.connections.list({
-          resourceName: 'people/me',
-          personFields: 'names,phoneNumbers,addresses',
-          pageSize: 1000, 
-          pageToken: nextPageToken
-        });
-
-        const connections = res.data.connections || [];
-        totalFound += connections.length;
-        
-        // ... (We need to include the processing loop inside try or move it out?)
-        // Better to just wrap the 'res' fetch.
-        
-        for (const person of connections) {
-          const name = person.names?.[0]?.displayName;
-          const phone = person.phoneNumbers?.[0]?.value;
-          const address = person.addresses?.[0]?.formattedValue; 
-
-          if (name) {
-            const exists = await this.prisma.customer.findFirst({
-                where: { 
-                    AND: [
-                        { userId: userId },
-                        { name: name }
-                    ]
-                }
-            });
-
-            if (!exists) {
-               await this.prisma.customer.create({
-                 data: {
-                   name,
-                   phone: phone || null,
-                   address: address || null,
-                   userId
-                 }
-               });
-               count++;
+  async create(createCustomerDto: CreateCustomerDto, userId: number) {
+    // Smart Selector Logic
+    if (createCustomerDto.contactId) {
+        const existing = await this.prisma.customer.findFirst({
+            where: {
+                userId,
+                contactId: createCustomerDto.contactId
             }
-          }
-        }
-        
-        nextPageToken = res.data.nextPageToken;
-
-      } catch (error) {
-          console.error('Error importing contacts from Google:', error);
-          if (error.code === 404 || error.status === 404) {
-             console.warn('Google People API returned 404. User might not have a Google Profile or Contacts.');
-             break; // Stop loop and return what we have
-          }
-          throw error; // Re-throw other errors (will result in 500)
-      }
-
-    } while (nextPageToken);
-
-    return { imported: count, totalFound: totalFound };
-  }
-
-  create(createCustomerDto: CreateCustomerDto, userId?: number) {
+        });
+        if (existing) return existing;
+    }
+  
     return this.prisma.customer.create({
       data: {
         name: createCustomerDto.name,
         phone: createCustomerDto.phone,
         address: createCustomerDto.address,
-        userId: userId || null
+        userId: userId,
+        contactId: createCustomerDto.contactId || undefined
       },
     });
   }

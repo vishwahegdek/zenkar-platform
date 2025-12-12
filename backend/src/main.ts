@@ -17,6 +17,8 @@ async function bootstrap() {
     .setTitle('Zenkar Order Book API')
     .setDescription('The Order Book API description')
     .setVersion('1.0')
+    .addBearerAuth()
+    .addSecurityRequirements('bearer')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

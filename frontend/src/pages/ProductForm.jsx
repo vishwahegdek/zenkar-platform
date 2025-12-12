@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { toast } from 'react-hot-toast';
 
-export default function ProductForm({ onSuccess, initialData }) {
+export default function ProductForm({ onSuccess, initialData, isModal = false }) {
   const { id: paramId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -61,13 +61,18 @@ export default function ProductForm({ onSuccess, initialData }) {
 
   if (isEdit && isLoading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{isEdit ? 'Edit Product' : 'New Product'}</h1>
-      </div>
+  const containerClasses = isModal ? "" : "max-w-2xl mx-auto space-y-6";
+  const formClasses = isModal ? "space-y-4" : "bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4";
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+  return (
+    <div className={containerClasses}>
+      {!isModal && (
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">{isEdit ? 'Edit Product' : 'New Product'}</h1>
+        </div>
+      )}
+
+      <div className={formClasses}>
         <div>
           <label htmlFor="productFormName" className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
           <input 
