@@ -35,17 +35,48 @@ This document serves as the **Single Source of Truth** for the deployment archit
 
 ---
 
-## 🔄 Deployment Workflows
+## 🔄 Deployment Workflows (Docker Hub)
 
-### Deploying to Staging
-1.  **Code**: Push to `master`.
-2.  **Server**: SSH and `cd ~/zenkar-staging`.
-3.  **Command**: `git pull && docker-compose -f deploy/staging/docker-compose.yml up -d --build`
+This project uses **Docker Hub** for standardizing builds. Images are built locally and pulled on the server.
 
-### Deploying to Production
-1.  **Code**: Push to `master`.
-2.  **Server**: SSH and `cd ~/zenkar-platform-production`.
-3.  **Command**: `git pull && docker-compose -f deploy/production/docker-compose.yml up -d --build`
+### 1️⃣ Build & Push (Local Machine)
+Run this from your **Local Machine** to build images and push them to Docker Hub.
+```bash
+# For Staging
+sudo ./deploy/build_and_push.sh staging
+
+# For Production
+sudo ./deploy/build_and_push.sh production
+```
+
+### 2️⃣ Deploy & Migrate (Remote Server)
+SSH into the server and run the deployment script. usage of `sudo -E` is recommended if user is not in docker group.
+```bash
+# SSH into Server
+ssh vishwa@160.250.204.219
+
+# For Staging (in ~/zenkar-staging)
+cd ~/zenkar-staging
+wget -O deploy_remote.sh https://raw.githubusercontent.com/vishwahegdek/zenkar-platform/master/deploy/deploy_remote.sh
+chmod +x deploy_remote.sh
+sudo -E ./deploy_remote.sh staging
+
+# For Production (in ~/zenkar-platform-production)
+cd ~/zenkar-platform-production
+wget -O deploy_remote.sh https://raw.githubusercontent.com/vishwahegdek/zenkar-platform/master/deploy/deploy_remote.sh
+chmod +x deploy_remote.sh
+sudo -E ./deploy_remote.sh production
+```
+
+---
+
+## 🛠️ Scripts Reference
+
+| Script | Location | Purpose |
+| :--- | :--- | :--- |
+| **Build & Push** | `deploy/build_and_push.sh` | Builds Docker images locally and pushes to Docker Hub. |
+| **Deploy Remote** | `deploy/deploy_remote.sh` | Pulls code/images, backs up DB, migrates DB, and restarts containers. |
+| **Restore DB** | `deploy/restore_db.sh` | Restores database from a SQL backup file. |
 
 ---
 
@@ -54,4 +85,3 @@ This document serves as the **Single Source of Truth** for the deployment archit
 2.  **NEVER** run `docker-compose down -v` in Production (it deletes volumes).
 3.  **ALWAYS** check which folder you are in (`pwd`) before running docker commands.
 4.  **NEVER** hardcode secrets (API Keys, DB Passwords) in `docker-compose.yml`. Always use `.env` files and SCP the local `.env` to the server location relative to the compose file (e.g. `deploy/staging/.env`).
-d
