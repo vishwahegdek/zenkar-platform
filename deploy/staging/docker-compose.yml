@@ -12,7 +12,7 @@ services:
       - "3000:3000" # Demo Backend on 3000 (Internal & Host)
     depends_on:
       - db
-    env_file: ../../.env./../.env
+    env_file: ../../.env
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/zenkar_db_demo?schema=public"
     networks:
