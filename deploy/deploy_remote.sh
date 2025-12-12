@@ -44,7 +44,7 @@ git reset --hard origin/master # Updated to use master
 # 2. Database Backup
 echo "💾 Creating Database Backup..."
 mkdir -p $BACKUP_DIR
-docker exec -t $DB_CONTAINER pg_dump -U $DB_USER $DB_NAME > "$BACKUP_DIR/backup_${ENV}_${DATE_TAG}.sql"
+sudo docker exec -t $DB_CONTAINER pg_dump -U $DB_USER $DB_NAME > "$BACKUP_DIR/backup_${ENV}_${DATE_TAG}.sql"
 
 if [ $? -eq 0 ]; then
   echo "✅ Backup Successful: $BACKUP_DIR/backup_${ENV}_${DATE_TAG}.sql"
@@ -55,15 +55,15 @@ fi
 
 # 3. Pull New Images
 echo "🐳 Pulling latest images from Docker Hub..."
-docker-compose -f $COMPOSE_FILE pull
+sudo docker-compose -f $COMPOSE_FILE pull
 
 # 4. Restart Services
 echo "🔄 Restarting Services..."
-docker-compose -f $COMPOSE_FILE up -d
+sudo docker-compose -f $COMPOSE_FILE up -d
 
 # 5. Run Migrations
 echo "📦 Running Prisma Migrations..."
 # We run this inside the backend container to ensure it's using the correct schema/client
-docker exec $BACKEND_CONTAINER npx prisma migrate deploy
+sudo docker exec $BACKEND_CONTAINER npx prisma migrate deploy
 
 echo "✅ Deployment Complete!"
