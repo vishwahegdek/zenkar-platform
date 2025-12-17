@@ -1,29 +1,39 @@
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
 import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react';
 
 export default function LabourManage() {
   const queryClient = useQueryClient();
   const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd } = useForm();
-  
+  const [isAdding, setIsAdding] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Fetch only labour contacts
   const { data: contacts, isLoading } = useQuery({
     queryKey: ['labourContacts'],
     queryFn: async () => {
-      // Use new /labour endpoints
-      const res = await api.get('/labour');
-      return res;
+      return await api.get('/labour');
     }
   });
+
+  const filteredContacts = useMemo(() => {
+    if (!contacts) return [];
+    return contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [contacts, searchTerm]);
 
   const addMutation = useMutation({
     mutationFn: (data) => api.post('/labour', data),
     onSuccess: () => {
       queryClient.invalidateQueries(['labourContacts']);
       resetAdd();
-    }
+      setIsAdding(false);
+      toast.success('Employee Added Successfully');
+    },
+    onError: (err) => toast.error('Failed to add employee: ' + err.message)
   });
 
   const updateMutation = useMutation({
@@ -31,95 +41,96 @@ export default function LabourManage() {
         name: data.name, 
         defaultDailyWage: parseFloat(data.defaultDailyWage) 
     }),
-    onSuccess: () => queryClient.invalidateQueries(['labourContacts'])
+    onSuccess: () => {
+        queryClient.invalidateQueries(['labourContacts']);
+        toast.success('Employee Updated Successfully');
+    },
+    onError: (err) => toast.error('Failed to update: ' + err.message)
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/labour/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['labourContacts'])
+    onSuccess: () => {
+        queryClient.invalidateQueries(['labourContacts']);
+        toast.success('Employee Removed');
+    },
+    onError: (err) => toast.error('Failed to remove: ' + err.message)
   });
 
-  // Bulk Update handler to mimic legacy "Update Existing Employees" button
-  const handleBulkUpdate = async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      // In legacy, it was a form post. Here we can iterate. 
-      // Since it's React, individual updates are cleaner, but let's support individual save for now 
-      // or "Update All" button that loops?
-      // Legacy UI had one big button. Let's do creating a mutation for each changed item is complex.
-      // Let's just have inline updates for simplicity or individual Save buttons?
-      // Legacy styling: Row with Name input, Checkbox Remove, Salary input. 
-      // Let's replicate row.
-      alert("Feature: In this version, changes are saved individually or by row. Use the 'Update' button if implemented or auto-save.");
-  };
-
-  const theme = {
-    inputBg: '#ddd',
-    inputColor: 'black',
-    buttonBg: '#4caf50',
-    deleteColor: '#ff0000',
-  };
-
-  if(isLoading) return <div>Loading...</div>;
+  if(isLoading) return <div className="text-gray-400 text-center mt-10">Loading Employees...</div>;
 
   return (
-    <div>
-      <h1 className="text-center text-2xl font-bold mb-4">Employee Information</h1>
+    <div className="min-h-screen bg-gray-900 pb-20">
       
-      {/* Existing Employees List mimicking legacy form */}
-      {/* Existing Employees List mimicking legacy form */}
-      <div className="bg-white/10 p-3 rounded-lg mb-4">
-        <h2 className="text-lg mb-2 font-bold">Existing Employees</h2>
-        <div className="space-y-4">
-            {contacts?.map(c => (
-                <EmployeeRow 
-                    key={c.id} 
-                    employee={c} 
-                    onUpdate={updateMutation.mutate}
-                    onDelete={deleteMutation.mutate}
-                    theme={theme}
-                />
-            ))}
-        </div>
+      {/* Search Header */}
+      <div className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur border-b border-gray-800 p-2 shadow-md">
+          <div className="flex gap-2 items-center">
+              <input 
+                  type="text" 
+                  placeholder="Search Employee..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 bg-gray-800 text-white p-3 rounded border border-gray-700 focus:outline-none focus:border-green-500 font-bold placeholder-gray-500"
+              />
+               <button 
+                  onClick={() => setIsAdding(!isAdding)}
+                  className={`px-4 py-3 rounded font-bold text-sm whitespace-nowrap transition-all ${isAdding ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-green-600 text-white flex items-center gap-1 hover:bg-green-500'}`}
+               >
+                   {isAdding ? '✕ Cancel' : '+ Add'}
+               </button>
+          </div>
+           
+           {/* Add Form */}
+           {isAdding && (
+               <div className="mt-2 bg-gray-800 rounded p-3 border border-gray-600 animate-fade-in-down">
+                   <form onSubmit={handleSubmitAdd(addMutation.mutate)} className="flex flex-col gap-3">
+                        <div className="flex gap-2">
+                             <div className="flex-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Name</label>
+                                <input 
+                                    {...registerAdd('name', { required: true })}
+                                    placeholder="Name"
+                                    className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-green-500 focus:outline-none"
+                                    autoFocus
+                                />
+                             </div>
+                             <div className="w-28">
+                                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Wage (₹)</label>
+                                <input 
+                                    {...registerAdd('defaultDailyWage', { required: true })}
+                                    type="number"
+                                    placeholder="0"
+                                    className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-green-500 focus:outline-none"
+                                />
+                             </div>
+                        </div>
+                        <button type="submit" className="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-500">
+                            Save 
+                        </button>
+                   </form>
+               </div>
+           )}
       </div>
 
-      <hr className="border-gray-500 my-8"/>
-
-      {/* Add New Employee */}
-      <div className="bg-white/10 p-3 rounded-lg">
-        <h2 className="text-lg mb-2 font-bold">Add New Employee</h2>
-        <form onSubmit={handleSubmitAdd(addMutation.mutate)} className="space-y-3">
-            <div>
-                <label className="block font-bold mb-1">New Employee Name:</label>
-                <input 
-                    {...registerAdd('name', { required: true })}
-                    className="p-2 w-full max-w-md"
-                    style={{ backgroundColor: theme.inputBg, color: theme.inputColor }}
-                />
-            </div>
-            <div>
-                <label className="block font-bold mb-1">New Employee Salary:</label>
-                <input 
-                    {...registerAdd('defaultDailyWage', { required: true })}
-                    type="number"
-                    className="p-2 w-full max-w-md"
-                    style={{ backgroundColor: theme.inputBg, color: theme.inputColor }}
-                />
-            </div>
-            <button 
-                type="submit" 
-                className="mt-4 px-6 py-2 font-bold text-white transition-colors hover:bg-green-600"
-                style={{ backgroundColor: theme.buttonBg }}
-            >
-                Add New Employee
-            </button>
-        </form>
+      {/* Employee List - Single Row Cards */}
+      <div className="p-2 grid gap-2">
+          {filteredContacts.map(c => (
+             <EmployeeRow 
+                 key={c.id} 
+                 employee={c} 
+                 onUpdate={updateMutation.mutate}
+                 onDelete={deleteMutation.mutate}
+             />
+          ))}
+          {filteredContacts.length === 0 && (
+              <div className="text-center text-gray-500 py-10">No employees found matching "{searchTerm}"</div>
+          )}
       </div>
     </div>
   );
 }
 
-function EmployeeRow({ employee, onUpdate, onDelete, theme }) {
+function EmployeeRow({ employee, onUpdate, onDelete }) {
     const { register, handleSubmit, formState: { isDirty } } = useForm({
         defaultValues: {
             id: employee.id,
@@ -129,47 +140,46 @@ function EmployeeRow({ employee, onUpdate, onDelete, theme }) {
     });
 
     return (
-        <form onSubmit={handleSubmit(onUpdate)} className="flex flex-col md:flex-row gap-2 items-start md:items-center border-b border-gray-600 pb-2">
-            <div className="flex-1">
-                <label className="block font-bold text-sm mb-1">Name:</label>
-                <input 
-                    {...register('name')}
-                    className="p-2 w-full"
-                    style={{ backgroundColor: theme.inputBg, color: theme.inputColor }}
-                />
-            </div>
-            
-            <div className="flex items-center gap-2 md:pt-6">
-                 <button 
-                    type="button" 
-                    onClick={() => { if(confirm(`Remove ${employee.name}?`)) onDelete(employee.id); }}
-                    className="text-red-400 hover:text-red-300 font-bold text-sm"
-                 >
-                    [ Remove ]
-                 </button>
-            </div>
+        <div className="bg-gray-800 rounded border border-gray-700 p-2 shadow-sm">
+            <form onSubmit={handleSubmit(onUpdate)} className="flex items-center gap-2">
+                
+                {/* Name Input */}
+                <div className="flex-1 min-w-0">
+                    <input 
+                        {...register('name')}
+                        className="w-full bg-transparent text-white font-bold text-base focus:bg-gray-700 p-1 rounded focus:outline-none border-b border-transparent focus:border-gray-500 transition-all placeholder-gray-600 truncate"
+                    />
+                </div>
 
-            <div className="flex-1 w-full">
-                <label className="block font-bold text-sm mb-1">Salary:</label>
-                <input 
-                    {...register('defaultDailyWage')}
-                    type="number"
-                    className="p-2 w-full"
-                    style={{ backgroundColor: theme.inputBg, color: theme.inputColor }}
-                />
-            </div>
+                {/* Wage Input */}
+                <div className="w-20 shrink-0 relative">
+                    <span className="absolute left-1 top-1.5 text-gray-500 text-xs">₹</span>
+                    <input 
+                        {...register('defaultDailyWage')}
+                        type="number"
+                        className="w-full bg-transparent text-right text-green-400 font-mono text-base focus:bg-gray-700 p-1 pl-4 rounded focus:outline-none border-b border-transparent focus:border-gray-500 transition-all"
+                    />
+                </div>
 
-            <div className="w-full md:w-20 md:pt-6 text-left md:text-center text-xs text-gray-400">
-                ID: {employee.id}
-            </div>
-            
-            <div className="md:pt-6 w-full md:w-auto">
-               {isDirty && (
-                   <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">
-                       Save
-                   </button>
-               )}
-            </div>
-        </form>
+                {/* Actions */}
+                <div className="shrink-0 flex items-center ml-4">
+                     {isDirty ? (
+                         <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 shadow animate-pulse">
+                             Save
+                         </button>
+                     ) : (
+                        <button 
+                            type="button" 
+                            onClick={() => { if(confirm(`Remove ${employee.name}?`)) onDelete(employee.id); }}
+                            className="bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white p-2 rounded transition-all"
+                            title="Delete"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                     )}
+                </div>
+
+            </form>
+        </div>
     );
 }

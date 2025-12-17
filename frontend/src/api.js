@@ -11,14 +11,25 @@ export const api = {
   get: async (url, options = {}) => {
     let fullUrl = `/api${url}`;
     if (options.params) {
-      const queryString = new URLSearchParams(options.params).toString();
+      const cleanParams = Object.fromEntries(
+        Object.entries(options.params).filter(([_, v]) => v != null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
       if (queryString) fullUrl += `?${queryString}`;
     }
     const res = await fetch(fullUrl, {
       ...options,
       headers: getHeaders(options),
     });
-    if (!res.ok) throw new Error('API Request Failed');
+    if (!res.ok) {
+      const errorText = await res.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorText || 'API Request Failed');
+      } catch (e) {
+        throw new Error(errorText || 'API Request Failed');
+      }
+    }
     return res.json();
   },
   post: async (url, data, options = {}) => {
@@ -30,7 +41,15 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('API Request Failed');
+    if (!res.ok) {
+      const errorText = await res.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorText || 'API Request Failed');
+      } catch (e) {
+        throw new Error(errorText || 'API Request Failed');
+      }
+    }
     return res.json();
   },
   delete: async (url, options = {}) => {
@@ -38,7 +57,15 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(options)
     });
-    if (!res.ok) throw new Error('API Request Failed');
+    if (!res.ok) {
+      const errorText = await res.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorText || 'API Request Failed');
+      } catch (e) {
+        throw new Error(errorText || 'API Request Failed');
+      }
+    }
     return res.json();
   },
   patch: async (url, data, options = {}) => {

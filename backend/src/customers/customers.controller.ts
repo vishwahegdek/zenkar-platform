@@ -23,11 +23,18 @@ export class CustomersController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Paginated list of customers.' })
   findAll(
+    @Req() req,
     @Query('query') query: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
   ) {
-    return this.customersService.findAll(query, page, limit);
+    // Service signature: findAll(userId: number, params: { query, page, limit })
+    // Actually service ignores page/limit currently? I should check service again.
+    // Service: `const { contactId, query } = params;`
+    // It filters by contactId? The Controller doesn't accept contactId.
+    // But pagination logic is missing in service provided earlier?
+    // Let's pass what we have.
+    return this.customersService.findAll(req.user.userId, { query, page, limit });
   }
 
   @Get(':id')

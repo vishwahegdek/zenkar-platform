@@ -19,8 +19,8 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Retrieve all products' })
   @ApiResponse({ status: 200, description: 'List of all products.' })
-  findAll(@Query('query') query: string) {
-    return this.productsService.findAll(query);
+  findAll(@Query('query') query: string, @Query('page') page: string, @Query('limit') limit: string) {
+    return this.productsService.findAll(query, +page || 1, +limit || 20);
   }
 
   @Get(':id')

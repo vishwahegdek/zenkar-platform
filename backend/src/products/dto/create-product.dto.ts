@@ -7,10 +7,9 @@ export class CreateProductDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional({ example: 99.99, description: 'Default unit price' })
-  @IsOptional()
+  @ApiProperty({ example: 99.99, description: 'Default unit price' })
   @IsNumber()
-  defaultUnitPrice?: number;
+  defaultUnitPrice: number;
 
   @ApiPropertyOptional({ example: 'A widget that does super things', description: 'Notes or description' })
   @IsOptional()

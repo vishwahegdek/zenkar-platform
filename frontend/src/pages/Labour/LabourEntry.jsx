@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export default function LabourEntry() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -20,8 +21,9 @@ export default function LabourEntry() {
     mutationFn: (updates) => api.post('/labour/daily', { date: selectedDate, updates }),
     onSuccess: () => {
       queryClient.invalidateQueries(['labourDaily', selectedDate]);
-      alert('Updated Successfully!');
-    }
+      toast.success('Updated Successfully!');
+    },
+    onError: (err) => toast.error('Update Failed: ' + err.message)
   });
 
   const handleSubmit = (e) => {
@@ -48,7 +50,14 @@ export default function LabourEntry() {
     });
 
     if (updates.length > 0) mutation.mutate(updates);
-    else alert("No changes to save.");
+    else toast('No changes to save.', { icon: 'ℹ️' });
+  };
+
+  const changeDate = (days) => {
+      const newDate = addDays(new Date(selectedDate), days);
+      // Prevent future dates
+      if (newDate > new Date()) return;
+      setSelectedDate(format(newDate, 'yyyy-MM-dd'));
   };
 
   // Legacy Theme Colors
@@ -65,7 +74,7 @@ export default function LabourEntry() {
   if (isLoading) return <div className="text-white p-4">Loading...</div>;
 
   return (
-    <div style={{ backgroundColor: theme.bg, minHeight: '100vh', padding: '8px', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ backgroundColor: theme.bg, minHeight: '100vh', padding: '0px', fontFamily: 'Arial, sans-serif' }}>
       <style>{`
         @media (max-width: 400px) {
            .responsive-hide { display: none; }
@@ -74,17 +83,38 @@ export default function LabourEntry() {
            .responsive-input { width: 60px !important; padding: 4px !important; }
         }
       `}</style>
-      <h1 className="text-center text-white text-2xl font-bold mb-2">Labour Entry</h1>
+      <h1 className="text-center text-white text-2xl font-bold py-2 mb-0">Labour Entry</h1>
       
-      <div className="flex justify-center items-center gap-2 mb-4">
-        <label className="text-white font-bold text-sm">Date:</label>
+      <div className="flex justify-center items-center gap-4 mb-4 p-2 bg-black/20">
+        <button 
+            type="button" 
+            onClick={() => changeDate(-1)}
+            className="bg-white/20 hover:bg-white/40 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl"
+        >
+            &lt;
+        </button>
+
         <input 
           type="date" 
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="p-1 rounded text-base"
-          style={{ backgroundColor: theme.inputBg }}
+          max={format(new Date(), 'yyyy-MM-dd')}
+          className="p-2 rounded text-lg font-bold text-center"
+          style={{ backgroundColor: theme.inputBg, color: 'black' }}
         />
+
+        <button 
+            type="button" 
+            onClick={() => changeDate(1)}
+            disabled={selectedDate >= format(new Date(), 'yyyy-MM-dd')}
+            className={`rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl ${
+                selectedDate >= format(new Date(), 'yyyy-MM-dd') 
+                ? 'bg-transparent text-gray-500 cursor-not-allowed' 
+                : 'bg-white/20 hover:bg-white/40 text-white'
+            }`}
+        >
+            &gt;
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} key={selectedDate + dailyView?.length}>
@@ -116,7 +146,7 @@ export default function LabourEntry() {
                             onChange={(e) => {
                                 if(e.target.checked) document.getElementsByName(`attendance_${labourer.id}_1`)[0].checked = false;
                             }}
-                            className="w-4 h-4"
+                            className="w-5 h-5 accent-green-500"
                         /> 
                         ½
                     </label>
@@ -128,7 +158,7 @@ export default function LabourEntry() {
                             onChange={(e) => {
                                 if(e.target.checked) document.getElementsByName(`attendance_${labourer.id}_0.5`)[0].checked = false;
                             }}
-                            className="w-4 h-4"
+                            className="w-5 h-5 accent-green-500"
                         /> 
                         1
                     </label>
@@ -137,11 +167,11 @@ export default function LabourEntry() {
                 <td className="responsive-padding" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
                   <input 
                     type="number" 
-                    className="responsive-input"
+                    className="responsive-input font-bold"
                     name={`amount_${labourer.id}`}
                     defaultValue={labourer.amount || ''}
                     placeholder="0"
-                    style={{ backgroundColor: theme.inputBg, width: '80px', padding: '8px' }}
+                    style={{ backgroundColor: theme.inputBg, color: 'black', width: '80px', padding: '8px' }}
                   />
                 </td>
               </tr>
@@ -152,14 +182,14 @@ export default function LabourEntry() {
         <div className="fixed bottom-0 left-0 w-full p-0 z-50">
             <button 
                 type="submit" 
-                style={{ backgroundColor: theme.buttonBg, height: '50px' }}
-                className="w-full text-white text-lg font-bold hover:bg-green-600 transition-colors shadow-lg"
+                style={{ backgroundColor: theme.buttonBg, height: '60px' }}
+                className="w-full text-white text-xl font-bold hover:bg-green-600 transition-colors shadow-[0_-5px_15px_rgba(0,0,0,0.3)] border-t border-green-400"
             >
-                UPDATE RECORDS
+                SAVE UPDATES
             </button>
         </div>
       </form>
-      <div className="h-20"></div> {/* Spacer for fixed button */}
+      <div className="h-24"></div> {/* Spacer for fixed button */}
     </div>
   );
 }

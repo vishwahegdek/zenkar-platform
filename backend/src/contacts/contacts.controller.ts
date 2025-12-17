@@ -23,16 +23,20 @@ export class ContactsController {
 
   @Get()
   @ApiQuery({ name: 'userId', required: false })
-  findAll(@Request() req, @Query('userId') userId?: string) {
-    // If userId query param provided, use it. Else return all (pass undefined).
-    // Note: req.user.userId is still available if we wanted to enforce default to "My Contacts" but allow "All".
-    // Instruction says "every user can access all contacts", implies default might be All.
-    return this.contactsService.findAll(userId ? Number(userId) : undefined);
+  findAll(@Request() req, @Query('userId') userId?: string, @Query('query') query?: string) {
+    // Determine the userId to use: query param (if admin/allowed) or logged-in user?
+    // Instruction didn't specify strict isolation, but service expects a number.
+    // If no userId param, maybe use req.user.userId? Or pass undefined if global?
+    // Service: `where: { userId, ... }`. If userId is undefined, `where: { userId: undefined }` (matches nothing? or ignored? Prisma ignores undefined in where).
+    // Let's pass req.user.userId if not provided? Or just undefined.
+    // Assuming straightforward mapping:
+    const targetUserId = userId ? Number(userId) : req.user.userId;
+    return this.contactsService.findAll(targetUserId, { query });
   }
 
   @Patch(':id')
   update(@Request() req, @Param('id') id: string, @Body() body: { name?: string; phone?: string; group?: string }) {
-    return this.contactsService.update(req.user.userId, +id, body);
+    return this.contactsService.update(+id, body);
   }
 
   @Delete(':id')

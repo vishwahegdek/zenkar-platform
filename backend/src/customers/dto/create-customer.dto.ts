@@ -1,11 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
+import { MinLength } from 'class-validator';
+
 export class CreateCustomerDto {
-  @ApiProperty({ example: 'Alice Smith', description: 'Name of the customer' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ example: 'Alice Smith', description: 'Name of the customer (Min 6 chars if provided)' })
+  @IsOptional()
   @IsString()
-  name: string;
+  @MinLength(6)
+  name?: string;
 
   @ApiPropertyOptional({ example: '9876543210', description: 'Phone number' })
   @IsOptional()

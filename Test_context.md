@@ -42,3 +42,30 @@ The application uses a split testing strategy:
 ## 3. Logs & Reports
 *   **Test Logs:** See `TEST_LOGS.md` for historical execution logs.
 *   **Curl Tests:** See `BACKEND_CURL_TESTS.md` for manual curl command library.
+
+## 4. Recent Test Coverage Additions (2025-12-13)
+**Focus:** Order System Robustness & Customer Creation Logic
+
+### Backend E2E Tests (`orders.e2e-spec.ts`)
+New test cases were added to verify critical workflows and prevent regression of 500 errors during order updates.
+
+1.  **Update Order: Change to Existing Customer**
+    *   **Goal:** Verify that changing an order's customer to another existing customer properly updates the link.
+    *   **Result:** PASSED.
+
+2.  **Update Order: Change to New Customer (via Contact)**
+    *   **Goal:** Verify the bug fix where editing an order and setting `customerId: 0` (with contact details) triggers the backend to create a new customer and link it.
+    *   **Context:** This previously caused a 500 error due to unhandled fields (`contactId`).
+    *   **Result:** PASSED.
+
+3.  **New Order: Create with New Customer from Contact**
+    *   **Goal:** Ensure the "New Order" flow correctly creates a customer when selected from contacts (`customerId: 0`).
+    *   **Result:** PASSED.
+
+4.  **Quick Sale: Create with New Customer from Contact**
+    *   **Goal:** Ensure the "Quick Sale" flow correctly handles the same new customer creation logic.
+    *   **Result:** PASSED.
+
+### Fix Verification
+*   **Excluded Fields:** Verified that sending `contactId` and `paymentMethod` in the Update payload no longer causes "Unknown argument" errors.
+*   **Data Conversion:** Verified that Date strings and Numbers in the Update payload are correctly converted before database insertion.

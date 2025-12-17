@@ -381,7 +381,7 @@ export default function QuickSale() {
                  <div>
                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Method</label>
                     <div className="grid grid-cols-2 gap-2">
-                        {['Cash', 'UPI', 'Card', 'Due', 'Custom'].map(method => (
+                        {['Cash', 'UPI', 'Due', 'Custom'].map(method => (
                             <button
                                 key={method}
                                 onClick={() => setPaymentMethod(method)}
@@ -412,8 +412,6 @@ export default function QuickSale() {
                                     >
                                         <option>Cash</option>
                                         <option>UPI</option>
-                                        <option>Card</option>
-                                        <option>Cheque</option>
                                     </select>
                                     <input 
                                         type="number" 

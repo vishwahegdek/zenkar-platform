@@ -7,10 +7,10 @@ export class CreateContactDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional({ example: '9988776655', description: 'Phone number' })
-  @IsOptional()
+  @ApiProperty({ example: '9988776655', description: 'Phone number' })
+  @IsNotEmpty()
   @IsString()
-  phone?: string;
+  phone: string;
 
   @ApiPropertyOptional({ example: 'Family', description: 'Group name' })
   @IsOptional()

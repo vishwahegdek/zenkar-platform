@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { CreateLabourerDto } from './dto/create-labourer.dto';
 import { UpdateDailyViewDto } from './dto/update-daily-view.dto';
+import { CreateSettlementDto } from './dto/create-settlement.dto';
 
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
@@ -55,5 +56,17 @@ export class LabourController {
   @Delete(':id')
   delete(@Request() req, @Param('id') id: string) {
       return this.labourService.deleteLabourer(Number(id));
+  }
+
+  @Post(':id/settle')
+  @ApiOperation({ summary: 'Create a settlement (Zero Date)' })
+  createSettlement(@Param('id') id: string, @Body() body: CreateSettlementDto) {
+      return this.labourService.createSettlement(Number(id), new Date(body.settlementDate), body.note);
+  }
+
+  @Get(':id/settlements')
+  @ApiOperation({ summary: 'Get history of settlements' })
+  getSettlements(@Param('id') id: string) {
+      return this.labourService.getSettlements(Number(id));
   }
 }

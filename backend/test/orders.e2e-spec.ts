@@ -139,6 +139,114 @@ describe('OrdersSystem (e2e)', () => {
     largeOrderId = response.body.id;
   });
 
+  it('/orders/:id (PATCH) - Update Customer to Existing Customer', async () => {
+    // 1. Create a dummy second customer
+    const custRes = await request(app.getHttpServer())
+      .post('/customers')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Another Customer', phone: '1112223333' });
+    const secondCustId = custRes.body.id;
+
+    // 2. Update createdOrderId to point to secondCustId
+    const response = await request(app.getHttpServer())
+      .patch(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        customerId: secondCustId,
+        customerName: 'Another Customer'
+      })
+      .expect(200);
+
+    expect(response.body.customer.id).toBe(secondCustId);
+    expect(response.body.customer.name).toBe('Another Customer');
+  });
+
+  it('/orders/:id (PATCH) - Update Customer to New Customer (Fix Verification)', async () => {
+    // 1. Create a Contact first (to avoid FK violation)
+    const contactRes = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Contact For Order', phone: '5555555555' })
+      .expect(201);
+    const contactId = contactRes.body.id;
+
+    // 2. Update order to use this contact (`customerId: 0` triggers creation)
+    const response = await request(app.getHttpServer())
+      .patch(`/orders/${createdOrderId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        customerId: 0,
+        customerName: 'Contact Converted User',
+        customerPhone: '5555555555',
+        contactId: contactId, // Now valid
+        paymentMethod: 'CASH', // Regression check: Should be excluded from Order update
+      })
+      .expect(200);
+
+    // Verify order is linked to a NEW customer
+    expect(response.body.customer.name).toBe('Contact Converted User');
+    expect(response.body.customer.phone).toBe('5555555555');
+    expect(response.body.customer.contactId).toBe(contactId);
+    expect(response.body.customerId).not.toBe(0); 
+  });
+
+  it('/orders (POST) - Create New Order with New Customer from Contact', async () => {
+    // 1. Create a Contact
+    const contactRes = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'New Order Contact', phone: '9998887777' })
+      .expect(201);
+    const contactId = contactRes.body.id;
+
+    // 2. Create Order with this contact
+    const response = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        customerId: 0,
+        customerName: 'New Order User',
+        customerPhone: '9998887777',
+        contactId: contactId,
+        orderDate: '2025-10-10',
+        totalAmount: 500,
+        items: [{ productName: 'Item A', quantity: 1, unitPrice: 500, lineTotal: 500 }]
+      })
+      .expect(201);
+
+    expect(response.body.customer.name).toBe('New Order User');
+    expect(response.body.customer.contactId).toBe(contactId);
+  });
+
+  it('/orders (POST) - Quick Sale with New Customer from Contact', async () => {
+    // 1. Create a Contact
+    const contactRes = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Quick Sale Contact', phone: '1110001110' })
+      .expect(201);
+    const contactId = contactRes.body.id;
+
+    // 2. Create Quick Sale Order
+    const response = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        customerId: 0,
+        customerName: 'Quick Sale User',
+        contactId: contactId,
+        isQuickSale: true,
+        orderDate: '2025-10-12',
+        totalAmount: 200,
+        items: [{ productName: 'Quick Item', quantity: 1, unitPrice: 200, lineTotal: 200 }]
+      })
+      .expect(201);
+
+    expect(response.body.customer.name).toBe('Quick Sale User');
+    expect(response.body.customer.contactId).toBe(contactId);
+    expect(response.body.isQuickSale).toBe(true);
+  });
+
   it('/orders/:id (DELETE) - Cleanup', async () => {
     if (createdOrderId) {
         await request(app.getHttpServer())

@@ -4,6 +4,58 @@ All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
  
+## [v1.8.0] - 2025-12-17 (Strict Payments & Recipients)
+### 💳 Strict Payments
+- **Payment Method Enforcement**: Enforced strict "Cash" or "UPI" selection for payments.
+    - **Order Form**: Restricted Advance Payment options to Cash/UPI.
+    - **Quick Sale**: Simplified payment selector to enforce strict methods.
+    - **Order Details**: Updated Payment Modal to allow only valid payment types.
+- **Backend Validation**: Enhanced `OrdersService` and `SyncPaymentsDto` to validate payment methods strictly.
+
+### 💸 Expense Recipients
+- **New Module**: Introduced **Recipients Management** for better expense tracking.
+- **Features**:
+    - **Manage Recipients**: centralized list of people/entities you pay.
+    - **Smart Search**: Integrated into Expense Form for quick lookup.
+    - **Link to Contacts**: Ability to promote existing Contacts to Recipients.
+
+### 🧪 Testing Enhancements
+- **Labour E2E**: Implemented comprehensive 15-day lifecycle simulation (attendance, settlements, reporting).
+- **Orders E2E**: Added strict coverage for Order creation, editing, and payment flows.
+- **Robustness**: Stabilized E2E tests with better wait strategies and visible-only selectors.
+
+## [v1.7.0] - 2025-12-13 (Creditors & Labour Settlements)
+### 💰 Creditors Management (Debt Tracking)
+- **New Module**: Launched standalone **Creditors** module for managing Accounts Payable.
+- **Features**:
+    - **Creditor Profiles**: Create and manage profiles for Suppliers/Lenders.
+    - **Transaction Ledger**: Record "Debts" (Purchases/Borrowing) and "Repayments".
+    - **Live Balance**: Real-time calculation of net amount owed to each creditor.
+    - **Mobile First**: Simple, card-based interface optimized for mobile usage.
+
+### 👷 Labour Settlements (Zero Dates)
+- **Settlement Logic**: Introduced "Zero Date" concept to settle/archive labour accounts periodically.
+- **Workflow**:
+    - Admins can now "Settle" a labourer's account up to a specific date.
+    - The system snapshots the total Attendance and Amount Paid at that point.
+    - **Report View**: Automatically resets the view to show only attendance/payments **after** the last settlement date, ensuring a clean "Current Due" view.
+- **Backend**: Added `LabourSettlement` model and enhanced `LabourService` to filter reporting data based on settlement timestamps.
+- **Labour Settlements**: Added "Set Zero" functionality to labour reports to clear previous dues and start fresh.
+
+### Database Changes
+- **New Table `labour_settlements`**:
+  - Stores settlement history for each labourer.
+  - Columns:
+    - `settlement_date`: The cutoff date for the settlement.
+    - `total_attendance`: Total days worked up to the settlement date.
+    - `total_payable`: Total amount payable (Attendance * Wage).
+    - `total_paid`: Total amount paid to the labourer.
+    - `net_balance`: Outstanding balance at the time of settlement.
+    - `wage_snapshot`: recorded wage of the settlement period.
+- **New Table `creditors`**: Stores tracking details for people you owe money to.
+- **New Table `creditor_transactions`**: Logs debts and repayments for creditors.
+
+
 ## [v1.6.0] - 2025-12-12 (Contacts, Import & Deduplication)
 ### 👥 Contacts & Google Import
 - **Google Integration**:

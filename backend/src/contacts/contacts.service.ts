@@ -1,6 +1,6 @@
-
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateContactDto } from './dto/update-contact.dto';
 
 @Injectable()
 export class ContactsService {
@@ -15,47 +15,41 @@ export class ContactsService {
     });
   }
 
-  async findAll(userId?: number) {
+  async findAll(userId: number, params: any) {
+    const { query } = params;
     return this.prisma.contact.findMany({
-      where: userId ? { userId } : {}, // If userId is provided, filter. Else return all.
-      orderBy: {
-        name: 'asc',
+      where: {
+        userId,
+        name: query ? { contains: query, mode: 'insensitive' } : undefined,
+        isDeleted: false
       },
       include: {
-        user: {
-             select: { username: true } // Include owner name for display
-        }
-      }
+        user: { select: { username: true } }
+      },
+      orderBy: { name: 'asc' }
     });
   }
 
   async findOne(userId: number, id: number) {
     return this.prisma.contact.findFirst({
-      where: {
-        id,
-        userId,
-      },
+      where: { id, userId, isDeleted: false }
     });
   }
 
-  async update(userId: number, id: number, data: { name?: string; phone?: string; group?: string }) {
-    // Verify ownership
+  async update(id: number, updateContactDto: UpdateContactDto) {
+    return this.prisma.contact.update({
+      where: { id },
+      data: updateContactDto,
+    });
+  }
+
+  async remove(userId: number, id: number) {
     const contact = await this.findOne(userId, id);
     if (!contact) throw new Error('Contact not found or access denied');
 
     return this.prisma.contact.update({
       where: { id },
-      data,
-    });
-  }
-
-  async remove(userId: number, id: number) {
-    // Verify ownership
-    const contact = await this.findOne(userId, id);
-    if (!contact) throw new Error('Contact not found or access denied');
-
-    return this.prisma.contact.delete({
-      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() } 
     });
   }
 

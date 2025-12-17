@@ -1,35 +1,38 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, ArrayMinSize } from 'class-validator';
 
 class OrderItemDto {
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional() @IsNumber() productId?: number;
+  @ApiProperty({ example: 1 })
+  @IsNumber() 
+  productId: number;
 
-  @ApiPropertyOptional({ example: 'Custom Item' })
-  @IsOptional() @IsString() productName?: string;
-  
   @ApiPropertyOptional({ example: 'Description' })
   @IsOptional() @IsString() description?: string;
 
   @ApiProperty({ example: 2 })
-  @IsNumber() quantity: number;
+  @IsOptional() @IsNumber() quantity: number = 0;
 
   @ApiProperty({ example: 50 })
-  @IsNumber() unitPrice: number;
+  @IsOptional() @IsNumber() unitPrice: number = 0;
 
   @ApiProperty({ example: 100 })
-  @IsNumber() lineTotal: number;
+  @IsOptional() @IsNumber() lineTotal: number = 0;
 }
 
 class PaymentDto {
     @ApiProperty({ example: 100 })
+    @IsNumber()
     amount: number;
 
     @ApiProperty({ example: 'CASH' })
+    @IsNotEmpty()
+    @IsString()
     method: string;
     
     @ApiPropertyOptional({ example: 'Initial deposit' })
+    @IsOptional()
+    @IsString()
     note?: string;
 }
 
@@ -37,35 +40,28 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ example: 'ORD-123' })
   @IsOptional() @IsString() orderNo?: string;
 
-  @ApiProperty({ example: 1, description: 'Customer ID (0 for new/walk-in)' })
-  @IsNumber() customerId: number;
-    
-  @ApiPropertyOptional({ example: 'John Walkin' })
-  @IsOptional() @IsString() customerName?: string;
-
-  @ApiPropertyOptional({ example: '9988776655' })
-  @IsOptional() @IsString() customerPhone?: string;
-  
-  @ApiPropertyOptional({ example: '123 Street' })
-  @IsOptional() @IsString() customerAddress?: string;
+  @ApiPropertyOptional({ example: 1, description: 'Customer ID (Either this or contactId required)' })
+  @IsOptional()
+  @IsNumber() 
+  customerId?: number;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional() @IsNumber() contactId?: number;
 
   @ApiProperty({ example: '2023-10-25T10:00:00Z' })
-  @IsDateString() orderDate?: string;
+  @IsOptional() 
+  @IsDateString() 
+  orderDate?: string;
 
+  // Due date is null if not sent
   @ApiPropertyOptional({ example: '2023-11-25T10:00:00Z' })
   @IsOptional() @IsDateString() dueDate?: string;
 
-  @ApiPropertyOptional({ example: 'pending', enum: ['pending', 'completed', 'cancelled', 'closed'] })
+  @ApiPropertyOptional({ example: 'enquired', default: 'enquired' })
   @IsOptional() @IsString() status?: string;
 
-  @ApiProperty({ example: 1000 })
-  @IsNumber() totalAmount: number;
-
-  @ApiPropertyOptional({ example: 0, description: 'Legacy advance amount field (Virtual)' })
-  @IsOptional() @IsNumber() advanceAmount?: number;
+  @ApiPropertyOptional({ example: 1000 })
+  @IsOptional() @IsNumber() totalAmount?: number;
 
   @ApiPropertyOptional({ example: 'Urgent order' })
   @IsOptional() @IsString() notes?: string;
@@ -73,7 +69,7 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ example: false })
   @IsOptional() isQuickSale?: boolean;
 
-  @ApiPropertyOptional({ example: 'CASH' })
+  @ApiPropertyOptional({ example: 'CASH', description: 'Optional payment method' })
   @IsOptional() @IsString() paymentMethod?: string;
 
   @ApiPropertyOptional({ example: 0 })
@@ -82,11 +78,12 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ type: [PaymentDto] })
   @IsOptional() 
   @IsArray()
-  payments?: { amount: number, method: string, note?: string }[];
+  payments?: PaymentDto[];
 
 
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];

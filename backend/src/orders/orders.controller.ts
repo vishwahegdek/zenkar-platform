@@ -20,8 +20,8 @@ export class OrdersController {
   @Get()
   @ApiOperation({ summary: 'Retrieve all orders' })
   @ApiResponse({ status: 200, description: 'List of all orders.' })
-  findAll(@Query('view') view?: string) {
-    return this.ordersService.findAll(view);
+  findAll(@Query('view') view: string, @Query('page') page: string, @Query('limit') limit: string) {
+    return this.ordersService.findAll(view, +page || 1, +limit || 20);
   }
 
   @Get(':id')
@@ -48,10 +48,10 @@ export class OrdersController {
 
   @Post(':id/payments')
   @ApiOperation({ summary: 'Add a payment to an order' })
-  @ApiBody({ schema: { type: 'object', properties: { amount: { type: 'number' }, date: { type: 'string' }, note: { type: 'string' } } } })
+  @ApiBody({ schema: { type: 'object', properties: { amount: { type: 'number' }, method: { type: 'string', example: 'CASH' }, date: { type: 'string' }, note: { type: 'string' } } } })
   @ApiResponse({ status: 201, description: 'Payment added successfully.' })
-  addPayment(@Param('id') id: string, @Body() body: { amount: number; date: string; note?: string }, @Req() req) {
-    return this.ordersService.addPayment(+id, +body.amount, new Date(body.date), body.note, req.user?.userId);
+  addPayment(@Param('id') id: string, @Body() body: { amount: number; method?: string; date: string; note?: string }, @Req() req) {
+    return this.ordersService.addPayment(+id, +body.amount, body.method || 'CASH', new Date(body.date), body.note, req.user?.userId);
   }
 
   @Patch(':id/payments')

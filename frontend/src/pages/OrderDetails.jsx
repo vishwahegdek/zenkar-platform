@@ -337,12 +337,13 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
   const [items, setItems] = useState(payments.map(p => ({
      id: p.id,
      amount: p.amount,
+     method: p.method || 'CASH',
      date: p.date ? new Date(p.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
      note: p.note || ''
   })));
 
   const addRow = () => {
-      setItems([...items, { amount: '', date: new Date().toISOString().split('T')[0], note: '' }]);
+      setItems([...items, { amount: '', method: 'CASH', date: new Date().toISOString().split('T')[0], note: '' }]);
   };
 
   const removeRow = (index) => {
@@ -382,6 +383,7 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
                    <tr>
                       <th className="px-1 md:px-3 py-2 w-28 md:w-32">Date</th>
                       <th className="px-1 md:px-3 py-2 w-20 md:w-24 text-right">Amount</th>
+                      <th className="px-1 md:px-3 py-2 w-20 md:w-24">Method</th>
                       <th className="px-1 md:px-3 py-2">Note</th>
                       <th className="px-1 py-2 w-8"></th>
                    </tr>
@@ -403,6 +405,16 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
                              />
                          </td>
                          <td className="p-1 md:p-2">
+                             <select 
+                                className="input-field py-1 px-1 text-xs w-full"
+                                value={item.method}
+                                onChange={e => updateRow(idx, 'method', e.target.value)}
+                             >
+                                <option value="CASH">Cash</option>
+                                <option value="UPI">UPI</option>
+                             </select>
+                         </td>
+                         <td className="p-1 md:p-2">
                              <input type="text" className="input-field py-1 px-2 text-xs w-full" 
                                 value={item.note}
                                 onChange={e => updateRow(idx, 'note', e.target.value)}
@@ -415,7 +427,7 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
                       </tr>
                    ))}
                    {items.length === 0 && (
-                       <tr><td colSpan={4} className="p-4 text-center text-gray-400 italic">No payments</td></tr>
+                       <tr><td colSpan={5} className="p-4 text-center text-gray-400 italic">No payments</td></tr>
                    )}
                 </tbody>
              </table>

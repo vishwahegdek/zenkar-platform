@@ -27,10 +27,12 @@ export default function OrdersList() {
   const setFilter = (val) => updateParams({ filter: val });
   const setSearch = (val) => updateParams({ search: val });
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['orders', view],
     queryFn: () => api.get(`/orders?view=${view}`),
   });
+
+  const orders = response?.data || [];
 
   const queryClient = useQueryClient();
 

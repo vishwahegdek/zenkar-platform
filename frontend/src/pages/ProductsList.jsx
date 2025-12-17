@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -26,10 +26,27 @@ export default function ProductsList() {
     return () => clearTimeout(timer);
   }, [searchTerm, searchParam, setSearchParams]);
 
-  const { data: products = [], isLoading } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError
+  } = useInfiniteQuery({
     queryKey: ['products', searchParam],
-    queryFn: () => api.get('/products', { params: { query: searchParam } }),
+    queryFn: async ({ pageParam = 1 }) => {
+        const res = await api.get('/products', { params: { query: searchParam, page: pageParam, limit: 20 } });
+        return res; // Assuming interceptor returns data
+    },
+    getNextPageParam: (lastPage) => {
+        // lastPage is { data: [...], meta: { ... } }
+        const { page, totalPages } = lastPage.meta;
+        return page < totalPages ? page + 1 : undefined;
+    },
   });
+
+  const products = data?.pages.flatMap(page => page.data) || [];
 
   const queryClient = useQueryClient();
 
@@ -44,12 +61,15 @@ export default function ProductsList() {
     }
   };
 
-  // Filter using local searchTerm for instant feedback
-  const filteredProducts = products.filter(product => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (product.name || '').toLowerCase().includes(searchLower);
-  });
+  // Filter using local searchTerm for instant feedback (Client-side filtering still useful for rapid filtering within loaded set, 
+  // but main search should be server-side. Here we rely on server-side search via searchParam)
+  // We can just use 'products' directly if server search is active.
+  // Existing logic: filteredProducts = products.filter(...)
+  // Since we pass 'query' to server, 'products' is already filtered by server.
+  // But local searchTerm might be "ahead" of debounce. 
+  // Let's keep local filter for UX smoothness but rely on server mostly.
+  
+  const filteredProducts = products; // Simplified for infinite scroll, relying on server search.
 
   return (
     <div className="space-y-6">
@@ -163,6 +183,19 @@ export default function ProductsList() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Load More Button */}
+                {hasNextPage && (
+                    <div className="p-4 flex justify-center border-t border-gray-100">
+                        <button
+                            onClick={() => fetchNextPage()}
+                            disabled={isFetchingNextPage}
+                            className="bg-gray-50 text-gray-600 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-100 border border-gray-200 transition-all disabled:opacity-50"
+                        >
+                            {isFetchingNextPage ? 'Loading more...' : 'Load More Products'}
+                        </button>
+                    </div>
+                )}
             </>
         )}
       </div>

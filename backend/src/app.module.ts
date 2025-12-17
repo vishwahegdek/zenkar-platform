@@ -16,9 +16,10 @@ import { ContactsModule } from './contacts/contacts.module';
 import { LabourModule } from './labour/labour.module';
 import { RecipientsModule } from './recipients/recipients.module';
 import { NoCacheInterceptor } from './common/interceptors/no-cache.interceptor';
+import { CreditorsModule } from './creditors/creditors.module';
 
 @Module({
-  imports: [PrismaModule, CustomersModule, RecipientsModule, ProductsModule, OrdersModule, UsersModule, AuthModule, AuditModule, DashboardModule, ExpensesModule, ContactsModule, LabourModule],
+  imports: [PrismaModule, CustomersModule, RecipientsModule, ProductsModule, OrdersModule, UsersModule, AuthModule, AuditModule, DashboardModule, ExpensesModule, ContactsModule, LabourModule, CreditorsModule],
   controllers: [AppController],
   providers: [
     AppService,

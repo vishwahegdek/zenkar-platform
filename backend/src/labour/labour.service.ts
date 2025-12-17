@@ -49,12 +49,32 @@ export class LabourService {
   }
 
   async updateDailyView(userId: number, dateStr: string, updates: { contactId: number; attendance: number; amount: number }[]) {
-    // Note: Frontend sends 'contactId' because we reused previous logic. 
-    // We should treat it as labourerId now.
+    // Note: Frontend sends 'contactId' which maps to 'labourerId'
     const date = new Date(dateStr);
     
+    // 1. Pre-fetch settlements for all involved labourers to enforce immutability
+    const labourerIds = updates.map(u => u.contactId);
+    const settlements = await this.prisma.labourSettlement.findMany({
+        where: { labourerId: { in: labourerIds } },
+        orderBy: { settlementDate: 'desc' },
+        distinct: ['labourerId'] // Get unique latest per labourer
+    });
+    
+    const settlementMap = new Map();
+    settlements.forEach(s => settlementMap.set(s.labourerId, s.settlementDate));
+
     for (const update of updates) {
        const labourerId = update.contactId;
+
+       // IMMUTABILITY CHECK
+       const lastSettlementDate = settlementMap.get(labourerId);
+       if (lastSettlementDate && date <= lastSettlementDate) {
+           // Skip or Error? 
+           // For bulk updates, skipping might be safer to avoid partial failures, 
+           // but technically it's a "Bad Request". 
+           // We'll throw to alert the user they are doing something wrong.
+           throw new Error(`Cannot modify data for Labourer ID ${labourerId} on ${dateStr} as it is prior to settlement date ${lastSettlementDate.toISOString().split('T')[0]}`);
+       }
 
        // A. Attendance
        if (update.attendance > 0) {
@@ -124,20 +144,45 @@ export class LabourService {
     const labourers = await this.prisma.labourer.findMany({
       where,
       orderBy: { name: 'asc' },
+      include: {
+        settlements: {
+          orderBy: { settlementDate: 'desc' },
+          take: 1,
+        }
+      }
     });
-
-    const dateFilter: any = {};
-    if (from || to) {
-      if (from) dateFilter.gte = new Date(from);
-      if (to) dateFilter.lte = new Date(to);
-    }
 
     const reportData: any[] = [];
 
     for (const labourer of labourers) {
+      // Determine Start Date (Zero Date)
+      let startDate: Date | undefined;
+      const lastSettlement = labourer.settlements ? labourer.settlements[0] : null;
+      
+      if (lastSettlement) {
+          startDate = lastSettlement.settlementDate;
+      }
+      
       const attWhere: any = { labourerId: labourer.id };
       const expWhere: any = { labourerId: labourer.id };
       
+      const dateFilter: any = {};
+      
+      // 1. Base filter: After settlement
+      if (startDate) {
+         dateFilter.gt = startDate;
+      }
+
+      // 2. User Override
+      if (from) {
+          delete dateFilter.gt;
+          dateFilter.gte = new Date(from);
+      }
+      
+      if (to) {
+          dateFilter.lte = new Date(to);
+      }
+
       if (Object.keys(dateFilter).length > 0) {
           attWhere.date = dateFilter;
           expWhere.date = dateFilter;
@@ -182,12 +227,13 @@ export class LabourService {
       reportData.push({
         id: labourer.id,
         name: labourer.name,
-        salary: Number(salary), // Legacy support for LabourReport
-        defaultDailyWage: Number(salary), // Support for LabourManage
+        salary: Number(salary), 
+        defaultDailyWage: Number(salary),
         totalDays,
         totalSalary,
         totalPaid,
         balance,
+        lastSettlementDate: lastSettlement ? lastSettlement.settlementDate : null,
         records
       });
     }
@@ -227,6 +273,36 @@ export class LabourService {
       return this.prisma.labourer.update({
           where: { id },
           data: { isDeleted: true }
+      });
+  }
+  
+  async createSettlement(labourerId: number, settlementDate: Date, note?: string) {
+     // 1. Calculate stats up to this date
+     // Reuse logic mostly, but bounded by <= date
+     const stats = await this.getReport(undefined, settlementDate.toISOString(), labourerId);
+     const stat = stats[0]; // Specific labourer
+     
+     if (!stat) throw new Error("Labourer stats not found");
+     
+     // 2. Create Settlement Snapshot
+     return this.prisma.labourSettlement.create({
+       data: {
+         labourerId,
+         settlementDate,
+         totalAttendance: stat.totalDays,
+         totalPayable: stat.totalSalary, // Salary generated
+         totalPaid: stat.totalPaid,
+         netBalance: stat.balance,
+         wageSnapshot: stat.salary, // Save the wage at this point
+         note
+       }
+     });
+  }
+
+  async getSettlements(labourerId: number) {
+      return this.prisma.labourSettlement.findMany({
+          where: { labourerId },
+          orderBy: { settlementDate: 'desc' }
       });
   }
 }

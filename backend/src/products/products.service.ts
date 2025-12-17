@@ -20,7 +20,7 @@ export class ProductsService {
     });
   }
 
-  findAll(query?: string) {
+  async findAll(query?: string, page: number = 1, limit: number = 20) {
     const whereClause: any = { isDeleted: false };
     
     if (query) {
@@ -29,11 +29,27 @@ export class ProductsService {
       ];
     }
 
-    return this.prisma.product.findMany({
-      where: whereClause,
-      take: 20,
-      orderBy: { name: 'asc' },
-    });
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where: whereClause,
+        take: limit,
+        skip: skip,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.product.count({ where: whereClause }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
   }
 
   findOne(id: number) {

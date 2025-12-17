@@ -31,17 +31,17 @@ fi
 
 # Build Backend
 echo "🔨 Building Backend..."
-docker build $BACKEND_TAGS -f backend/Dockerfile .
+sudo docker build $BACKEND_TAGS -f backend/Dockerfile .
 
 # Build Frontend
 echo "🔨 Building Frontend..."
-docker build $FRONTEND_TAGS -f frontend/Dockerfile .
+sudo docker build $FRONTEND_TAGS -f frontend/Dockerfile .
 
 # Push Images
 echo "📤 Pushing Backend Images..."
-docker push $BACKEND_REPO --all-tags
+sudo docker push $BACKEND_REPO --all-tags
 
 echo "📤 Pushing Frontend Images..."
-docker push $FRONTEND_REPO --all-tags
+sudo docker push $FRONTEND_REPO --all-tags
 
 echo "✅ Build and Push Complete!"

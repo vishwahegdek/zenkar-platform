@@ -58,6 +58,7 @@ export default function OrderForm() {
     items: [],
     notes: '',
     advanceAmount: 0,
+    paymentMethod: 'CASH',
   });
 
   // Fetch Order Data if Edit
@@ -442,10 +443,21 @@ export default function OrderForm() {
                {/* {!isEdit && ( */}
                <div className="flex items-center justify-between gap-4">
                  <span className="text-sm text-gray-600">Advance</span>
-                 <input type="number" className="input-field w-32 text-right"
-                    value={formData.advanceAmount}
-                    onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
-                 />
+                 <div className="flex gap-2">
+                    <select 
+                        className="input-field w-20 py-1 px-1 text-sm"
+                        value={formData.paymentMethod}
+                        onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
+                    >
+                        <option value="CASH">Cash</option>
+                        <option value="UPI">UPI</option>
+                    </select>
+                    <input type="number" className="input-field w-24 text-right"
+                        value={formData.advanceAmount}
+                        onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
+                        placeholder="0"
+                    />
+                 </div>
                </div>
                {/* )} */}
                {/* {!isEdit && ( */}

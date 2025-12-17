@@ -38,6 +38,17 @@ echo "📂 Project Dir: $PROJECT_DIR"
 # 1. Update Code (to get new compose files)
 echo "📥 Pulling latest code..."
 cd $PROJECT_DIR
+
+# --- Deployment Verification: Log Current State ---
+CURRENT_COMMIT=$(git rev-parse HEAD)
+# Extract version from package.json using grep/sed to avoid jq dependency if not present, or use node
+CURRENT_VERSION=$(grep '"version":' package.json | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
+
+LOG_FILE="$BACKUP_DIR/deployment_log.txt"
+echo "$(date '+%Y-%m-%d %H:%M:%S') | Version: $CURRENT_VERSION | Commit: $CURRENT_COMMIT | Backup: backup_${ENV}_${DATE_TAG}.sql" >> "$LOG_FILE"
+echo "📝 Logged previous state: $CURRENT_VERSION ($CURRENT_COMMIT)"
+# --------------------------------------------------
+
 git fetch --all
 git reset --hard origin/master # Updated to use master
 

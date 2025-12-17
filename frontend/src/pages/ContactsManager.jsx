@@ -116,10 +116,11 @@ export default function ContactsManager() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Phone</label>
                 <input
-                  {...register('phone')}
-                  placeholder="Optional"
+                  {...register('phone', { required: 'Phone is required' })}
+                  placeholder="e.g. 9876543210"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
                 />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
               </div>
 
               <div>
