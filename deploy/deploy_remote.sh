@@ -49,8 +49,8 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') | Version: $CURRENT_VERSION | Commit: $CURREN
 echo "📝 Logged previous state: $CURRENT_VERSION ($CURRENT_COMMIT)"
 # --------------------------------------------------
 
-git fetch --all
-git reset --hard origin/master # Updated to use master
+# git fetch --all (Skipped: Run "git pull" as user before running script with sudo)
+# git reset --hard origin/master
 
 # 2. Database Backup
 echo "💾 Creating Database Backup..."
