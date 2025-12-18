@@ -41,4 +41,7 @@ sudo docker push "$FRONTEND_REPO:staging-$DATE_TAG"
 sudo docker push "$FRONTEND_REPO:$GIT_SHA"
 
 echo "✅ Build and Push Complete!"
-echo "👉 To promote this build to PRODUCTION, run: ./deploy/promote_to_prod.sh $GIT_SHA"
+echo "$GIT_SHA" > .latest_build_sha
+echo "ℹ️  Saved SHA to .latest_build_sha"
+echo "👉 To promote this build to PRODUCTION, run: ./deploy/promote_to_prod.sh (It will use $GIT_SHA by default)"
+

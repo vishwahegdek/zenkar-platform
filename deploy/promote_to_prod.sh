@@ -8,8 +8,13 @@ set -e
 GIT_SHA=$1
 
 if [ -z "$GIT_SHA" ]; then
-    GIT_SHA=$(git rev-parse --short HEAD)
-    echo "ℹ️  No Git SHA provided, using current HEAD: $GIT_SHA"
+    if [ -f ".latest_build_sha" ]; then
+        GIT_SHA=$(cat .latest_build_sha)
+        echo "ℹ️  No SHA provided. Found last build SHA: $GIT_SHA"
+    else
+        GIT_SHA=$(git rev-parse --short HEAD)
+        echo "⚠️  No SHA provided and no .latest_build_sha found. Using current HEAD: $GIT_SHA"
+    fi
 fi
 
 DATE_TAG=$(date +%Y%m%d-%H%M%S)
