@@ -29,15 +29,24 @@ describe('OrdersSystem (e2e)', () => {
   });
 
   it('/orders (POST) - Create Order with Indian Context', async () => {
+    // 1. Create Contact first (Strict Requirement)
+    const contactRes = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Rajesh Kumar', phone: '9876543210' })
+      .expect(201);
+    const contactId = contactRes.body.id;
+
     const orderData = {
-      customerName: 'Rajesh Kumar',
+      contactId: contactId,
+      customerName: 'Rajesh Kumar', // Helper might use this
       customerPhone: '9876543210',
       customerAddress: '123, MG Road, Indiranagar, Bangalore',
-      customerId: 0, // 0 triggers new customer creation logic
       orderDate: '2025-10-01',
       items: [
         {
-          productName: 'Teak Wood Coffee Table', // Realistic furniture
+          productId: 0, // Added for Strict Validation (Ad-hoc)
+          productName: 'Teak Wood Coffee Table',
           description: '3x3 feet with glass top',
           quantity: 1,
           unitPrice: 15000,
@@ -45,7 +54,11 @@ describe('OrdersSystem (e2e)', () => {
         }
       ],
       totalAmount: 15000,
-      advanceAmount: 5000, // Initial advance is handled as payment now
+      // advanceAmount: 5000, // Removed by strict DTO
+      payments: [
+        { amount: 5000, method: 'CASH', date: '2025-10-01' }
+      ],
+      paymentMethod: 'CASH',
     };
 
     const response = await request(app.getHttpServer())
@@ -111,9 +124,18 @@ describe('OrdersSystem (e2e)', () => {
   let largeOrderId: number;
 
   it('/orders (POST) - Create Large Order', async () => {
+    // 1. Create Contact
+    const contactRes = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Bulk Buyer', phone: '9988776655' })
+      .expect(201);
+    const contactId = contactRes.body.id;
+
     const items: any[] = [];
     for (let i = 0; i < 20; i++) {
         items.push({
+            productId: 0,
             productName: `Bulk Item ${i}`,
             quantity: 1,
             unitPrice: 100,
@@ -125,13 +147,14 @@ describe('OrdersSystem (e2e)', () => {
       .post('/orders')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        customerId: 0,
+        contactId: contactId,
         customerName: 'Bulk Buyer',
         customerPhone: '9988776655',
         customerAddress: 'Bulk Address',
         orderDate: new Date().toISOString(),
         totalAmount: 2000,
         advanceAmount: 0,
+        paymentMethod: 'CASH',
         items: items
       })
       .expect(201);
@@ -175,16 +198,16 @@ describe('OrdersSystem (e2e)', () => {
       .patch(`/orders/${createdOrderId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        customerId: 0,
+        customerId: 0, // Restore: Required to trigger New Customer from Contact in Update logic
         customerName: 'Contact Converted User',
         customerPhone: '5555555555',
-        contactId: contactId, // Now valid
-        paymentMethod: 'CASH', // Regression check: Should be excluded from Order update
+        contactId: contactId, 
+        paymentMethod: 'CASH', 
       })
       .expect(200);
 
-    // Verify order is linked to a NEW customer
-    expect(response.body.customer.name).toBe('Contact Converted User');
+    // Verify order is linked to a NEW customer (Name comes from Contact)
+    expect(response.body.customer.name).toBe('Contact For Order');
     expect(response.body.customer.phone).toBe('5555555555');
     expect(response.body.customer.contactId).toBe(contactId);
     expect(response.body.customerId).not.toBe(0); 
@@ -204,17 +227,18 @@ describe('OrdersSystem (e2e)', () => {
       .post('/orders')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        customerId: 0,
+        // customerId: 0, // Removed
         customerName: 'New Order User',
         customerPhone: '9998887777',
         contactId: contactId,
         orderDate: '2025-10-10',
         totalAmount: 500,
-        items: [{ productName: 'Item A', quantity: 1, unitPrice: 500, lineTotal: 500 }]
+        paymentMethod: 'CASH',
+        items: [{ productId: 0, productName: 'Item A', quantity: 1, unitPrice: 500, lineTotal: 500 }]
       })
       .expect(201);
 
-    expect(response.body.customer.name).toBe('New Order User');
+    expect(response.body.customer.name).toBe('New Order Contact');
     expect(response.body.customer.contactId).toBe(contactId);
   });
 
@@ -232,17 +256,18 @@ describe('OrdersSystem (e2e)', () => {
       .post('/orders')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        customerId: 0,
+        // customerId: 0, // Removed
         customerName: 'Quick Sale User',
         contactId: contactId,
         isQuickSale: true,
         orderDate: '2025-10-12',
         totalAmount: 200,
-        items: [{ productName: 'Quick Item', quantity: 1, unitPrice: 200, lineTotal: 200 }]
+        paymentMethod: 'CASH',
+        items: [{ productId: 0, productName: 'Quick Item', quantity: 1, unitPrice: 200, lineTotal: 200 }]
       })
       .expect(201);
 
-    expect(response.body.customer.name).toBe('Quick Sale User');
+    expect(response.body.customer.name).toBe('Quick Sale Contact');
     expect(response.body.customer.contactId).toBe(contactId);
     expect(response.body.isQuickSale).toBe(true);
   });

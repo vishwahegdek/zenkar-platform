@@ -3,6 +3,14 @@
 All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
+### 💸 Expenses Enhancements
+- **Search**: Added search bar to Expense Book (filters by description, recipient, or category).
+- **Edit**: Added inline "Edit" button to modify existing expenses.
+- **Backend**: Updated API to support search filtering and single expense retrieval.
+- **Backend**: Added `GET /expenses?date=YYYY-MM-DD` for single-day filtering.
+- **Pagination**: Integrated "Daily View" with Round Prev/Next navigation buttons in the header.
+- **Sorting**: Expenses are sorted by `updatedAt` descending, with visible modification times.
+
 
 ## [v1.8.1] - 2025-12-18 (Carry Forward & History)
 ### 🔄 Carry Forward Settlements

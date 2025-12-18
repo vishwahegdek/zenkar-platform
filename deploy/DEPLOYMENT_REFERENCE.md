@@ -46,8 +46,8 @@ Run this from your **Local Machine** to build images and push them to Docker Hub
 sudo ./deploy/build_and_push.sh
 
 # For Production (Promote an existing build)
-# Copy the Git SHA from the build output above
-sudo ./deploy/promote_to_prod.sh <git_sha>
+# The git SHA is automatically detected     
+sudo ./deploy/promote_to_prod.sh
 
 ```
 
@@ -83,7 +83,7 @@ sudo -E ./deploy/deploy_remote.sh production
 ---
 
 ## ⚠️ Important Safety Rules
-1.  **NEVER** delete `~/zenkar-platform-production/pgdata`. This is the production database.
+1.  **NEVER** delete `~/zenkar-platform-production/pgdata`. Thivs is the production database.
 2.  **NEVER** run `docker-compose down -v` in Production (it deletes volumes).
 3.  **ALWAYS** check which folder you are in (`pwd`) before running docker commands.
 4.  **NEVER** hardcode secrets (API Keys, DB Passwords) in `docker-compose.yml`. Always use `.env` files and SCP the local `.env` to the server location relative to the compose file (e.g. `deploy/staging/.env`).

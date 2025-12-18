@@ -35,8 +35,7 @@ const ExpenseForm = () => {
   const { data: expense, isLoading: isLoadingExpense } = useQuery({
     queryKey: ['expense', id],
     queryFn: async () => {
-      const res = await api.get(`/expenses?id=${id}`); // Assuming API supports filtering by ID returns array
-      return res[0]; 
+      return await api.get(`/expenses/${id}`);
     },
     enabled: isEditMode
   });

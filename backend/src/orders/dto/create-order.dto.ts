@@ -7,6 +7,11 @@ class OrderItemDto {
   @IsNumber() 
   productId: number;
 
+  @ApiPropertyOptional({ example: 'Product Name' })
+  @IsOptional() 
+  @IsString() 
+  productName?: string;
+
   @ApiPropertyOptional({ example: 'Description' })
   @IsOptional() @IsString() description?: string;
 

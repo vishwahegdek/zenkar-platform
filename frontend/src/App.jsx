@@ -74,6 +74,7 @@ function App() {
               <Route path="expenses" element={<ExpensesBook />} />
               <Route path="expenses/new" element={<ExpenseForm />} />
               <Route path="expenses/manage" element={<ManageExpenses />} />
+              <Route path="expenses/:id/edit" element={<ExpenseForm />} />
 
 
 

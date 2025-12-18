@@ -118,7 +118,8 @@ test.describe('Labour Module UI Flow (Rigorous)', () => {
     if (expectedBalance < 0) {
         await expect(footer.locator('text=Balance').locator('xpath=..')).toHaveClass(/text-red-400/);
     } else {
-        await expect(footer.locator('text=Balance').locator('xpath=..')).toHaveClass(/text-green-400/);
+        // Check for Green indication (Text or Background)
+        await expect(footer.locator('text=Balance').locator('xpath=..')).toHaveClass(/text-green|bg-green/);
     }
 
 

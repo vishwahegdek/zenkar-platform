@@ -71,6 +71,11 @@ export class ExpensesService {
         date: data.date ? new Date(data.date) : new Date(),
         createdById: userId,
       },
+      include: {
+        category: true,
+        recipient: true,
+        labourer: true,
+      },
     });
   }
 
@@ -94,10 +99,62 @@ export class ExpensesService {
     });
   }
 
-  async updateExpense(id: number, data: Prisma.ExpenseUpdateInput, userId?: number) {
+  async findOne(id: number) {
+    return this.prisma.expense.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        recipient: true,
+        labourer: true,
+      },
+    });
+  }
+
+  async updateExpense(id: number, data: any, userId?: number) {
+    let recipientId = data.recipientId;
+
+    // Resolve Recipient if name provided (similar to create)
+    if (data.recipientName) {
+        let recipient = await this.prisma.recipient.findFirst({
+            where: { 
+                userId: userId, 
+                name: data.recipientName 
+            }
+        });
+
+        if (!recipient) {
+            recipient = await this.prisma.recipient.create({
+                data: {
+                    userId: userId || 1, // Fallback if no userId context (shouldn't happen in auth routes)
+                    name: data.recipientName,
+                    contactId: data.contactId || undefined
+                }
+            });
+        }
+        recipientId = recipient.id;
+    }
+
+    // Sanitize payload for Prisma
+    const updateData: Prisma.ExpenseUpdateInput = {
+        amount: data.amount,
+        category: data.categoryId ? { connect: { id: data.categoryId } } : undefined,
+        description: data.description,
+        date: data.date ? new Date(data.date) : undefined,
+        recipient: recipientId ? { connect: { id: recipientId } } : undefined,
+        updatedBy: userId ? { connect: { id: userId } } : undefined
+    };
+
+    // Remove undefined keys
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
     return this.prisma.expense.update({
       where: { id },
-      data: { ...data, updatedById: userId } as any,
+      data: updateData,
+      include: {
+        category: true,
+        recipient: true,
+        labourer: true,
+      },
     });
   }
 

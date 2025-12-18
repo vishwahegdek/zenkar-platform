@@ -1,0 +1,670 @@
+
+> backend@1.8.1 test:e2e
+> jest --config ./test/jest-e2e.json --runInBand orders
+
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientKnownRequestError: 
+Invalid `tx.order.create()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:95:36
+
+  92 const processedItems = await this.processItems(items, tx);
+  93 
+  94 // 3. Create Order
+→ 95 const order = await tx.order.create(
+Foreign key constraint violated: `order_items_product_id_fkey (index)`
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:7315[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:95:21
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.create [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:50:20[90m)[39m {
+  code: [32m'P2003'[39m,
+  clientVersion: [32m'5.22.0'[39m,
+  meta: {
+    modelName: [32m'Order'[39m,
+    field_name: [32m'order_items_product_id_fkey (index)'[39m
+  }
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientValidationError: 
+Invalid `this.prisma.payment.create()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:371:47
+
+  368 }
+  369 
+  370 async addPayment(orderId: number, amount: number, method: string, date: Date, note?: string, userId?: number) {
+→ 371   const payment = await this.prisma.payment.create({
+          data: {
+            orderId: NaN,
+            amount: 5000,
+            method: "CASH",
+            date: new Date("2025-10-05T00:00:00.000Z"),
+            note: "UPI Payment",
+            createdById: 1,
+        +   order: {
+        +     create: OrderCreateWithoutPaymentsInput | OrderUncheckedCreateWithoutPaymentsInput,
+        +     connectOrCreate: OrderCreateOrConnectWithoutPaymentsInput,
+        +     connect: OrderWhereUniqueInput
+        +   }
+          }
+        })
+
+Argument `order` is missing.
+    at wn [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:29:1363[90m)[39m
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6958[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at OrdersService.addPayment [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:371:21[90m)[39m {
+  clientVersion: [32m'5.22.0'[39m
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientValidationError: 
+Invalid `this.prisma.order.findUnique()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:231:43
+
+  228 }
+  229 
+  230 async findOne(id: number) {
+→ 231   const order = await this.prisma.order.findUnique({
+          where: {
+        +   id: Int
+          },
+          include: {
+            customer: true,
+            items: {
+              include: {
+                images: true
+              }
+            },
+            payments: {
+              orderBy: {
+                date: "desc"
+              }
+            }
+          }
+        })
+
+Argument `id` is missing.
+    at wn [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:29:1363[90m)[39m
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6958[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at OrdersService.findOne [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:231:19[90m)[39m {
+  clientVersion: [32m'5.22.0'[39m
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientValidationError: 
+Invalid `tx.order.findUnique()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:276:46
+
+  273 let discountUpdate = {};
+  274 if (status === 'closed') {
+  275    // Need current totals to calculate remaining balance
+→ 276    const currentOrder = await tx.order.findUnique({
+           where: {
+         +   id: Int
+           },
+           include: {
+             payments: true
+           }
+         })
+
+Argument `id` is missing.
+    at wn [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:29:1363[90m)[39m
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6958[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:276:31
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.update [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:271:20[90m)[39m {
+  clientVersion: [32m'5.22.0'[39m
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientKnownRequestError: 
+Invalid `tx.order.create()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:95:36
+
+  92 const processedItems = await this.processItems(items, tx);
+  93 
+  94 // 3. Create Order
+→ 95 const order = await tx.order.create(
+Foreign key constraint violated: `order_items_product_id_fkey (index)`
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:7315[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:95:21
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.create [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:50:20[90m)[39m {
+  code: [32m'P2003'[39m,
+  clientVersion: [32m'5.22.0'[39m,
+  meta: {
+    modelName: [32m'Order'[39m,
+    field_name: [32m'order_items_product_id_fkey (index)'[39m
+  }
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientValidationError: 
+Invalid `tx.order.update()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:321:22
+
+  318 }
+  319 
+  320 // 1. Update Order details
+→ 321 await tx.order.update({
+        where: {
+      +   id: Int
+        },
+        data: {
+          status: undefined,
+          customer: {
+            connect: {
+              id: 39
+            }
+          },
+          updatedBy: {
+            connect: {
+              id: 1
+            }
+          }
+        }
+      })
+
+Argument `id` is missing.
+    at wn [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:29:1363[90m)[39m
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6958[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:321:7
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.update [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:271:20[90m)[39m {
+  clientVersion: [32m'5.22.0'[39m
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientValidationError: 
+Invalid `tx.order.update()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:321:22
+
+  318 }
+  319 
+  320 // 1. Update Order details
+→ 321 await tx.order.update({
+        where: {
+      +   id: Int
+        },
+        data: {
+          status: undefined,
+          customer: undefined,
+          updatedBy: {
+            connect: {
+              id: 1
+            }
+          }
+        }
+      })
+
+Argument `id` is missing.
+    at wn [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:29:1363[90m)[39m
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6958[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:321:7
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.update [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:271:20[90m)[39m {
+  clientVersion: [32m'5.22.0'[39m
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientKnownRequestError: 
+Invalid `tx.order.create()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:95:36
+
+  92 const processedItems = await this.processItems(items, tx);
+  93 
+  94 // 3. Create Order
+→ 95 const order = await tx.order.create(
+Foreign key constraint violated: `order_items_product_id_fkey (index)`
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:7315[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:95:21
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.create [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:50:20[90m)[39m {
+  code: [32m'P2003'[39m,
+  clientVersion: [32m'5.22.0'[39m,
+  meta: {
+    modelName: [32m'Order'[39m,
+    field_name: [32m'order_items_product_id_fkey (index)'[39m
+  }
+}
+[31m[Nest] 625530  - [39m12/18/2025, 3:15:05 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientKnownRequestError: 
+Invalid `tx.order.create()` invocation in
+/home/vishwa/projects/zenkar-platform/backend/src/orders/orders.service.ts:95:36
+
+  92 const processedItems = await this.processItems(items, tx);
+  93 
+  94 // 3. Create Order
+→ 95 const order = await tx.order.create(
+Foreign key constraint violated: `order_items_product_id_fkey (index)`
+    at $n.handleRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:7315[90m)[39m
+    at $n.handleAndLogRequestError [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6623[90m)[39m
+    at $n.request [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:121:6307[90m)[39m
+    at l [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:9633[90m)[39m
+    at [90m/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:95:21
+    at Proxy._transactionWithCallback [90m(/home/vishwa/projects/zenkar-platform/backend/[39mnode_modules/[4m@prisma[24m/client/runtime/library.js:130:8000[90m)[39m
+    at OrdersService.create [90m(/home/vishwa/projects/zenkar-platform/backend/[39msrc/orders/orders.service.ts:50:20[90m)[39m {
+  code: [32m'P2003'[39m,
+  clientVersion: [32m'5.22.0'[39m,
+  meta: {
+    modelName: [32m'Order'[39m,
+    field_name: [32m'order_items_product_id_fkey (index)'[39m
+  }
+}
+FAIL test/orders.e2e-spec.ts
+  ● Console
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] GET /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] PATCH /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] PATCH /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] PATCH /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+  ● OrdersSystem (e2e) › /orders (POST) - Create Order with Indian Context
+
+    TypeError: Cannot read properties of undefined (reading 'body')
+
+      65 |       .expect(201)
+      66 |       .catch(err => {
+    > 67 |           console.log('Error creating Indian Context order:', JSON.stringify(err.response.body, null, 2));
+         |                                                                                           ^
+      68 |           throw err;
+      69 |       });
+      70 |
+
+      at orders.e2e-spec.ts:67:91
+      at Object.<anonymous> (orders.e2e-spec.ts:61:22)
+
+  ● OrdersSystem (e2e) › /orders/:id/payments (POST) - Add Partial Payment
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      85 |       .set('Authorization', `Bearer ${authToken}`)
+      86 |       .send(paymentData)
+    > 87 |       .expect(201);
+         |        ^
+      88 |   });
+      89 |
+      90 |   it('/orders/:id (GET) - Verify Balance', async () => {
+
+      at Object.<anonymous> (orders.e2e-spec.ts:87:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders/:id (GET) - Verify Balance
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      92 |       .get(`/orders/${createdOrderId}`)
+      93 |       .set('Authorization', `Bearer ${authToken}`)
+    > 94 |       .expect(200);
+         |        ^
+      95 |
+      96 |     // Total: 15000. Advance: 5000 (from create). Payment: 5000. Total Paid: 10000. Balance: 5000.
+      97 |     // Note: create() logic: "Capture initial advance... Create Initial Payment".
+
+      at Object.<anonymous> (orders.e2e-spec.ts:94:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders/:id (PATCH) - Close Order and Write-off Balance
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      111 |       .set('Authorization', `Bearer ${authToken}`)
+      112 |       .send({ status: 'closed' })
+    > 113 |       .expect(200);
+          |        ^
+      114 |
+      115 |     const response = await request(app.getHttpServer())
+      116 |       .get(`/orders/${createdOrderId}`)
+
+      at Object.<anonymous> (orders.e2e-spec.ts:113:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders (POST) - Create Large Order
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      159 |         items: items
+      160 |       })
+    > 161 |       .expect(201);
+          |        ^
+      162 |       
+      163 |     largeOrderId = response.body.id;
+      164 |   });
+
+      at Object.<anonymous> (orders.e2e-spec.ts:161:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders/:id (PATCH) - Update Customer to Existing Customer
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      180 |         customerName: 'Another Customer'
+      181 |       })
+    > 182 |       .expect(200);
+          |        ^
+      183 |
+      184 |     expect(response.body.customer.id).toBe(secondCustId);
+      185 |     expect(response.body.customer.name).toBe('Another Customer');
+
+      at Object.<anonymous> (orders.e2e-spec.ts:182:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders/:id (PATCH) - Update Customer to New Customer (Fix Verification)
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      206 |         paymentMethod: 'CASH', // Regression check: Should be excluded from Order update
+      207 |       })
+    > 208 |       .expect(200);
+          |        ^
+      209 |
+      210 |     // Verify order is linked to a NEW customer
+      211 |     expect(response.body.customer.name).toBe('Contact Converted User');
+
+      at Object.<anonymous> (orders.e2e-spec.ts:208:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders (POST) - Create New Order with New Customer from Contact
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      238 |         items: [{ productId: 0, productName: 'Item A', quantity: 1, unitPrice: 500, lineTotal: 500 }]
+      239 |       })
+    > 240 |       .expect(201);
+          |        ^
+      241 |
+      242 |     expect(response.body.customer.name).toBe('New Order User');
+      243 |     expect(response.body.customer.contactId).toBe(contactId);
+
+      at Object.<anonymous> (orders.e2e-spec.ts:240:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● OrdersSystem (e2e) › /orders (POST) - Quick Sale with New Customer from Contact
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      267 |         items: [{ productId: 0, productName: 'Quick Item', quantity: 1, unitPrice: 200, lineTotal: 200 }]
+      268 |       })
+    > 269 |       .expect(201);
+          |        ^
+      270 |
+      271 |     expect(response.body.customer.name).toBe('Quick Sale User');
+      272 |     expect(response.body.customer.contactId).toBe(contactId);
+
+      at Object.<anonymous> (orders.e2e-spec.ts:269:8)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+PASS test/strict_orders.e2e-spec.ts
+  ● Console
+
+    console.log
+      Attempting login...
+
+      at Object.<anonymous> (strict_orders.e2e-spec.ts:26:13)
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      Login Status: 201
+
+      at Object.<anonymous> (strict_orders.e2e-spec.ts:31:13)
+
+    console.log
+      Logged in as Admin. Token: Yes
+
+      at Object.<anonymous> (strict_orders.e2e-spec.ts:42:17)
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] GET /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] PATCH /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] GET /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] POST /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] GET /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] DELETE /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] DELETE /
+
+      at ../src/app.module.ts:40:17
+
+    console.log
+      [Request] DELETE /
+
+      at ../src/app.module.ts:40:17
+
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       9 failed, 21 passed, 30 total
+Snapshots:   0 total
+Time:        1.352 s, estimated 2 s
+Ran all test suites matching orders.
