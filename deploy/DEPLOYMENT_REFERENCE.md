@@ -42,11 +42,13 @@ This project uses **Docker Hub** for standardizing builds. Images are built loca
 ### 1️⃣ Build & Push (Local Machine)
 Run this from your **Local Machine** to build images and push them to Docker Hub.
 ```bash
-# For Staging
-sudo ./deploy/build_and_push.sh staging
+# For Staging (and to generate build artifact)
+sudo ./deploy/build_and_push.sh
 
-# For Production
-sudo ./deploy/build_and_push.sh production
+# For Production (Promote an existing build)
+# Copy the Git SHA from the build output above
+sudo ./deploy/promote_to_prod.sh <git_sha>
+
 ```
 
 ### 2️⃣ Deploy & Migrate (Remote Server)
@@ -74,7 +76,8 @@ sudo -E ./deploy_remote.sh production
 
 | Script | Location | Purpose |
 | :--- | :--- | :--- |
-| **Build & Push** | `deploy/build_and_push.sh` | Builds Docker images locally and pushes to Docker Hub. |
+| **Build & Push** | `deploy/build_and_push.sh` | Builds Docker images locally, tags with SHA, and pushes to Staging. |
+| **Promote to Prod** | `deploy/promote_to_prod.sh` | Takes a Git SHA, retags it as Production, and pushes (No Rebuild). |
 | **Deploy Remote** | `deploy/deploy_remote.sh` | Pulls code/images, backs up DB, migrates DB, and restarts containers. |
 | **Restore DB** | `deploy/restore_db.sh` | Restores database from a SQL backup file. |
 

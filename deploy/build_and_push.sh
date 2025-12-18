@@ -1,33 +1,25 @@
 #!/bin/bash
 
-# Usage: ./build_and_push.sh <environment>
-# environment: staging | production
+# Usage: ./build_and_push.sh
+# description: Builds the Docker images once, tags them with the Git Commit Hash and Staging tags, and pushes them.
 
 set -e
 
-if [ -z "$1" ]; then
-  echo "Usage: ./build_and_push.sh <staging|production>"
-  exit 1
-fi
-
-ENV=$1
 DATE_TAG=$(date +%Y%m%d-%H%M%S)
+GIT_SHA=$(git rev-parse --short HEAD)
 
 # Repo Names
 BACKEND_REPO="vishwahegdek/zenkar-backend"
 FRONTEND_REPO="vishwahegdek/zenkar-frontend"
 
-echo "🚀 Starting build for environment: $ENV"
-echo "📅 Tag: $DATE_TAG"
+echo "🚀 Starting Single-Build Process"
+echo "📅 Date Tag: $DATE_TAG"
+echo "🔗 Git SHA:  $GIT_SHA"
 
-# Determine Tags
-if [ "$ENV" == "production" ]; then
-    BACKEND_TAGS="-t $BACKEND_REPO:production -t $BACKEND_REPO:prod-$DATE_TAG"
-    FRONTEND_TAGS="-t $FRONTEND_REPO:production -t $FRONTEND_REPO:prod-$DATE_TAG"
-else
-    BACKEND_TAGS="-t $BACKEND_REPO:staging -t $BACKEND_REPO:staging-$DATE_TAG"
-    FRONTEND_TAGS="-t $FRONTEND_REPO:staging -t $FRONTEND_REPO:staging-$DATE_TAG"
-fi
+# Tags for Backend (Staging + Immutable SHA)
+BACKEND_TAGS="-t $BACKEND_REPO:staging -t $BACKEND_REPO:staging-$DATE_TAG -t $BACKEND_REPO:$GIT_SHA"
+# Tags for Frontend (Staging + Immutable SHA)
+FRONTEND_TAGS="-t $FRONTEND_REPO:staging -t $FRONTEND_REPO:staging-$DATE_TAG -t $FRONTEND_REPO:$GIT_SHA"
 
 # Build Backend
 echo "🔨 Building Backend..."
@@ -39,21 +31,14 @@ sudo docker build $FRONTEND_TAGS -f frontend/Dockerfile .
 
 # Push Images
 echo "📤 Pushing Backend Images..."
-if [ "$ENV" == "production" ]; then
-    sudo docker push "$BACKEND_REPO:production"
-    sudo docker push "$BACKEND_REPO:prod-$DATE_TAG"
-else
-    sudo docker push "$BACKEND_REPO:staging"
-    sudo docker push "$BACKEND_REPO:staging-$DATE_TAG"
-fi
+sudo docker push "$BACKEND_REPO:staging"
+sudo docker push "$BACKEND_REPO:staging-$DATE_TAG"
+sudo docker push "$BACKEND_REPO:$GIT_SHA"
 
 echo "📤 Pushing Frontend Images..."
-if [ "$ENV" == "production" ]; then
-    sudo docker push "$FRONTEND_REPO:production"
-    sudo docker push "$FRONTEND_REPO:prod-$DATE_TAG"
-else
-    sudo docker push "$FRONTEND_REPO:staging"
-    sudo docker push "$FRONTEND_REPO:staging-$DATE_TAG"
-fi
+sudo docker push "$FRONTEND_REPO:staging"
+sudo docker push "$FRONTEND_REPO:staging-$DATE_TAG"
+sudo docker push "$FRONTEND_REPO:$GIT_SHA"
 
 echo "✅ Build and Push Complete!"
+echo "👉 To promote this build to PRODUCTION, run: ./deploy/promote_to_prod.sh $GIT_SHA"
