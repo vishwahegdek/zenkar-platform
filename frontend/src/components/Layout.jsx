@@ -34,7 +34,7 @@ export default function Layout() {
               <NavLink to="/contacts">Contacts</NavLink>
               <NavLink to="/labour">Labour</NavLink>
               <NavLink to="/customers">Customers</NavLink>
-              <NavLink to="/creditors">Creditors</NavLink>
+              <NavLink to="/finance">Finance Book</NavLink>
               <NavLink to="/products">Products</NavLink>
               <button onClick={logout} className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700">Logout</button>
             </nav>
@@ -69,7 +69,7 @@ export default function Layout() {
               <NavLink to="/contacts" mobile>Contacts</NavLink>
               <NavLink to="/labour" mobile>Labour</NavLink>
               <NavLink to="/customers" mobile>Customers</NavLink>
-              <NavLink to="/creditors" mobile>Creditors</NavLink>
+              <NavLink to="/finance" mobile>Finance Book</NavLink>
               <NavLink to="/products" mobile>Products</NavLink>
               <div className="border-t border-gray-100 my-1"></div>
               <button 

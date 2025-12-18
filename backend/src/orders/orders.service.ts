@@ -147,6 +147,10 @@ export class OrdersService implements OnModuleInit {
           include: { items: true, customer: true, payments: true }
       });
 
+      if (!fullOrder) {
+          throw new Error('Failed to retrieve created order');
+      }
+
       return fullOrder;
     });
 

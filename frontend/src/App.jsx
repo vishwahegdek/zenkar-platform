@@ -12,8 +12,8 @@ import ExpensesBook from './pages/ExpensesBook';
 import ExpenseForm from './pages/ExpenseForm';
 import ManageExpenses from './pages/ManageExpenses';
 import ContactsManager from './pages/ContactsManager';
-import CreditorsList from './pages/CreditorsList';
-import CreditorDetails from './pages/CreditorDetails';
+
+import FinancePage from './pages/Finance/FinancePage';
 import LabourLayout from './pages/Labour/LabourLayout';
 import LabourEntry from './pages/Labour/LabourEntry';
 import LabourManage from './pages/Labour/LabourManage';
@@ -80,8 +80,8 @@ function App() {
 
               <Route path="contacts" element={<ContactsManager />} />
 
-              <Route path="creditors" element={<CreditorsList />} />
-              <Route path="creditors/:id" element={<CreditorDetails />} />
+              <Route path="contacts" element={<ContactsManager />} />
+              <Route path="finance" element={<FinancePage />} />
               <Route path="labour" element={<LabourLayout />}>
                 <Route index element={<Navigate to="daily" replace />} />
                 <Route path="daily" element={<LabourEntry />} />

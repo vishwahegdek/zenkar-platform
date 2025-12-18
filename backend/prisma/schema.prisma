@@ -21,7 +21,7 @@ model User {
   contacts  Contact[] // Relation - user can own contacts
   // labourers Labourer[] // Removed for shared access
   recipients Recipient[]
-  creditors Creditor[]
+  financeParties FinanceParty[]
   auditLogs AuditLog[]
 
   createdOrders   Order[]   @relation("OrderCreatedBy")
@@ -199,6 +199,7 @@ model Contact {
   user      User?    @relation(fields: [userId], references: [id])
   customers Customer[]
   recipients Recipient[]
+  financeParties FinanceParty[]
 
   @@map("contacts")
 }
@@ -296,32 +297,35 @@ model Expense {
   @@map("expenses")
 }
 
-model Creditor {
+model FinanceParty {
   id        Int      @id @default(autoincrement())
   userId    Int?     @map("user_id")
-  name      String
+  name      String?
   phone     String?
   notes     String?
+  type      String   @default("CREDITOR") // CREDITOR (Payable), DEBTOR (Receivable) - Hints default view
   
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
+  contactId Int?     @map("contact_id")
   user      User?    @relation(fields: [userId], references: [id])
-  transactions CreditorTransaction[]
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  transactions FinanceTransaction[]
 
-  @@map("creditors")
+  @@map("finance_parties")
 }
 
-model CreditorTransaction {
-  id         Int      @id @default(autoincrement())
-  creditorId Int      @map("creditor_id")
-  amount     Decimal  @db.Decimal(12, 2)
-  type       String   // DEBT_INC (Borrowed), DEBT_DEC (Repaid)
-  date       DateTime @db.Date
-  note       String?
-  createdAt  DateTime @default(now()) @map("created_at")
+model FinanceTransaction {
+  id              Int      @id @default(autoincrement())
+  financePartyId  Int      @map("finance_party_id")
+  amount          Decimal  @db.Decimal(12, 2)
+  type            String   // BORROWED, REPAID, LENT, COLLECTED
+  date            DateTime @db.Date
+  note            String?
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  creditor   Creditor @relation(fields: [creditorId], references: [id], onDelete: Cascade)
+  party           FinanceParty @relation(fields: [financePartyId], references: [id], onDelete: Cascade)
 
-  @@map("creditor_transactions")
+  @@map("finance_transactions")
 }
