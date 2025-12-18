@@ -59,15 +59,14 @@ ssh vishwa@160.250.204.219
 
 # For Staging (in ~/zenkar-staging)
 cd ~/zenkar-staging
-wget -O deploy_remote.sh https://raw.githubusercontent.com/vishwahegdek/zenkar-platform/master/deploy/deploy_remote.sh
-chmod +x deploy_remote.sh
-sudo -E ./deploy_remote.sh staging
+git pull origin master
+sudo -E ./deploy/deploy_remote.sh staging
 
 # For Production (in ~/zenkar-platform-production)
 cd ~/zenkar-platform-production
-wget -O deploy_remote.sh https://raw.githubusercontent.com/vishwahegdek/zenkar-platform/master/deploy/deploy_remote.sh
-chmod +x deploy_remote.sh
-sudo -E ./deploy_remote.sh production
+git pull origin master
+sudo -E ./deploy/deploy_remote.sh production
+
 ```
 
 ---
