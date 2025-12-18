@@ -231,6 +231,26 @@ describe('Strict Order Module (E2E)', () => {
               expect(res.body.customer.id).toBeDefined(); 
           });
       });
+
+      // Reproduction Test Case for Bug
+      it('should create payment record if advanceAmount is provided', async () => {
+          const res = await request(app.getHttpServer())
+            .post('/orders')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send({
+                customerId: createdCustomerId,
+                totalAmount: 100,
+                advanceAmount: 50,
+                paymentMethod: 'CASH',
+                items: [{ productId: createdProductId, quantity: 1, unitPrice: 100, lineTotal: 100 }]
+            })
+            .expect(201);
+          
+          expect(res.body.payments).toBeDefined();
+          expect(res.body.payments.length).toBeGreaterThan(0);
+          expect(Number(res.body.payments[0].amount)).toBe(50);
+          expect(res.body.payments[0].note).toBe('Initial Advance');
+      });
   });
 
   // --- Step 5: Payments ---

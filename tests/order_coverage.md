@@ -37,6 +37,7 @@ This document details the strict validation and logic tests implemented in `back
 | O3 | Create without CustomerId & ContactId | `400 Bad Request` (Strict) | ✅ Verified |
 | O4 | Create with CustomerID (Legacy Fields Ignored) | `201 Created` & Fields Ignored | ✅ Verified |
 | O5 | Create with ContactID (Auto-Resolve Customer) | `201 Created` & Customer Linked | ✅ Verified |
+| O6 | Create with Advance Amount | `201 Created` & Payment Record Created | ✅ Verified |
 
 ## Technical Implementation
 - **Test File**: `backend/test/strict_orders.e2e-spec.ts`

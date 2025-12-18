@@ -113,6 +113,7 @@ export class OrdersService implements OnModuleInit {
       });
 
       // 4. Handle Payments (Strict Payment Method usage)
+      // 4. Handle Payments (Strict Payment Method usage)
       if (payments && payments.length > 0) {
           for (const p of payments) {
                await tx.payment.create({
@@ -125,26 +126,28 @@ export class OrdersService implements OnModuleInit {
                    }
                });
           }
-      } else if (createOrderDto.paymentMethod) {
-          // If no specific payment array but paymentMethod provided (Single payment flow?)
-          // Usually frontend might send totalAmount or we assume 0? 
-          // Wait, logic says "Payment Method is strict". 
-          // If 'payments' array is empty, maybe we don't create a payment record? 
-          // OR do we create a record with 0 amount?
-          // User didn't specify "Create payment if method provided".
-          // But strict order usually implies we record how it's paid.
-          // Legacy code created initial Advance. 
-          // Let's assume: If `payments` array provided, use it. If not, check if `totalAmount` > 0 and `isQuickSale`?
-          // Let's stick to: If `payments` array is present, use it. If NOT, ignore. 
-          // Because `paymentMethod` field on DTO might just be informational for the Order header? 
-          // BUT Order model doesn't have `paymentMethod` column! It's in `Payment` table.
-          // So if we have `paymentMethod` in DTO but no `payments` array, we likely need to create a payment RECORD if there is an `advanceAmount` (legacy) or just create one with 0?
-          // Re-reading legacy code: It used `advanceAmount`.
-          // New DTO has `payments`.
-          // Let's assume `createOrderDto.payments` is the source of truth.
+      } else if (createOrderDto.advanceAmount && Number(createOrderDto.advanceAmount) > 0) {
+          // Handle Legacy/Frontend 'advanceAmount' field
+          // This ensures that new orders created with an advance are properly recorded in the payments table.
+          await tx.payment.create({
+              data: {
+                  orderId: order.id,
+                  amount: Number(createOrderDto.advanceAmount),
+                  method: createOrderDto.paymentMethod || 'CASH',
+                  date: new Date(),
+                  note: 'Initial Advance',
+                  createdById: userId
+              }
+          });
       }
 
-      return order;
+      // Re-fetch order with payments to return complete object
+      const fullOrder = await tx.order.findUnique({
+          where: { id: order.id },
+          include: { items: true, customer: true, payments: true }
+      });
+
+      return fullOrder;
     });
 
     if (userId) {

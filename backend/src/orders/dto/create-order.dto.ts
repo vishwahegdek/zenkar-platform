@@ -80,6 +80,9 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ example: 0 })
   @IsOptional() @IsNumber() discount?: number;
 
+  @ApiPropertyOptional({ example: 0, description: 'Legacy field for initial payment' })
+  @IsOptional() @IsNumber() advanceAmount?: number;
+
   @ApiPropertyOptional({ type: [PaymentDto] })
   @IsOptional() 
   @IsArray()
