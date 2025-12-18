@@ -14,10 +14,11 @@ export class LabourService {
     });
 
     // 2. Get attendance records for this date
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // 2. Get attendance records for this date
+    // FIX: Use strict UTC range to avoid local timezone (IST) shifts causing overlap
+    const dateStr = date.toISOString().split('T')[0];
+    const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
 
     const attendances = await this.prisma.attendance.findMany({
       where: {
@@ -34,16 +35,26 @@ export class LabourService {
       },
     });
 
-    // 4. Merge data
+    // 4. Get active settlements for context (Optimization: could be one query with labourers)
+    const settlements = await this.prisma.labourSettlement.findMany({
+        where: { labourerId: { in: labourers.map(c => c.id) } },
+        orderBy: { settlementDate: 'desc' },
+        distinct: ['labourerId']
+    });
+
+    // 5. Merge data
     return labourers.map(labourer => {
       const att = attendances.find(a => a.labourerId === labourer.id);
       const exp = expenses.find(e => e.labourerId === labourer.id);
+      const settlement = settlements.find(s => s.labourerId === labourer.id);
+
       return {
         id: labourer.id,
         name: labourer.name,
         defaultDailyWage: labourer.defaultDailyWage,
         attendance: att ? att.value : 0,
         amount: exp ? exp.amount : 0,
+        lastSettlementDate: settlement ? settlement.settlementDate : null, // Send back to frontend
       };
     });
   }
@@ -69,11 +80,8 @@ export class LabourService {
        // IMMUTABILITY CHECK
        const lastSettlementDate = settlementMap.get(labourerId);
        if (lastSettlementDate && date <= lastSettlementDate) {
-           // Skip or Error? 
-           // For bulk updates, skipping might be safer to avoid partial failures, 
-           // but technically it's a "Bad Request". 
-           // We'll throw to alert the user they are doing something wrong.
-           throw new Error(`Cannot modify data for Labourer ID ${labourerId} on ${dateStr} as it is prior to settlement date ${lastSettlementDate.toISOString().split('T')[0]}`);
+           // Skip immutability violation silently to allow other valid updates to proceed
+           continue;
        }
 
        // A. Attendance
@@ -135,7 +143,7 @@ export class LabourService {
     return { success: true };
   }
 
-  async getReport(from?: string, to?: string, labourerId?: number) {
+  async getReport(from?: string, to?: string, labourerId?: number, settlementId?: number) {
     const where: any = { isDeleted: false };
     if (labourerId) {
         where.id = labourerId;
@@ -157,7 +165,46 @@ export class LabourService {
     for (const labourer of labourers) {
       // Determine Start Date (Zero Date)
       let startDate: Date | undefined;
-      const lastSettlement = labourer.settlements ? labourer.settlements[0] : null;
+      let lastSettlement = labourer.settlements ? labourer.settlements[0] : null;
+
+      // HISTORY MODE: Fetch specific settlement context
+      if (settlementId) {
+          // If viewing history, we need the settlement defined by ID
+          // And the *previous* settlement relative to that one to define range
+          const targetSettlement = await this.prisma.labourSettlement.findUnique({
+              where: { id: settlementId }
+          });
+          if (!targetSettlement || targetSettlement.labourerId !== labourer.id) continue; // Skip if unrelated
+
+          // Find the settlement immediately PRECEDING this one
+          const prevSettlement = await this.prisma.labourSettlement.findFirst({
+              where: { 
+                  labourerId: labourer.id,
+                  settlementDate: { lt: targetSettlement.settlementDate }
+              },
+              orderBy: { settlementDate: 'desc' }
+          });
+
+          // Range: (Prev Date) < Data <= (Target Date)
+          startDate = prevSettlement ? prevSettlement.settlementDate : undefined;
+          
+          // Override 'to' date to be the settlement date
+          // Effectively showing the report AS IT WAS on that day
+          // We must respect the settlement snapshot logic
+          // Actually, we should use the snapshot values directly?
+          // The user wants to see the "Old Report". 
+          // Re-calculating offers transparency, but snapshot is safer.
+          // Let's re-calculate to allow "View Details".
+          
+          lastSettlement = prevSettlement || null; // The "Base" for this period
+          
+          // Force date filter to end at settlement date
+          // The report logic below takes 'to', so we set it.
+          // Note: createSettlement calculates based on <= date.
+          // So 'to' should be targetSettlement.settlementDate.
+           
+          // We need to bypass the 'from/to' arguments if in history mode usually
+      } 
       
       if (lastSettlement) {
           startDate = lastSettlement.settlementDate;
@@ -173,14 +220,24 @@ export class LabourService {
          dateFilter.gt = startDate;
       }
 
-      // 2. User Override
-      if (from) {
-          delete dateFilter.gt;
-          dateFilter.gte = new Date(from);
-      }
-      
-      if (to) {
-          dateFilter.lte = new Date(to);
+      // 2. User Override / History Mode
+      if (settlementId) {
+          const target = await this.prisma.labourSettlement.findUnique({ where: { id: settlementId } });
+          if(target) {
+            delete dateFilter.gt; // Reset
+            // If there is a start date (prev settlement), use GT
+            if(startDate) dateFilter.gt = startDate;
+            dateFilter.lte = target.settlementDate;
+          }
+      } else {
+        if (from) {
+            delete dateFilter.gt;
+            dateFilter.gte = new Date(from);
+        }
+        
+        if (to) {
+            dateFilter.lte = new Date(to);
+        }
       }
 
       if (Object.keys(dateFilter).length > 0) {
@@ -222,7 +279,14 @@ export class LabourService {
 
       const records = Array.from(recordMap.values()).sort((a, b) => a.date.localeCompare(b.date));
       const totalSalary = totalDays * salary;
-      const balance = totalSalary - totalPaid;
+      
+      // Opening Balance Logic
+      let openingBalance = 0;
+      if (lastSettlement && lastSettlement.isCarryForward) {
+          openingBalance = Number(lastSettlement.netBalance);
+      }
+
+      const balance = openingBalance + totalSalary - totalPaid;
 
       reportData.push({
         id: labourer.id,
@@ -233,6 +297,7 @@ export class LabourService {
         totalSalary,
         totalPaid,
         balance,
+        openingBalance,
         lastSettlementDate: lastSettlement ? lastSettlement.settlementDate : null,
         records
       });
@@ -276,7 +341,7 @@ export class LabourService {
       });
   }
   
-  async createSettlement(labourerId: number, settlementDate: Date, note?: string) {
+  async createSettlement(labourerId: number, settlementDate: Date, note?: string, isCarryForward: boolean = false) {
      // 1. Calculate stats up to this date
      // Reuse logic mostly, but bounded by <= date
      const stats = await this.getReport(undefined, settlementDate.toISOString(), labourerId);
@@ -294,7 +359,8 @@ export class LabourService {
          totalPaid: stat.totalPaid,
          netBalance: stat.balance,
          wageSnapshot: stat.salary, // Save the wage at this point
-         note
+         note,
+          isCarryForward
        }
      });
   }

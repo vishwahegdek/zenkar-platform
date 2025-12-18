@@ -29,12 +29,16 @@ export default function LabourReport() {
       setIsDropdownOpen(false);
   };
 
+  const [selectedSettlementId, setSelectedSettlementId] = useState(''); // Empty = Current Period
+
   // Fetch Report
   const { data: reportData, isLoading, refetch } = useQuery({
-    queryKey: ['labourReport', selectedLabourerId],
+    queryKey: ['labourReport', selectedLabourerId, selectedSettlementId],
     queryFn: async () => {
       if (!selectedLabourerId) return null;
-      const res = await api.get(`/labour/report?labourerId=${selectedLabourerId}`);
+      let url = `/labour/report?labourerId=${selectedLabourerId}`;
+      if (selectedSettlementId) url += `&settlementId=${selectedSettlementId}`;
+      const res = await api.get(url);
       return res;
     },
     enabled: !!selectedLabourerId
@@ -43,20 +47,36 @@ export default function LabourReport() {
   const employeeData = reportData && reportData.length > 0 ? reportData[0] : null;
 
   const [settlementDate, setSettlementDate] = useState(new Date().toISOString().split('T')[0]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, type: '', date: '' });
+
+  // Fetch Settlements for History Dropdown
+  const { data: settlements } = useQuery({
+      queryKey: ['settlements', selectedLabourerId],
+      queryFn: async () => {
+          if(!selectedLabourerId) return [];
+          return await api.get(`/labour/${selectedLabourerId}/settlements`);
+      },
+      enabled: !!selectedLabourerId
+  });
 
   const { mutate: settle } = useMutation({
-    mutationFn: (data) => api.post(`/labour/${data.id}/settle`, { settlementDate: data.date }),
+    mutationFn: (data) => api.post(`/labour/${data.id}/settle`, { settlementDate: data.date, isCarryForward: data.isCarryForward }),
     onSuccess: () => {
-        toast.success('Settlement created successfully. Zeros set.');
+        toast.success('Settlement created successfully.');
+        setConfirmModal({ ...confirmModal, open: false });
         refetch();
     },
     onError: (err) => toast.error('Failed to settle: ' + err.message)
   });
 
-  const handleSettle = (id, validDate) => {
-      if(window.confirm(`Are you sure you want to Settle (Zero) this account up to ${validDate}? This will archive current totals.`)) {
-          settle({ id, date: validDate });
-      }
+  const initiateSettle = (type) => { // type: 'CLEAR' or 'CARRY_FORWARD'
+     if (!settlementDate) return toast.error("Please select a date");
+     setConfirmModal({ open: true, type, date: settlementDate });
+  };
+
+  const executeSettle = () => {
+      const isCF = confirmModal.type === 'CARRY_FORWARD';
+      settle({ id: employeeData.id, date: confirmModal.date, isCarryForward: isCF });
   };
 
   return (
@@ -113,20 +133,50 @@ export default function LabourReport() {
                      </div>
                 </div>
 
-                <div className="flex gap-1 items-center bg-gray-800 rounded border border-gray-600 p-1">
-                   <input 
-                       type="date" 
-                       className="p-1 rounded bg-gray-700 text-white text-xs border border-gray-600" 
-                       value={settlementDate}
-                       onChange={e => setSettlementDate(e.target.value)}
-                   />
-                   <button 
-                       onClick={() => handleSettle(employeeData.id, settlementDate)}
-                       className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs font-bold uppercase"
-                   >
-                       Settle
-                   </button>
+                {/* History Selector */}
+                <div className="flex gap-2">
+                    <select 
+                        className="p-1 rounded bg-gray-700 text-white text-xs border border-gray-600"
+                        value={selectedSettlementId}
+                        onChange={(e) => setSelectedSettlementId(e.target.value)}
+                    >
+                        <option value="">Current Period</option>
+                        {settlements?.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {new Date(s.settlementDate).toLocaleDateString()} {s.isCarryForward ? '(CF)' : ''} - ₹{Number(s.netBalance).toFixed(0)}
+                            </option>
+                        ))}
+                    </select>
                 </div>
+
+                {/* Settle Actions - Only show if in Current Period */}
+                {!selectedSettlementId && (
+                    <div className="flex bg-gray-800 rounded border border-gray-600 p-1 gap-1 items-center">
+                       <input 
+                           type="date" 
+                           className="p-1 rounded bg-gray-700 text-white text-xs border border-gray-600" 
+                           value={settlementDate}
+                           onChange={e => setSettlementDate(e.target.value)}
+                       />
+                       
+                       <div className="flex">
+                           <button 
+                               onClick={() => initiateSettle('CLEAR')}
+                               className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-l text-[10px] font-bold uppercase border-r border-red-800"
+                               title="Settle and Clear Balance to Zero"
+                           >
+                               Settle (Clear)
+                           </button>
+                           <button 
+                             onClick={() => initiateSettle('CARRY_FORWARD')}
+                             className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-r text-[10px] font-bold uppercase"
+                             title="Settle and Carry Forward Balance"
+                           >
+                               Carry Fwd
+                           </button>
+                       </div>
+                    </div>
+                )}
             </div>
 
             {/* Data Table - Edge to Edge */}
@@ -140,6 +190,14 @@ export default function LabourReport() {
                         </tr>
                     </thead>
                     <tbody className="text-gray-300 text-sm">
+                        {/* Opening Balance Row */}
+                        {employeeData.openingBalance !== 0 && (
+                            <tr className="bg-gray-800/80 border-b border-gray-700 font-bold text-yellow-500">
+                                <td className="p-2 italic border-r border-gray-700/50">OPENING BAL</td>
+                                <td className="p-2 border-r border-gray-700/50"></td>
+                                <td className="p-2 text-right">₹{employeeData.openingBalance.toFixed(0)}</td>
+                            </tr>
+                        )}
                         {employeeData.records.length === 0 ? (
                             <tr>
                                 <td colSpan={3} className="p-6 text-center text-gray-500 italic">
@@ -198,6 +256,48 @@ export default function LabourReport() {
 
          </div>
       )}
+
+     {/* 3. Custom Confirmation Modal */}
+     {confirmModal.open && (
+         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+             <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-sm w-full p-4 transform scale-100 transition-all">
+                 <h3 className="text-lg font-bold text-white mb-2">Confirm Settlement</h3>
+                 
+                 <div className="bg-gray-900/50 p-3 rounded mb-4 text-sm text-gray-300">
+                     <p className="mb-2">Settle up to <span className="font-mono text-white">{confirmModal.date}</span>?</p>
+                     
+                     {confirmModal.type === 'CARRY_FORWARD' ? (
+                         <div className="flex items-start gap-2 text-blue-300 bg-blue-900/20 p-2 rounded">
+                             <span className="text-lg">➥</span>
+                             <p>Balance will be <strong>Carried Forward</strong> as Opening Balance for the next period.</p>
+                         </div>
+                     ) : (
+                        <div className="flex items-start gap-2 text-red-300 bg-red-900/20 p-2 rounded">
+                            <span className="text-lg">✘</span>
+                            <p>Balance will be <strong>CLEARED (Zeroed)</strong>. This starts clean.</p>
+                        </div>
+                     )}
+                 </div>
+
+                 <div className="flex justify-end gap-3">
+                     <button 
+                         onClick={() => setConfirmModal({ ...confirmModal, open: false })}
+                         className="px-4 py-2 text-gray-400 hover:text-white font-bold"
+                     >
+                         Cancel
+                     </button>
+                     <button 
+                        onClick={executeSettle}
+                        className={`px-4 py-2 rounded font-bold text-white shadow-lg ${
+                            confirmModal.type === 'CARRY_FORWARD' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-red-600 hover:bg-red-500'
+                        }`}
+                     >
+                         Confirm {confirmModal.type === 'CARRY_FORWARD' ? 'Carry Forward' : 'Clear'}
+                     </button>
+                 </div>
+             </div>
+         </div>
+     )}
     </div>
   );
 }

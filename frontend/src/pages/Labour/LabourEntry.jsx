@@ -128,8 +128,13 @@ export default function LabourEntry() {
             </tr>
           </thead>
           <tbody>
-            {dailyView?.map((labourer) => (
-              <tr key={labourer.id}>
+            {dailyView?.map((labourer) => {
+              const isSettled = labourer.lastSettlementDate && new Date(selectedDate) <= new Date(labourer.lastSettlementDate);
+              const rowOpacity = isSettled ? '0.5' : '1';
+              const rowBg = isSettled ? '#333' : theme.tableCellBg;
+
+              return (
+              <tr key={labourer.id} style={{ opacity: rowOpacity, backgroundColor: rowBg }}>
                 <td className="responsive-hide" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
                   {labourer.id}
                 </td>
@@ -142,6 +147,7 @@ export default function LabourEntry() {
                         <input 
                             type="checkbox" 
                             name={`attendance_${labourer.id}_0.5`}
+                            disabled={isSettled}
                             defaultChecked={Number(labourer.attendance) === 0.5}
                             onChange={(e) => {
                                 if(e.target.checked) document.getElementsByName(`attendance_${labourer.id}_1`)[0].checked = false;
@@ -154,6 +160,7 @@ export default function LabourEntry() {
                         <input 
                             type="checkbox" 
                             name={`attendance_${labourer.id}_1`} 
+                            disabled={isSettled}
                             defaultChecked={Number(labourer.attendance) === 1}
                             onChange={(e) => {
                                 if(e.target.checked) document.getElementsByName(`attendance_${labourer.id}_0.5`)[0].checked = false;
@@ -163,10 +170,12 @@ export default function LabourEntry() {
                         1
                     </label>
                   </div>
+                  {isSettled && <div className="text-xs text-red-300 mt-1 font-bold">Settled</div>}
                 </td>
                 <td className="responsive-padding" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
                   <input 
                     type="number" 
+                    disabled={isSettled} 
                     className="responsive-input font-bold"
                     name={`amount_${labourer.id}`}
                     defaultValue={labourer.amount || ''}
@@ -174,8 +183,10 @@ export default function LabourEntry() {
                     style={{ backgroundColor: theme.inputBg, color: 'black', width: '80px', padding: '8px' }}
                   />
                 </td>
+
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

@@ -1,10 +1,15 @@
-import { IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsOptional, IsString, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateSettlementDto {
   @ApiProperty({ example: '2025-12-01', description: 'The zero date' })
   @IsDateString()
   settlementDate: string;
+
+  @ApiProperty({ required: false, description: 'Carry forward balance' })
+  @IsOptional()
+  @IsBoolean()
+  isCarryForward?: boolean;
 
   @ApiProperty({ required: false, example: 'Paid in full via cash' })
   @IsOptional()

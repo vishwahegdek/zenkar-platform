@@ -179,6 +179,110 @@ describe('LabourSystem Comprehensive Coverage (e2e)', () => {
       expect(Number(report.balance)).toBe(newBalance);
   });
 
+  it('5b. Verify Immutable Settlements (Partial Update)', async () => {
+      // Attempt to modify a settled date (SETTLEMENT_DATE or before)
+      // This should be IGNORED silently by backend now
+      const settledDate = dateStr(subDays(SETTLEMENT_DATE, 1)); // 1 day before settlement
+      
+      console.log(`    -> Attempting to modify settled data on ${settledDate} (Should be ignored)`);
+
+      await request(app.getHttpServer())
+        .post('/labour/daily')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+            date: settledDate,
+            updates: [{ contactId: labourerId, attendance: 0.5, amount: 999 }] // Changed values
+        })
+        .expect(201); // Success code, but should not have changed data
+
+      // Verify Report Unchanged
+      const res = await request(app.getHttpServer())
+        .get('/labour/report')
+        .query({ labourerId })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const report = res.body[0];
+      // Reuse previous expectations - totals should remain exactly same
+      const salary = expectedDays * 600; // Wage updated in step 5
+      const balance = salary - expectedPaid;
+
+      expect(Number(report.totalPaid)).toBe(expectedPaid);
+      expect(Number(report.balance)).toBe(balance);
+      console.log('    -> Verified: Totals remained unchanged after attempted modification of settled data');
+  });
+
+  it('5c. Verify Carry Forward & History', async () => {
+      // 1. Add fresh data for new period
+      const newDate = dateStr(addDays(today, 1));
+      await request(app.getHttpServer())
+        .post('/labour/daily')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+            date: newDate,
+            updates: [{ contactId: labourerId, attendance: 1, amount: 0 }] 
+        })
+        .expect(201);
+
+      // Current State: Previous Balance (from Step 5b logic) + 1 day
+      // Wait, Step 4 settled up to SETTLEMENT_DATE.
+      // Expected Paid/Days are for post-settlement period.
+      // Let's settle AGAIN with Carry Forward.
+      
+      const cfSettlementDate = dateStr(addDays(today, 2));
+      console.log(`    -> Settling with Carry Forward on ${cfSettlementDate}`);
+
+      const resSettle = await request(app.getHttpServer())
+        .post(`/labour/${labourerId}/settle`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ settlementDate: cfSettlementDate, isCarryForward: true })
+        .expect(201);
+      
+      const settlementId = resSettle.body.id;
+      const netBalanceAtSettlement = Number(resSettle.body.netBalance);
+       
+      // 2. Add data AFTER this settlement
+      const postCFDate = dateStr(addDays(today, 3));
+      await request(app.getHttpServer())
+        .post('/labour/daily')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+            date: postCFDate,
+            updates: [{ contactId: labourerId, attendance: 1, amount: 100 }] 
+        })
+        .expect(201);
+
+      // 3. Verify Report: Should have Opening Balance == Previous Net Balance
+      const resReport = await request(app.getHttpServer())
+        .get('/labour/report')
+        .query({ labourerId })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const report = resReport.body[0];
+      const salary = 600; // From step 5
+      
+      expect(Number(report.openingBalance)).toBe(netBalanceAtSettlement);
+      expect(report.totalDays).toBe(1);
+      expect(Number(report.totalSalary)).toBe(salary); 
+      expect(Number(report.balance)).toBe(netBalanceAtSettlement + salary - 100);
+      
+      console.log(`    -> Verified OB: ${report.openingBalance}, Balance: ${report.balance}`);
+
+      // 4. Verify History Fetch
+      console.log(`    -> Verifying History for Settlement ID: ${settlementId}`);
+      const resHistory = await request(app.getHttpServer())
+        .get('/labour/report')
+        .query({ labourerId, settlementId })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+        
+      const histReport = resHistory.body[0];
+      // Should match the state AT settlement
+      expect(Number(histReport.balance)).toBe(netBalanceAtSettlement);
+      expect(histReport.lastSettlementDate).not.toBe(cfSettlementDate); // Context is previous
+  });
+
   it('6. Delete Labourer (Soft Delete)', async () => {
       await request(app.getHttpServer())
         .delete(`/labour/${labourerId}`)

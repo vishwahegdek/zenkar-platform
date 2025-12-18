@@ -3,6 +3,23 @@
 All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
+
+## [v1.8.1] - 2025-12-18 (Carry Forward & History)
+### 🔄 Carry Forward Settlements
+- **Feature**: Option to "Carry Forward" balance during labour settlement instead of clearing it to zero.
+- **UI**:
+    - Replaced checkbox with explicit **"Settle (Clear)"** and **"Carry Fwd"** buttons.
+    - Added custom Confirmation Modal for better user clarity.
+    - **Report**: Highlighted "Opening Balance" row to show carried-forward debt.
+- **Backend**:
+    - Added `isCarryForward` flag to `LabourSettlement` table.
+    - Logic to calculate opening balance based on previous settlement's carry-forward status.
+
+### 📜 Report History
+- **Feature**: View past settlement reports exactly as they were.
+- **UI**: Added History Dropdown to toggle between Current Period and Historical Settlements.
+- **Logic**: Fetching report by `settlementId` locks the view to that specific period.
+
  
 ## [v1.8.0] - 2025-12-17 (Strict Payments & Recipients)
 ### 💳 Strict Payments

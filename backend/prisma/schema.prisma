@@ -248,6 +248,7 @@ model LabourSettlement {
   wageSnapshot    Decimal  @default(0) @map("wage_snapshot") @db.Decimal(10, 2)
   
   note            String?
+  isCarryForward  Boolean  @default(false) @map("is_carry_forward")
 
   createdAt       DateTime @default(now()) @map("created_at")
 

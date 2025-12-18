@@ -28,8 +28,8 @@ export class LabourController {
   }
 
   @Get('report')
-  getReport(@Request() req, @Query('from') from?: string, @Query('to') to?: string, @Query('labourerId') labourerId?: string) {
-    return this.labourService.getReport(from, to, labourerId ? Number(labourerId) : undefined);
+  getReport(@Request() req, @Query('from') from?: string, @Query('to') to?: string, @Query('labourerId') labourerId?: string, @Query('settlementId') settlementId?: string) {
+    return this.labourService.getReport(from, to, labourerId ? Number(labourerId) : undefined, settlementId ? Number(settlementId) : undefined);
   }
 
   @Post()
@@ -61,7 +61,7 @@ export class LabourController {
   @Post(':id/settle')
   @ApiOperation({ summary: 'Create a settlement (Zero Date)' })
   createSettlement(@Param('id') id: string, @Body() body: CreateSettlementDto) {
-      return this.labourService.createSettlement(Number(id), new Date(body.settlementDate), body.note);
+      return this.labourService.createSettlement(Number(id), new Date(body.settlementDate), body.note, body.isCarryForward);
   }
 
   @Get(':id/settlements')
