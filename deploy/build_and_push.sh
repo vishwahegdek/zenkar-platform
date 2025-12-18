@@ -39,9 +39,21 @@ sudo docker build $FRONTEND_TAGS -f frontend/Dockerfile .
 
 # Push Images
 echo "📤 Pushing Backend Images..."
-sudo docker push $BACKEND_REPO --all-tags
+if [ "$ENV" == "production" ]; then
+    sudo docker push "$BACKEND_REPO:production"
+    sudo docker push "$BACKEND_REPO:prod-$DATE_TAG"
+else
+    sudo docker push "$BACKEND_REPO:staging"
+    sudo docker push "$BACKEND_REPO:staging-$DATE_TAG"
+fi
 
 echo "📤 Pushing Frontend Images..."
-sudo docker push $FRONTEND_REPO --all-tags
+if [ "$ENV" == "production" ]; then
+    sudo docker push "$FRONTEND_REPO:production"
+    sudo docker push "$FRONTEND_REPO:prod-$DATE_TAG"
+else
+    sudo docker push "$FRONTEND_REPO:staging"
+    sudo docker push "$FRONTEND_REPO:staging-$DATE_TAG"
+fi
 
 echo "✅ Build and Push Complete!"
