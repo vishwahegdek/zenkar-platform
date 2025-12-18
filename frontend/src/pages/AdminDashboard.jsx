@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { format } from 'date-fns';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -59,7 +60,7 @@ export default function AdminDashboard() {
                             <tr key={u.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.id}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.username}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{format(new Date(u.createdAt), 'dd/MM/yyyy')}</td>
                             </tr>
                         ))}
                     </tbody>

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
 
 export default function CreditorDetails() {
   const { id } = useParams();
@@ -97,7 +98,7 @@ export default function CreditorDetails() {
                              {tx.type === 'DEBT_INC' ? 'Added Debt' : 'Repayment'}
                           </p>
                           <p className="text-xs text-gray-400">
-                             {new Date(tx.date).toLocaleDateString()}
+                             {format(new Date(tx.date), 'dd/MM/yyyy')}
                           </p>
                           {tx.note && <p className="text-sm text-gray-500 mt-1">{tx.note}</p>}
                       </div>

@@ -70,7 +70,7 @@ export default function OrdersList() {
       `Advance: ₹${Number(order.advanceAmount).toLocaleString()}`,
       `Balance: ₹${(Number(order.totalAmount) - Number(order.advanceAmount)).toLocaleString()}`,
       '',
-      `Due: ${order.dueDate ? new Date(order.dueDate).toLocaleDateString() : '—'}`
+      `Due: ${order.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}`
     ];
     
     const text = lines.join('\n');
@@ -206,7 +206,7 @@ export default function OrdersList() {
                         QS
                       </span>
                   )}
-                  <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
                 </div>
                 <StatusSelect order={order} onChange={handleStatusChange} />
               </div>
@@ -220,7 +220,7 @@ export default function OrdersList() {
                  <div className="text-right">
                     <div className="font-bold text-gray-900">₹{Number(order.totalAmount).toLocaleString()}</div>
                      <div className="text-xs text-red-600 font-medium">Bal: ₹{Number(order.remainingBalance || 0).toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 mt-1">Due: {order.dueDate ? new Date(order.dueDate).toLocaleDateString() : '—'}</div>
+                    <div className="text-xs text-gray-500 mt-1">Due: {order.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}</div>
                  </div>
               </div>
 

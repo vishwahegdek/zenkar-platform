@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 
 export default function LabourReport() {
   const [selectedLabourerId, setSelectedLabourerId] = useState('');
@@ -127,7 +128,7 @@ export default function LabourReport() {
                         Current Wage: <span className="text-white font-mono">₹{employeeData.salary}</span> | 
                         Last Settled: <span className="text-yellow-400 font-mono">
                             {employeeData.lastSettlementDate 
-                                ? new Date(employeeData.lastSettlementDate).toLocaleDateString() 
+                                ? format(new Date(employeeData.lastSettlementDate), 'dd/MM/yyyy')
                                 : 'Never'}
                         </span>
                      </div>
@@ -143,7 +144,7 @@ export default function LabourReport() {
                         <option value="">Current Period</option>
                         {settlements?.map(s => (
                             <option key={s.id} value={s.id}>
-                                {new Date(s.settlementDate).toLocaleDateString()} {s.isCarryForward ? '(CF)' : ''} - ₹{Number(s.netBalance).toFixed(0)}
+                                {format(new Date(s.settlementDate), 'dd/MM/yyyy')} {s.isCarryForward ? '(CF)' : ''} - ₹{Number(s.netBalance).toFixed(0)}
                             </option>
                         ))}
                     </select>
