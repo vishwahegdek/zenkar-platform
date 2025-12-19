@@ -5,6 +5,15 @@
 
 set -e
 
+# Check for uncommitted changes
+if [[ -n $(git status --porcelain) ]]; then
+  echo "❌ ERROR: You have uncommitted changes in your working directory."
+  echo "Please commit or stash your changes before building."
+  echo ""
+  git status --short
+  exit 1
+fi
+
 DATE_TAG=$(date +%Y%m%d-%H%M%S)
 GIT_SHA=$(git rev-parse --short HEAD)
 
