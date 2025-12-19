@@ -20,8 +20,8 @@ export class OrdersController {
   @Get()
   @ApiOperation({ summary: 'Retrieve all orders' })
   @ApiResponse({ status: 200, description: 'List of all orders.' })
-  findAll(@Query('view') view: string, @Query('page') page: string, @Query('limit') limit: string) {
-    return this.ordersService.findAll(view, +page || 1, +limit || 20);
+  findAll(@Query('view') view: string, @Query('page') page: string, @Query('limit') limit: string, @Query('search') search: string) {
+    return this.ordersService.findAll(view, +page || 1, +limit || 20, search);
   }
 
   @Get(':id')

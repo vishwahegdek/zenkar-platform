@@ -81,12 +81,10 @@ test.describe('Order Management Flow', () => {
     await page.getByPlaceholder('Price').first().fill('25000');
     
     // 4. Advance
-    // Find input near "Advance" text
-    const advanceContainer = page.locator('div').filter({ hasText: /^Advance$/ }).locator('..');
     // Select Payment Method (Strict)
     await page.locator('select').filter({ hasText: /Cash|UPI/ }).first().selectOption('CASH');
     // Fill Amount
-    await advanceContainer.locator('input[type="number"]').fill('5000');
+    await page.getByPlaceholder('0').fill('5000');
     
     // 5. Save
     // Desktop: "Save Order", Mobile: "✓" (FAB). Use :visible to click the correct one.

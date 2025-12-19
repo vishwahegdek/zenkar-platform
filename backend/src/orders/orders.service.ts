@@ -191,7 +191,7 @@ export class OrdersService implements OnModuleInit {
     return processed;
   }
 
-  async findAll(view?: string, page: number = 1, limit: number = 20) {
+  async findAll(view?: string, page: number = 1, limit: number = 20, search?: string) {
     const isHistory = view === 'history';
     const statusFilter = isHistory 
       ? { in: ['closed', 'cancelled'] } 
@@ -201,6 +201,12 @@ export class OrdersService implements OnModuleInit {
         isDeleted: false,
         status: statusFilter
     };
+
+    if (search) {
+       where.customer = {
+          name: { contains: search, mode: 'insensitive' }
+       };
+    }
 
     const skip = (page - 1) * limit;
 
@@ -266,7 +272,7 @@ export class OrdersService implements OnModuleInit {
   }
 
   async update(id: number, dto: UpdateOrderDto, userId?: number) {
-    const { items, customerId, status, payments, contactId, paymentMethod, ...rest } = dto;
+    const { items, customerId, status, payments, contactId, paymentMethod, advanceAmount, ...rest } = dto;
     
     // Explicit transformations to ensure types match Prisma schema
     let orderData: any = { ...rest };

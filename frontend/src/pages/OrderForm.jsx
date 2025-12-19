@@ -150,10 +150,11 @@ export default function OrderForm() {
       } else {
          result = await api.post('/orders', payload);
       }
-            toast.success(isEdit ? 'Order updated!' : 'New order added successfully');
-       navigate('/orders');
-      
       queryClient.invalidateQueries(['orders']);
+      toast.success(isEdit ? 'Order Updated!' : 'Order Created!');
+      // Clear any hash fragment and navigate to orders list
+      window.location.hash = '';
+      navigate('/orders', { replace: true });
       
     } catch (err) {
        toast.error('Failed to save order: ' + err.message);
@@ -440,7 +441,7 @@ export default function OrderForm() {
                 <span>₹{calculateTotal().toLocaleString()}</span>
               </div>
 
-               {/* {!isEdit && ( */}
+               {!isEdit && (
                <div className="flex items-center justify-between gap-4">
                  <span className="text-sm text-gray-600">Advance</span>
                  <div className="flex gap-2">
@@ -459,13 +460,13 @@ export default function OrderForm() {
                     />
                  </div>
                </div>
-               {/* )} */}
-               {/* {!isEdit && ( */}
+               )}
+               {!isEdit && (
                <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
                  <span>Balance Due</span>
                  <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
                </div>
-               {/* )} */}
+               )}
            </div>
          </div>
        </div>
