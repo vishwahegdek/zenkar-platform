@@ -2,7 +2,11 @@
 
 All notable changes to the Zenkar Platform will be documented in this file.
 
-## [Unreleased]
+## [v1.9.1] - 2026-01-05 (Hotfix)
+### 🐛 Bug Fixes
+- **Regression**: Fixed missing database column `google_refresh_token` that caused 500 Error on deployment.
+- **Docker**: Ensured Prisma Client is correctly generated and copied in the production image.
+
 ## [v1.9.0] - 2026-01-05 (Global Access & Google Sync)
 ### 🌍 Global Data Access
 - **No More Silos**: Refactored `Customer`, `Order`, `Finance`, and `Expense` modules to remove user-specific restrictions.
