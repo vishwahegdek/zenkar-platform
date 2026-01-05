@@ -3,6 +3,23 @@
 All notable changes to the Zenkar Platform will be documented in this file.
 
 ## [Unreleased]
+## [v1.9.0] - 2026-01-05 (Global Access & Google Sync)
+### 🌍 Global Data Access
+- **No More Silos**: Refactored `Customer`, `Order`, `Finance`, and `Expense` modules to remove user-specific restrictions.
+- **Collaboration**: All team members can now access and manage the same business entities (Customers, Creditors, Recipients).
+- **Smart Linking**: Creating orders/expenses now intelligently links to existing global records instead of creating duplicates.
+
+### 👥 Google Contacts Sync (Two-Way)
+- **Push & Pull**: Full two-way synchronization between Zenkar and Google Contacts.
+- **Manual Sync**: Added "Sync Now" button for instant updates.
+- **Organization**: Contacts from the app are automatically labeled "**Zenkar App**" in Google.
+- **Reliability**: Improved OAuth flow with connection status indicators (✅ Connected / ❌ Not Connected).
+
+### ⚡ UI/UX Improvements
+- **Global Search**: Reducing search threshold to **1 character** across the entire platform (Quick Sale, Orders, etc) for significantly faster lookup.
+- **Orders List**: Safety Cleanup - Removed 'Edit'/'Delete' buttons from the list view to prevent accidental clicks. Access these actions via the Order Details page.
+- **Order Details**: Consolidated "Record Payment", "Print", "Edit" into a single **"Actions"** dropdown menu. Removed redundant "Back" button.
+
 ### 💸 Expenses Enhancements
 - **Search**: Added search bar to Expense Book (filters by description, recipient, or category).
 - **Edit**: Added inline "Edit" button to modify existing expenses.

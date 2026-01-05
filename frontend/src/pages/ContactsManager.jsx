@@ -8,6 +8,9 @@ import { toast } from 'react-hot-toast';
 
 export default function ContactsManager() {
   const { user } = useAuth();
+  // Status state
+  const [syncStatus, setSyncStatus] = useState({ isConnected: false, lastSyncAt: null });
+
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
   
@@ -17,26 +20,18 @@ export default function ContactsManager() {
   const { data: contacts, isLoading } = useQuery({
     queryKey: ['contacts', filterUserId],
     queryFn: async () => {
-      // Backend creates contacts with userId, but findAll returns based on userId arg
-      // Since user requirements say "every user can access all contacts", the backend `findAll` 
-      // might need adjustment if it was strictly filtering by `userId`.
-      // Let's assume for now we fetch all and filter client side OR 
-      // we need a new endpoint to fetch ALL contacts if filtering logic dictates.
-      // However, current `ContactsService.findAll` takes `userId` arg. 
-      // If we want everyone to see everything, we might need to modify backend or pass a specal flag?
-      // Or maybe `userId` in `findAll` is just a filter?
-      // Re-reading service: `where: { userId }`. This is strict.
-      // Instructions: "every user can access all the contacts, he should be ablt filter based on owner."
-      // This implies the Default View should probably be "All".
-      // I should update the Backend `findAll` to be looser, or implement search params.
-      
-      // For now, let's keep it simple: If `filterUserId` is 'all', we might miss data if backend restricts.
-      // I will update backend service to handle 'all'.
-      
       const res = await api.get('/contacts', { params: { userId: filterUserId === 'all' ? undefined : filterUserId } });
       return res;
     }
   });
+  
+  // Fetch Status on Mount
+  useEffect(() => {
+     if(user) {
+         // api.get returns the data object directly, so use 'res' not 'res.data'
+         api.get('/auth/google/status').then(res => setSyncStatus(res || { isConnected: false, lastSyncAt: null })).catch(console.error);
+     }
+  }, [user]);
 
   const handleImport = () => {
      if (!user || !user.id) return toast.error("User not found");
@@ -57,27 +52,36 @@ export default function ContactsManager() {
     const timer = setInterval(() => {
         if (popup && popup.closed) {
             clearInterval(timer);
+            // Refresh Status
+            api.get('/auth/google/status').then(res => setSyncStatus(res || { isConnected: false, lastSyncAt: null })).catch(console.error);
             queryClient.invalidateQueries(['contacts']);
-            toast.success('Import check complete.');
+            toast.success('Sync connection updated.');
         }
     }, 1000);
   };
 
   const mutation = useMutation({
-    mutationFn: (data) => api.post('/contacts', { ...data, userId: user?.id }), // Ensure explicit ownership on manual create too
+    mutationFn: (data) => api.post('/contacts', { ...data, userId: user?.id }), 
     onSuccess: () => {
       queryClient.invalidateQueries(['contacts']);
       reset();
       toast.success('Contact added');
-    }
-  });
-
-  // Simple deleting for now
-  const deleteMutation = useMutation({
-    mutationFn: (id) => api.delete(`/contacts/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['contacts']);
-      toast.success('Contact deleted');
+    },
+    onError: async (error, variables) => {
+        if (error.response?.status === 424) {
+            if (window.confirm("Unable to save to Google Contacts (Network/Auth Error).\n\nDo you want to save strictly to the App only?")) {
+                try {
+                    await api.post('/contacts', { ...variables, userId: user?.id, skipGoogleSync: true });
+                    queryClient.invalidateQueries(['contacts']);
+                    reset();
+                    toast.success('Contact added (Local Only)');
+                } catch (retryError) {
+                    toast.error("Failed to save contact locally.");
+                }
+            }
+        } else {
+            toast.error(error.message || "Failed to create contact");
+        }
     }
   });
 
@@ -85,16 +89,57 @@ export default function ContactsManager() {
     mutation.mutate(data);
   };
 
+  const handleSync = async () => {
+      const toastId = toast.loading('Syncing with Google...');
+      try {
+          const res = await api.post('/auth/google/sync', {});
+          if (res.success) {
+              setSyncStatus(prev => ({ ...prev, lastSyncAt: new Date().toISOString() }));
+              queryClient.invalidateQueries(['contacts']);
+              toast.success(`Synced. +${res.imported} contacts.`, { id: toastId });
+          }
+      } catch (error) {
+          console.error(error);
+          toast.error('Sync failed. Try reconnecting.', { id: toastId });
+      }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">My Contacts</h1>
-        <button 
-           onClick={handleImport}
-           className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 flex items-center gap-2 shadow-sm"
-        >
-           <span className="text-xl">☁️</span> Sync from Google
-        </button>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div>
+            <h1 className="text-2xl font-bold text-gray-800">My Contacts</h1>
+            <p className="text-sm text-gray-500 mt-1">
+                {syncStatus.isConnected 
+                    ? <span className="text-green-600 font-medium">✅ Google Sync Active</span> 
+                    : <span className="text-red-500 font-medium">❌ Not Connected to Google</span>
+                }
+                {syncStatus.lastSyncAt && <span className="text-gray-400 ml-2">(Last sync: {new Date(syncStatus.lastSyncAt).toLocaleString()})</span>}
+            </p>
+        </div>
+        
+        <div className="flex gap-2">
+            {syncStatus.isConnected && (
+                <button
+                    onClick={handleSync}
+                    className="border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors"
+                >
+                    🔁 Sync Now
+                </button>
+            )}
+
+            <button 
+            onClick={handleImport}
+            className={`border px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors ${
+                syncStatus.isConnected 
+                ? 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+            >
+            <span className="text-xl">☁️</span> 
+            {syncStatus.isConnected ? 'Reconnect' : 'Connect Google Contacts'}
+            </button>
+        </div>
       </div>
       
       <div className="grid md:grid-cols-3 gap-6">

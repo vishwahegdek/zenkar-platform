@@ -24,13 +24,9 @@ export class ContactsController {
   @Get()
   @ApiQuery({ name: 'userId', required: false })
   findAll(@Request() req, @Query('userId') userId?: string, @Query('query') query?: string) {
-    // Determine the userId to use: query param (if admin/allowed) or logged-in user?
-    // Instruction didn't specify strict isolation, but service expects a number.
-    // If no userId param, maybe use req.user.userId? Or pass undefined if global?
-    // Service: `where: { userId, ... }`. If userId is undefined, `where: { userId: undefined }` (matches nothing? or ignored? Prisma ignores undefined in where).
-    // Let's pass req.user.userId if not provided? Or just undefined.
-    // Assuming straightforward mapping:
-    const targetUserId = userId ? Number(userId) : req.user.userId;
+    // Universal Access: If userId param provided, filter by it. If not, return ALL.
+    // We do NOT default to req.user.userId anymore.
+    const targetUserId = userId ? Number(userId) : undefined;
     return this.contactsService.findAll(targetUserId, { query });
   }
 

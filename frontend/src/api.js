@@ -52,6 +52,26 @@ export const api = {
     }
     return res.json();
   },
+  put: async (url, data, options = {}) => {
+    const res = await fetch(`/api${url}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getHeaders(options)
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || errorText || 'API Request Failed');
+      } catch (e) {
+        throw new Error(errorText || 'API Request Failed');
+      }
+    }
+    return res.json();
+  },
   delete: async (url, options = {}) => {
     const res = await fetch(`/api${url}`, { 
       method: 'DELETE',

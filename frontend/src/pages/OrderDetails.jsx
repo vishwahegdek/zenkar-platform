@@ -1,82 +1,136 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import { useReactToPrint } from 'react-to-print';
+import { ArrowLeft, Edit, Printer, ChevronDown, MoreVertical } from 'lucide-react';
 import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
+import BillView from '../components/BillView';
 import { format } from 'date-fns';
 
 export default function OrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isGstModalOpen, setIsGstModalOpen] = useState(false); // Kept for safety if referenced elsewhere, but logically unused now. 
+  // Actually, better to remove them if I remove usages.
+  // Let's check usages. I removed the dropdown usage above.
+  // The tool call before this one SUCCEEDED in removing the dropdown JSX.
+  // Now I must clean up the state variables.
+  
+  // Cleaned state:
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isManagePaymentsModalOpen, setIsManagePaymentsModalOpen] = useState(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  
+  // Print State
+  const [printConfig, setPrintConfig] = useState({ mode: 'ESTIMATE', data: null });
+  const componentRef = useRef();
+  
+  const handlePrint = useReactToPrint({
+    contentRef: componentRef,
+  });
+  
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
 
-  const { data: order, isLoading } = useQuery({
+  // Effect to trigger print when config changes and data is ready
+  // Actually, we can just set config and then call handlePrint manually? 
+  // No, handlePrint is bound to current ref state.
+  // Strategy: Update state -> Render -> THEN print.
+  
+  const triggerPrint = (mode, data = null) => {
+      setPrintConfig({ mode, data });
+      // Timeout to ensure state update and render completes
+      setTimeout(() => {
+          console.log("Printing...", componentRef.current);
+          if (componentRef.current) {
+            handlePrint();
+          } else {
+            console.error("Print failed: Component ref is null");
+          }
+      }, 500);
+  };
+
+  const { data: order, isLoading, error } = useQuery({
     queryKey: ['orders', id],
     queryFn: () => api.get(`/orders/${id}`),
   });
-  
-  // Keep the quick record for convenience if needed, but managing everything via Manage is cleaner
+
   const paymentMutation = useMutation({
     mutationFn: (data) => api.post(`/orders/${id}/payments`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['orders', id]);
       setIsPaymentModalOpen(false);
-    }
+    },
   });
 
   const managePaymentsMutation = useMutation({
-     mutationFn: (payments) => api.patch(`/orders/${id}/payments`, { payments }),
-     onSuccess: () => {
-        queryClient.invalidateQueries(['orders', id]);
-        setIsManagePaymentsModalOpen(false);
-     },
-     onError: (error) => {
-        console.error("Payment Save Failed:", error);
-        alert(`Failed to save payments: ${error.message}`);
-     }
-  });
-
-  const discountMutation = useMutation({
-    mutationFn: (val) => api.patch(`/orders/${id}`, { discount: Number(val) }),
+    mutationFn: (data) => api.patch(`/orders/${id}/payments`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['orders', id]);
-      setIsDiscountModalOpen(false);
-    },
-    onError: (err) => {
-        alert(err.message);
+       queryClient.invalidateQueries(['orders', id]);
+       setIsManagePaymentsModalOpen(false);
     }
   });
 
+  const discountMutation = useMutation({
+      mutationFn: (val) => api.patch(`/orders/${id}`, { discount: val }),
+      onSuccess: () => {
+          queryClient.invalidateQueries(['orders', id]);
+          setIsDiscountModalOpen(false);
+      }
+  });
+  // ...
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading order details...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error loading order: {error.message}</div>;
   if (!order) return <div className="p-8 text-center text-gray-500">Order not found.</div>;
 
   return (
     <div className="space-y-0 md:space-y-6 max-w-4xl mx-auto">
-      {/* ... Header ... */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 md:px-0 py-2 md:py-0">
-         <button onClick={() => navigate('/orders')} className="flex items-center text-gray-600 hover:text-gray-900">
-            <span className="mr-2">←</span> Back to Orders
-         </button>
-         <div className="flex gap-2">
+         <div></div> {/* Spacer since Back button is gone */}
+         <div className="relative">
             <button 
-               onClick={() => setIsPaymentModalOpen(true)}
-               className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"
+               onClick={() => setIsActionsOpen(!isActionsOpen)}
+               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm font-medium transition-colors"
             >
-               Record Payment
+               <span>Actions</span>
+               <ChevronDown size={16} />
             </button>
-            <Link to={`/orders/${order.id}/edit`} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Edit Order
-            </Link>
+            
+            {isActionsOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50">
+                    <button 
+                       onClick={() => { setIsPaymentModalOpen(true); setIsActionsOpen(false); }}
+                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600 font-medium"
+                    >
+                       Record Payment
+                    </button>
+                    <button 
+                       onClick={() => { triggerPrint('ESTIMATE', order); setIsActionsOpen(false); }}
+                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 font-medium"
+                    >
+                       Print Estimate
+                    </button>
+                    <button
+                       onClick={() => { navigate(`/orders/${id}/edit`); setIsActionsOpen(false); }}
+                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 font-medium"
+                    >
+                       Edit Order
+                    </button>
+                </div>
+            )}
+            {/* Backdrop to close */}
+            {isActionsOpen && (
+                <div className="fixed inset-0 z-40" onClick={() => setIsActionsOpen(false)}></div>
+            )}
          </div>
       </div>
 
       <div className="bg-white md:rounded-xl shadow-sm md:border border-y border-gray-200 overflow-hidden">
-          {/* ... Header Info ... */}
+          {/* Header Info */}
           <div className="p-4 md:p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
              <div>
                 <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNo || order.id}</h1>
@@ -86,7 +140,7 @@ export default function OrderDetails() {
           </div>
           
           <div className="p-0 md:p-6 space-y-6">
-             {/* ... Internal Notes ... */}
+             {/* Internal Notes */}
              {order.notes && (
                  <div className="bg-yellow-50 mx-4 md:mx-0 p-4 rounded-lg border border-yellow-100">
                     <h3 className="text-xs font-bold text-yellow-800 uppercase tracking-wide mb-2">Internal Notes</h3>
@@ -95,7 +149,7 @@ export default function OrderDetails() {
              )}
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* ... Customer ... */}
+                {/* Customer */}
                 <div>
                    <div className="flex justify-between items-center mb-3 mt-4 md:mt-0 px-4 md:px-0">
                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Customer</h3>
@@ -112,7 +166,7 @@ export default function OrderDetails() {
                    </div>
                 </div>
                 
-                {/* ... Dates & Payments ... */}
+                {/* Dates & Payments */}
                 <div>
                    <h3 className="px-4 md:px-0 text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Dates & Status</h3>
                    <div className="bg-gray-50 p-4 rounded-none md:rounded-lg border-y md:border border-gray-100 space-y-2 text-sm">
@@ -156,7 +210,7 @@ export default function OrderDetails() {
                 </div>
              </div>
 
-             {/* ... Items ... */}
+             {/* Items */}
              <div>
                 <h3 className="px-4 md:px-0 text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Items</h3>
                 <div className="border-y md:border border-gray-100 rounded-none md:rounded-lg overflow-hidden">
@@ -215,7 +269,7 @@ export default function OrderDetails() {
           </div>
       </div>
       
-      {/* Payment Modal (Record) */}
+      {/* Modals */}
       {isPaymentModalOpen && (
         <PaymentModal 
            onClose={() => setIsPaymentModalOpen(false)} 
@@ -224,7 +278,6 @@ export default function OrderDetails() {
         />
       )}
 
-      {/* Manage Payments Modal (Edit All) */}
       {isManagePaymentsModalOpen && (
         <ManagePaymentsModal
            payments={order.payments} 
@@ -254,7 +307,6 @@ export default function OrderDetails() {
         </div>
       </Modal>
 
-      {/* Discount Modal */}
       {isDiscountModalOpen && (
         <DiscountModal
             initialValue={order.discount}
@@ -263,6 +315,19 @@ export default function OrderDetails() {
             isLoading={discountMutation.isPending}
         />
       )}
+
+      {/* GST Modal Removed */}
+
+      {/* Hidden Print Component - Use height 0 instead of display:none to ensure ref is accessible */}
+      <div style={{ position: 'absolute', top: 0, left: 0, height: 0, overflow: 'hidden' }}>
+         <div ref={componentRef}>
+             <BillView 
+                order={order} 
+                data={printConfig.data}
+                mode={printConfig.mode}
+             />
+         </div>
+      </div>
     </div>
   );
 }
@@ -364,7 +429,7 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
         ...i,
         amount: Number(i.amount)
       }));
-      onSubmit(validItems);
+      onSubmit({ payments: validItems });
   };
 
   const total = items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);

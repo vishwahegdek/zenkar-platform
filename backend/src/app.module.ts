@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'; // Import APP_GUARD
+import { ScheduleModule } from '@nestjs/schedule'; // Import ScheduleModule
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,7 +20,10 @@ import { NoCacheInterceptor } from './common/interceptors/no-cache.interceptor';
 import { FinanceModule } from './finance/finance.module';
 
 @Module({
-  imports: [PrismaModule, CustomersModule, RecipientsModule, ProductsModule, OrdersModule, UsersModule, AuthModule, AuditModule, DashboardModule, ExpensesModule, ContactsModule, LabourModule, FinanceModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    PrismaModule, CustomersModule, RecipientsModule, ProductsModule, OrdersModule, UsersModule, AuthModule, AuditModule, DashboardModule, ExpensesModule, ContactsModule, LabourModule, FinanceModule
+  ],
   controllers: [AppController],
   providers: [
     AppService,

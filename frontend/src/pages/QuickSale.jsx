@@ -221,26 +221,22 @@ export default function QuickSale() {
          {/* Customer Section */}
          <div 
             ref={customerRef}
-            className={`md:col-span-3 bg-white p-6 rounded-xl shadow-sm border transition-colors ${
+            className={`md:col-span-3 bg-white px-4 py-3 rounded-xl shadow-sm border transition-colors ${
                 isCustomerInvalid ? 'border-red-500 bg-red-50' : 'border-gray-100'
             }`}
         >
-            <label className={`text-sm font-semibold uppercase tracking-wider mb-2 block ${isCustomerInvalid ? 'text-red-600' : 'text-gray-500'}`}>
-                Customer <span className="text-red-500">*</span>
-            </label>
-            
             {customer.name ? (
-               <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-100">
-                   <div>
-                       <span className="text-lg font-bold text-blue-900">{customer.name}</span>
-                       <span className="block text-sm text-blue-700">{customer.phone}</span>
-                       {customer.name === 'Walk-In' && <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">Default</span>}
+               <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2 overflow-hidden">
+                       <span className="font-bold text-gray-900 truncate">{customer.name}</span>
+                       <span className="text-sm text-gray-500 truncate mobile:hidden">{customer.phone}</span>
+                       {customer.name === 'Walk-In' && <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full font-medium">Default</span>}
                    </div>
                    <button 
                      onClick={() => setCustomer({ name: '', id: null })}
-                     className="text-sm text-blue-600 font-medium hover:underline"
+                     className="text-xs text-blue-600 font-bold hover:underline whitespace-nowrap ml-2"
                    >
-                     Change
+                     CHANGE
                    </button>
                </div>
             ) : (
@@ -248,16 +244,13 @@ export default function QuickSale() {
                      label="Search Customer..."
                      type="customer"
                      autoFocus={true}
-                     initialValue={customer.name === 'Walk-In' ? '' : customer.name} // Don't prepopulate Walk-In if searching
+                     initialValue={customer.name === 'Walk-In' ? '' : customer.name}
                       onSelect={(cust) => {
-                          console.log('QuickSale: onSelect triggered', cust);
                           if (cust.source === 'new') {
-                              console.log('QuickSale: Opening New Customer Modal');
                               setTempCustomerName(cust.name);
                               window.location.hash = 'new-customer';
                               setIsCustomerModalOpen(true);
                           } else {
-                              console.log('QuickSale: Customer Selected', cust);
                               setCustomer({ 
                                   name: cust.name, 
                                   id: cust.id, 
@@ -273,40 +266,33 @@ export default function QuickSale() {
          </div>
 
         {/* Items Section */}
-        <div className="md:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-           <h2 className="text-lg font-bold text-gray-800 mb-4">Items</h2>
+        <div className="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+           {/* Items Table Header */}
+           <div className="bg-gray-50 border-b border-gray-200 grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase">
+              <div className="col-span-5 md:col-span-5">Item</div>
+              <div className="col-span-2 md:col-span-1 text-center">Qty</div>
+              <div className="col-span-3 md:col-span-2 text-right">Price</div>
+              <div className="col-span-2 md:col-span-4 text-right">Total</div>
+           </div>
            
-           <div className="space-y-4">
-              <div className="hidden md:grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase px-2">
-                 <div className="col-span-4">Product</div>
-                 <div className="col-span-4">Description</div>
-                 <div className="col-span-1 text-center">Qty</div>
-                 <div className="col-span-2 text-right">Price</div>
-                 <div className="col-span-1 text-right">Total</div>
-              </div>
-
+           <div className="divide-y divide-gray-100">
               {items.map((item, idx) => (
                   <div 
                         key={idx} 
                         ref={el => itemRefs.current[idx] = el}
-                        className={`grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3 md:p-0 rounded-lg border relative transition-colors ${
-                            invalidItems.includes(idx) 
-                            ? 'bg-red-50 border-red-500 shadow-sm' 
-                            : 'bg-gray-50 md:bg-transparent border-gray-100 md:border-none'
+                        className={`grid grid-cols-12 gap-2 items-start px-3 py-3 transition-colors ${
+                            invalidItems.includes(idx) ? 'bg-red-50' 
+                            : idx % 2 === 0 ? 'bg-white' : 'bg-gray-100'
                         }`}
                     >
-                      <button onClick={() => removeItem(idx)} className="md:hidden absolute top-2 right-2 text-gray-400">✕</button>
-                      
-                      <div className="md:col-span-4">
-                         <label className="md:hidden text-xs font-bold text-gray-500">Product</label>
-                         
+                      {/* Item Column */}
+                      <div className="col-span-5 md:col-span-5 space-y-1">
                          {item.productId ? (
-                             <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                                <span className="font-medium text-gray-800 truncate pr-2">{item.productName}</span>
+                             <div className="group relative">
+                                <div className="font-medium text-sm text-gray-900 truncate">{item.productName}</div>
                                 <button 
-                                    type="button"
                                     onClick={() => handleChangeProduct(idx)}
-                                    className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide"
+                                    className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
                                 >
                                     Change
                                 </button>
@@ -314,8 +300,8 @@ export default function QuickSale() {
                          ) : (
                             <Autocomplete 
                                 value={item.productName}
-                                autoFocus={true}
-                                placeholder="Scan or Search Product"
+                                autoFocus={idx === items.length - 1} // Auto focus only on new row
+                                placeholder="Item"
                                 endpoint="/products"
                                 displayKey="name"
                                 subDisplayKey="defaultUnitPrice"
@@ -324,55 +310,62 @@ export default function QuickSale() {
                                    setTempProductName(name);
                                    setActiveProductRowIndex(idx);
                                    window.location.hash = 'new-product';
-                                   setIsProductModalOpen(true); // Explicitly open
+                                   setIsProductModalOpen(true);
                                 }}
                                 onSelect={(p) => handleProductSelect(idx, p)}
+                                className="text-sm"
                             />
                          )}
-                      </div>
-                      <div className="md:col-span-4">
-                        <label className="md:hidden text-xs font-bold text-gray-500">Description</label>
-                         <input type="text" className="input-field" placeholder="Notes"
+                         <input 
+                            type="text" 
+                            className="w-full text-xs text-gray-500 placeholder-gray-300 border-none p-0 focus:ring-0 bg-transparent" 
+                            placeholder="Add description..."
                             value={item.description || ''}
                             onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
                          />
                       </div>
-                      
-                      <div className="grid grid-cols-3 gap-2 md:contents">
-                          <div className="md:col-span-1">
-                             <label className="md:hidden text-xs font-bold text-gray-500">Qty</label>
-                             <input type="number" className="input-field text-center"
-                                aria-label="Quantity"
-                                value={item.quantity}
-                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                             />
-                          </div>
-                          <div className="md:col-span-2">
-                             <label className="md:hidden text-xs font-bold text-gray-500">Price</label>
-                             <input type="number" className="input-field text-right"
-                                aria-label="Price"
-                                value={item.unitPrice}
-                                onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                             />
-                          </div>
-                          <div className="md:col-span-1 flex items-center justify-end font-bold text-gray-800">
-                             <span className="md:hidden mr-2 text-xs font-normal text-gray-500">Total:</span>
-                             ₹{item.lineTotal.toLocaleString()}
-                          </div>
+
+                      {/* Quantity Column */}
+                      <div className="col-span-2 md:col-span-1">
+                         <input type="number" 
+                            className="w-full text-center text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                         />
                       </div>
-                      
-                      <button onClick={() => removeItem(idx)} className="hidden md:block col-span-1 text-gray-400 hover:text-red-500 text-xl font-bold pb-2">×</button>
+
+                      {/* Price Column */}
+                      <div className="col-span-3 md:col-span-2">
+                         <input type="number" 
+                            className="w-full text-right text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            value={item.unitPrice}
+                            onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                         />
+                      </div>
+
+                      {/* Total Column + Remove */}
+                      <div className="col-span-2 md:col-span-4 flex flex-col md:flex-row items-end md:items-center justify-between gap-1">
+                         <div className="font-medium text-sm text-gray-900 text-right w-full md:w-auto">
+                            ₹{item.lineTotal.toLocaleString()}
+                         </div>
+                         <button 
+                            onClick={() => removeItem(idx)} 
+                            className="text-gray-400 hover:text-red-500 p-1 -mr-2"
+                         >
+                            <span className="text-lg font-bold">×</span>
+                         </button>
+                      </div>
                   </div>
               ))}
            </div>
            
-           <button onClick={addItem} className="mt-4 w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-500 font-medium hover:border-primary hover:text-primary transition-colors">
-              + Add Another Item
+           <button onClick={addItem} className="w-full py-3 text-center text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border-t border-blue-100 transition-colors uppercase tracking-wide">
+              + Add Item
            </button>
 
-           <div className="mt-6 flex justify-end items-center gap-4 pt-4 border-t border-gray-100">
-               <span className="text-xl font-medium text-gray-600">Total Amount:</span>
-               <span className="text-3xl font-bold text-gray-900">₹{calculateTotal().toLocaleString()}</span>
+           <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-200">
+               <span className="text-sm font-medium text-gray-600">Total</span>
+               <span className="text-xl font-bold text-gray-900">₹{calculateTotal().toLocaleString()}</span>
            </div>
         </div>
         

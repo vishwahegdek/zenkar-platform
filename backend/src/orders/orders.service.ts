@@ -61,8 +61,8 @@ export class OrdersService implements OnModuleInit {
              finalCustomerId = newWalkIn.id;
          }
       } else if (!finalCustomerId && contactId) {
-          // Resolve from Contact
-          const existingCustomer = await tx.customer.findFirst({ where: { contactId: contactId, userId: userId || undefined } }); // Should we scope by User? Contacts are user specific usually.
+          // Resolve from Contact (Global Lookup)
+          const existingCustomer = await tx.customer.findFirst({ where: { contactId: contactId } });
           
           if (existingCustomer) {
               finalCustomerId = existingCustomer.id;
@@ -305,8 +305,8 @@ export class OrdersService implements OnModuleInit {
       // Handle New Customer Creation from Context/Contact (If CustomerId=0)
       // Since customerName is removed from DTO, we can only create via ContactId or use existing
       if (customerId === 0 && contactId) {
-         // Try to find customer by contact
-         const existing = await tx.customer.findFirst({ where: { contactId, userId: userId || undefined } });
+         // Try to find customer by contact (Global Lookup)
+         const existing = await tx.customer.findFirst({ where: { contactId } });
          if (existing) {
              finalCustomerId = existing.id;
          } else {
@@ -454,5 +454,78 @@ export class OrdersService implements OnModuleInit {
         await this.auditService.log(userId, 'DELETE', 'Order', id);
     }
     return result;
+  }
+
+  // --- GST Invoice Logic ---
+
+  async getGstInvoice(orderId: number) {
+     return this.prisma.gstInvoice.findUnique({ where: { orderId } });
+  }
+
+  async upsertGstInvoice(orderId: number, data: any, userId?: number) {
+     // 1. Check if exists
+     const existing = await this.prisma.gstInvoice.findUnique({ where: { orderId } });
+     
+     if (existing) {
+        // Update
+        const updated = await this.prisma.gstInvoice.update({
+           where: { orderId },
+           data: {
+              items: data.items,
+              customerName: data.customerName,
+              subtotal: data.subtotal,
+              discount: data.discount,
+              totalAmount: data.totalAmount
+           }
+        });
+        return updated;
+     } else {
+        // Create New
+        // Generate Invoice Number: GST-YYYY-SEQ (e.g. GST-2025-0001)
+        const invoiceNo = await this.generateNextGstInvoiceNo();
+        
+        const created = await this.prisma.gstInvoice.create({
+           data: {
+              orderId,
+              invoiceNo,
+              customerName: data.customerName,
+              items: data.items,
+              subtotal: data.subtotal,
+              discount: data.discount,
+              totalAmount: data.totalAmount
+           }
+        });
+        
+        if (userId) await this.auditService.log(userId, 'CREATE', 'GstInvoice', created.id, { invoiceNo });
+        return created;
+     }
+  }
+
+  private async generateNextGstInvoiceNo() {
+     // Format: GST-{Year}-{4digitSeq}
+     const year = new Date().getFullYear();
+     const prefix = `GST-${year}-`;
+     
+     // Find last invoice created this year (crudely by filtering string if possible, or just last created)
+     // Prisma doesn't support 'startsWith' easily on all DBs, but Postgres ILIKE, or just get last ID.
+     // Better strategy: count? No, gaps.
+     // Strategy: Get last created GstInvoice. Check if it starts with current prefix.
+     
+     const lastInvoice = await this.prisma.gstInvoice.findFirst({
+        orderBy: { id: 'desc' }
+     });
+
+     let seq = 1;
+     if (lastInvoice && lastInvoice.invoiceNo.startsWith(prefix)) {
+         const parts = lastInvoice.invoiceNo.split('-');
+         if (parts.length === 3) {
+             const lastSeq = parseInt(parts[2], 10);
+             if (!isNaN(lastSeq)) {
+                 seq = lastSeq + 1;
+             }
+         }
+     }
+
+     return `${prefix}${String(seq).padStart(4, '0')}`;
   }
 }

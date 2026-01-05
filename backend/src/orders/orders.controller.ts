@@ -60,4 +60,16 @@ export class OrdersController {
   syncPayments(@Param('id') id: string, @Body() body: SyncPaymentsDto, @Req() req) {
     return this.ordersService.syncPayments(+id, body.payments, req.user?.userId);
   }
+
+  @Get(':id/gst-invoice')
+  @ApiOperation({ summary: 'Get GST Invoice for order' })
+  getGstInvoice(@Param('id') id: string) {
+     return this.ordersService.getGstInvoice(+id);
+  }
+
+  @Post(':id/gst-invoice')
+  @ApiOperation({ summary: 'Create/Update GST Invoice' })
+  upsertGstInvoice(@Param('id') id: string, @Body() body: any, @Req() req) {
+     return this.ordersService.upsertGstInvoice(+id, body, req.user?.userId);
+  }
 }

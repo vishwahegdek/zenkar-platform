@@ -1,20 +1,30 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 
 export default function OrdersList() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   const view = searchParams.get('view') || 'active';
   const filter = searchParams.get('filter') || 'All';
   const search = searchParams.get('search') || '';
+  
+  // Local state for search input to prevent losing focus
+  const [searchInput, setSearchInput] = useState(search);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debounceTimer = useRef(null);
+
+  // Sync searchInput with URL param when search changes EXTERNALLY only
+  useEffect(() => {
+    setSearchInput(search);
+    setDebouncedSearch(search);
+  }, [search]);
 
   const updateParams = (newParams) => {
     // Merge new params with existing ones
-    // Note: iterating existing to keep any others? or just these 3?
-    // Generally safer to keep existing.
     const next = new URLSearchParams(searchParams);
     Object.entries(newParams).forEach(([k, v]) => {
        if (v === null || v === '') next.delete(k); // cleanup empty
@@ -25,12 +35,22 @@ export default function OrdersList() {
 
   const setView = (val) => updateParams({ view: val });
   const setFilter = (val) => updateParams({ filter: val });
-  const setSearch = (val) => updateParams({ search: val });
-
-  // Debounce search update (optional but good practice, here we trust user types then stops or hits enter? 
-  // Actually simpler to just update state and let query refetch.
-  // We'll keep local state for input to avoid lagging, but update params on debounce or blur/enter.
-  // For simplicity given request, we will just pass `search` param to query directly.
+  
+  // Debounced search handler
+  const handleSearchChange = (value) => {
+    setSearchInput(value);
+    
+    // Clear existing timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    // Set new timer to update both URL params and debounced state after 500ms
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      updateParams({ search: value });
+    }, 500);
+  };
 
   const {
       data,
@@ -41,40 +61,9 @@ export default function OrdersList() {
       isError,
       error
   } = useInfiniteQuery({
-      queryKey: ['orders', view, search], // Search is now part of key
+      queryKey: ['orders', view, debouncedSearch], // Use debouncedSearch instead of search
       queryFn: async ({ pageParam = 1 }) => {
-          // Backend filter assumes 'All' isn't needed or handle in frontend?
-          // Actually backend service doesn't receive filter param in our update?
-          // Wait, backend service `findAll` has `view` but no `status` filter param other than view logic?
-          // The frontend was filtering locally by status!
-          // Issue: Backend only supports 'view' (active/history) which maps to status groups.
-          // Frontend was doing finer filtering (e.g. 'Enquired').
-          // If we move to backend pagination, we MUST do backend filtering too.
-          // BUT: The user asked for "Customer Name" search primarily. 
-          // Infinite Scroll with client-side filtering of partial results works BADLY (page 1 might have 0 matches).
-          // We should ideally pass status filter to backend too.
-          // However, to strictly follow "search for customer name only" and "infinite scroll",
-          // and avoiding massive refactor of backend status logic if possible (unless necessary).
-          // The current backend `findAll` logic:
-          // isHistory ? closed/cancelled : NOT closed/cancelled.
-          // It fetches a page (20).
-          // If we filter by status in frontend, we receive 20 filtered by view, then hide some.
-          // This breaks pages. (e.g. fetched 20 'confirmed', user selects 'ready' filter -> shows 0).
-          // REQUIRED: We technically need to pass filter to backend too if we want proper pagination.
-          // Let's implement client-side consistency for now: 
-          // If filter is specific (e.g. 'Ready'), we might need backend support OR accept that 'Load More' 
-          // might just load more to check. for now we'll stick to 'view' and 'search' on backend, 
-          // and simple 'filter' on frontend (User said "filter is applicable for customer name only" -> NO wait.
-          // "The filter is needed to apply for customer name only"... likely meant SEARCH is for customer name.
-          // Status filter is different.
-          // Let's pass 'search' to backend. Status filter remains client side? ERROR prone.
-          // If I paginate 20 items, and filtering by 'Ready', I might see 0 items. 
-          // The user explicitly asked for "filter is needed to apply for customer name only". 
-          // This implies the previous status filters might not be critical or can be applied on loaded data?
-          // NO, standard infinite scroll needs backend filtering.
-          // Let's assume we fetch by View, and Server Search. Frontend Status Filter will filter visible items.
-          
-          const res = await api.get(`/orders?view=${view}&search=${search}&page=${pageParam}&limit=20`);
+          const res = await api.get(`/orders?view=${view}&search=${debouncedSearch}&page=${pageParam}&limit=20`);
           return res;
       },
       getNextPageParam: (lastPage, pages) => {
@@ -182,10 +171,6 @@ export default function OrdersList() {
     return matchesFilter;
   });
 
-  const navigate = useNavigate();
-
-  if (isLoading) return <div className="p-8 text-center text-gray-500">Loading orders...</div>;
-
   return (
     <div className="space-y-6">
       {/* ... Header ... */}
@@ -231,13 +216,24 @@ export default function OrdersList() {
       <div className="bg-white md:rounded-xl shadow-sm md:border border-y border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
            <input 
+              id="orders-search-input"
               type="text" 
               placeholder="Search orders..." 
               className="w-full md:w-80 px-4 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={e => handleSearchChange(e.target.value)}
+              autoComplete="off"
            />
         </div>
+
+        {/* Content Area with Loading State */}
+        {isLoading ? (
+             <div className="p-12 text-center text-gray-500">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
+                <div>Loading orders...</div>
+             </div>
+        ) : (
+        <>
 
         {/* Mobile View: Cards */}
         <div className="md:hidden divide-y divide-gray-100">
@@ -271,17 +267,7 @@ export default function OrdersList() {
                  </div>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-gray-50" onClick={e => e.stopPropagation()}>
-                <Link to={`/orders/${order.id}/edit`} className="flex-1 py-1.5 text-center text-xs font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 border border-gray-200">
-                  Edit
-                </Link>
-                <button onClick={() => handleCopy(order)} className="flex-1 py-1.5 text-center text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 border border-blue-100">
-                  Copy
-                </button>
-                <button onClick={() => handleDelete(order.id)} className="flex-1 py-1.5 text-center text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 border border-red-100">
-                  Delete
-                </button>
-              </div>
+
             </div>
           ))}
           {filteredOrders.length === 0 && (
@@ -300,7 +286,7 @@ export default function OrdersList() {
                 <th className="px-6 py-3 text-right">Amount</th>
                 <th className="px-6 py-3 text-right text-red-600">Balance</th>
                 <th className="px-6 py-3 w-32">Due Date</th>
-                <th className="px-6 py-3 w-32 text-center">Actions</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -338,33 +324,9 @@ export default function OrdersList() {
                      ₹{Number(order.remainingBalance || 0).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(order.orderDate), 'dd/MM/yyyy')}
-                </td>
-                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleCopy(order)}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                        title="Copy Order"
-                      >
-                         📋
-                      </button>
-                      <Link 
-                        to={`/orders/${order.id}/edit`}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                         title="Edit Order"
-                      >
-                         ✏️
-                      </Link>
-                      <button 
-                         onClick={() => handleDelete(order.id)}
-                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                         title="Delete Order"
-                      >
-                         🗑️
-                      </button>
-                    </div>
-                  </td>
+                   {format(new Date(order.orderDate), 'dd/MM/yyyy')}
+                 </td>
+
                 </tr>
               ))}
               {filteredOrders.length === 0 && (
@@ -389,6 +351,8 @@ export default function OrdersList() {
                     {isFetchingNextPage ? 'Loading...' : 'Load More Results'}
                 </button>
             </div>
+        )}
+        </>
         )}
       </div>
     </div>

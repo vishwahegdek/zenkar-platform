@@ -27,12 +27,12 @@ export default function Autocomplete({
   const { data: response, isLoading } = useQuery({
     queryKey: [endpoint, query],
     queryFn: () => api.get(`${endpoint}?query=${query}`),
-    enabled: query.length > 1 && isOpen,
+    enabled: query.length >= 1 && isOpen,
     staleTime: 60000,
   });
 
   const suggestions = Array.isArray(response) ? response : (response?.data || []);
-  const showCreateOption = onCreate && query.length > 1 && suggestions.length === 0 && !isLoading;
+  const showCreateOption = onCreate && query.length >= 1 && suggestions.length === 0 && !isLoading;
   const showDropdown = isOpen && (suggestions.length > 0 || showCreateOption);
 
   useEffect(() => {

@@ -24,6 +24,10 @@ model User {
   financeParties FinanceParty[]
   auditLogs AuditLog[]
 
+  // Google Sync Credentials
+  googleRefreshToken String? @map("google_refresh_token")
+  lastSyncAt         DateTime? @map("last_sync_at")
+
   createdOrders   Order[]   @relation("OrderCreatedBy")
   updatedOrders   Order[]   @relation("OrderUpdatedBy")
   createdPayments Payment[] @relation("PaymentCreatedBy")
@@ -110,6 +114,7 @@ model Order {
   customer      Customer?   @relation(fields: [customerId], references: [id])
   items         OrderItem[]
   payments      Payment[]
+  gstInvoice    GstInvoice?
 
   createdById   Int?      @map("created_by_id")
   updatedById   Int?      @map("updated_by_id")
@@ -117,6 +122,24 @@ model Order {
   updatedBy     User?     @relation("OrderUpdatedBy", fields: [updatedById], references: [id])
 
   @@map("orders")
+}
+
+model GstInvoice {
+  id            Int      @id @default(autoincrement())
+  orderId       Int      @unique @map("order_id")
+  invoiceNo     String   @map("invoice_no")
+  customerName  String   @map("customer_name")
+  items         Json     // Stores [{ productName, quantity, unitPrice, lineTotal }]
+  subtotal      Decimal  @db.Decimal(12, 2)
+  discount      Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal  @map("total_amount") @db.Decimal(12, 2)
+  
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("gst_invoices")
 }
 
 model Payment {

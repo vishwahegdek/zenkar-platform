@@ -51,17 +51,21 @@ export class CustomersService {
     });
   }
 
-  async findAll(userId: number, params: any) {
-    const { contactId, query, page = 1, limit = 20 } = params;
+  async findAll(userId: number | undefined, params: any) {
+    const { contactId, query, page = 1, limit = 20, filterByOwner } = params;
     const skip = (page - 1) * limit;
     const take = +limit;
 
-    const where = {
-      userId,
+    const where: any = {
+      isDeleted: false,
       contactId: contactId ? +contactId : undefined,
       name: query ? { contains: query, mode: 'insensitive' as const } : undefined,
-      isDeleted: false,
     };
+    
+    // Only filter by userId if explicitly requested (e.g. for "My Customers" view)
+    if (filterByOwner && userId) {
+        where.userId = userId;
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({

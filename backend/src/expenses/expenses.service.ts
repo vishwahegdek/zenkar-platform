@@ -44,8 +44,7 @@ export class ExpensesService {
         // Check if exists
         let recipient = await this.prisma.recipient.findFirst({
             where: { 
-                userId, 
-                name: data.recipientName 
+                 name: { equals: data.recipientName, mode: 'insensitive' }
             }
         });
 
@@ -117,8 +116,7 @@ export class ExpensesService {
     if (data.recipientName) {
         let recipient = await this.prisma.recipient.findFirst({
             where: { 
-                userId: userId, 
-                name: data.recipientName 
+                name: { equals: data.recipientName, mode: 'insensitive' }
             }
         });
 

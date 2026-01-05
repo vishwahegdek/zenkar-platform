@@ -34,7 +34,10 @@ export class CustomersController {
     // It filters by contactId? The Controller doesn't accept contactId.
     // But pagination logic is missing in service provided earlier?
     // Let's pass what we have.
-    return this.customersService.findAll(req.user.userId, { query, page, limit });
+    // Refactored for Global Access: We pass req.user.userId but service ignores it unless filterByOwner is true.
+    // Or we can pass undefined to be explicit.
+    // Let's pass undefined to default to "All Customers"
+    return this.customersService.findAll(undefined, { query, page, limit });
   }
 
   @Get(':id')

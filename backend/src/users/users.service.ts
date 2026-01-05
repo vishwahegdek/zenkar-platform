@@ -28,4 +28,19 @@ export class UsersService {
       }
     });
   }
+  async updateGoogleCredentials(userId: number, refreshToken: string | null) {
+      // Only update if refreshToken is provided (it might be null on subsequent logins if prompt is not consent)
+      // But we forced prompt='consent', so it should be there.
+      // If it is null, we shouldn't overwrite existing token with null unless intended.
+      
+      const data: any = { lastSyncAt: new Date() };
+      if (refreshToken) {
+          data.googleRefreshToken = refreshToken;
+      }
+
+      return this.prisma.user.update({
+          where: { id: userId },
+          data: data
+      });
+  }
 }

@@ -6,7 +6,7 @@ export class RecipientsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(userId: number, query?: string) {
-    const where: any = { userId };
+    const where: any = {};
     
     if (query) {
       where.name = { contains: query, mode: 'insensitive' };

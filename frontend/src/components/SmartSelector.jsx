@@ -31,7 +31,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (query.length < 2) {
+            if (query.length < 1) {
                 setResults([]);
                 setContacts([]);
                 return;
@@ -119,7 +119,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                 autoComplete="off"
             />
             
-            {showDropdown && query.length >= 2 && (
+            {showDropdown && query.length >= 1 && (
                 <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 max-h-60 overflow-auto py-1 text-sm">
                     {isSearching && <div className="px-4 py-2 text-gray-500">Searching...</div>}
 

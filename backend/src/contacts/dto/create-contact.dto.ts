@@ -16,4 +16,8 @@ export class CreateContactDto {
   @IsOptional()
   @IsString()
   group?: string;
+
+  @ApiPropertyOptional({ example: false, description: 'Skip syncing to Google Contacts' })
+  @IsOptional()
+  skipGoogleSync?: boolean;
 }

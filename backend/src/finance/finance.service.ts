@@ -27,8 +27,8 @@ export class FinanceService {
     };
   }
 
-  async getAllParties(userId: number, type?: string) {
-    const whereClause: any = { userId };
+  async getAllParties(userId: number | undefined, type?: string) {
+    const whereClause: any = {};
     // If type is provided, filter by it (optional view filter)
     if (type) {
       whereClause.type = type;
@@ -89,9 +89,9 @@ export class FinanceService {
     });
   }
 
-  async getParty(id: number, userId: number) {
+  async getParty(id: number, userId?: number) {
     const party = await this.prisma.financeParty.findFirst({
-      where: { id, userId },
+      where: { id },
       include: { 
           transactions: { orderBy: { date: 'desc' } },
           contact: true

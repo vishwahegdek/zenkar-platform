@@ -13,7 +13,7 @@ export class FinanceController {
       @Req() req, 
       @Query('type') type?: string
   ) {
-    return this.financeService.getAllParties(req.user.userId, type);
+    return this.financeService.getAllParties(undefined, type);
   }
 
   @Post('/parties')
@@ -29,7 +29,7 @@ export class FinanceController {
       @Req() req, 
       @Param('id', ParseIntPipe) id: number
   ) {
-    return this.financeService.getParty(id, req.user.userId);
+    return this.financeService.getParty(id, undefined);
   }
 
   @Post('/parties/:id/transactions')
