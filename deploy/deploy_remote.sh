@@ -15,14 +15,14 @@ DATE_TAG=$(date +%Y%m%d-%H%M%S)
 
 # Configuration Variables
 if [ "$ENV" == "production" ]; then
-    PROJECT_DIR="$HOME/zenkar-platform-production"
+    PROJECT_DIR="/home/vishwa/zenkar-platform-production"
     COMPOSE_FILE="deploy/production/docker-compose.yml"
     DB_CONTAINER="zenkar-db-prod"
     BACKEND_CONTAINER="zenkar-backend-prod"
     DB_NAME="order_book"
     DB_USER="postgres"
 else
-    PROJECT_DIR="$HOME/zenkar-staging"
+    PROJECT_DIR="/home/vishwa/zenkar-staging"
     COMPOSE_FILE="deploy/staging/docker-compose.yml"
     DB_CONTAINER="zenkar-db-demo"
     BACKEND_CONTAINER="zenkar-backend-demo"
@@ -30,7 +30,7 @@ else
     DB_USER="postgres"
 fi
 
-BACKUP_DIR="$HOME/zenkar-backups/$ENV"
+BACKUP_DIR="/home/vishwa/zenkar-backups/$ENV"
 
 echo "🚀 Starting Deployment to $ENV"
 echo "📂 Project Dir: $PROJECT_DIR"
