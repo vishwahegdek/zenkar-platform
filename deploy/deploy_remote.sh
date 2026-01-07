@@ -45,7 +45,7 @@ CURRENT_COMMIT=$(git rev-parse HEAD)
 CURRENT_VERSION=$(grep '"version":' package.json | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
 
 LOG_FILE="$BACKUP_DIR/deployment_log.txt"
-echo "$(date '+%Y-%m-%d %H:%M:%S') | Version: $CURRENT_VERSION | Commit: $CURRENT_COMMIT | Backup: backup_${ENV}_${DATE_TAG}.sql" >> "$LOG_FILE"
+echo "$(date '+%Y-%m-%d %H:%M:%S') | Version: $CURRENT_VERSION | Commit: $CURRENT_COMMIT | Backup: backup_${ENV}_v${CURRENT_VERSION}_${DATE_TAG}.sql" >> "$LOG_FILE"
 echo "📝 Logged previous state: $CURRENT_VERSION ($CURRENT_COMMIT)"
 # --------------------------------------------------
 
@@ -55,10 +55,10 @@ echo "📝 Logged previous state: $CURRENT_VERSION ($CURRENT_COMMIT)"
 # 2. Database Backup
 echo "💾 Creating Database Backup..."
 mkdir -p $BACKUP_DIR
-sudo docker exec -t $DB_CONTAINER pg_dump -U $DB_USER $DB_NAME > "$BACKUP_DIR/backup_${ENV}_${DATE_TAG}.sql"
+sudo docker exec -t $DB_CONTAINER pg_dump -U $DB_USER $DB_NAME > "$BACKUP_DIR/backup_${ENV}_v${CURRENT_VERSION}_${DATE_TAG}.sql"
 
 if [ $? -eq 0 ]; then
-  echo "✅ Backup Successful: $BACKUP_DIR/backup_${ENV}_${DATE_TAG}.sql"
+  echo "✅ Backup Successful: $BACKUP_DIR/backup_${ENV}_v${CURRENT_VERSION}_${DATE_TAG}.sql"
 else
   echo "❌ Backup Failed! Aborting deployment."
   exit 1
