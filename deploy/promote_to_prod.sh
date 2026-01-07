@@ -8,12 +8,19 @@ set -e
 GIT_SHA=$1
 
 if [ -z "$GIT_SHA" ]; then
-    if [ -f ".latest_build_sha" ]; then
-        GIT_SHA=$(cat .latest_build_sha)
-        echo "ℹ️  No SHA provided. Found last build SHA: $GIT_SHA"
-    else
-        GIT_SHA=$(git rev-parse --short HEAD)
-        echo "⚠️  No SHA provided and no .latest_build_sha found. Using current HEAD: $GIT_SHA"
+    # Default to HEAD
+    GIT_SHA=$(git rev-parse --short HEAD)
+    echo "ℹ️  No SHA provided. Using current HEAD: $GIT_SHA"
+
+    # Optional: Warn if it differs from latest build (if file exists/readable)
+    if [ -f ".latest_build_sha" ] && [ -r ".latest_build_sha" ]; then
+        LAST_BUILD=$(cat .latest_build_sha)
+        if [ "$GIT_SHA" != "$LAST_BUILD" ]; then
+            echo "⚠️  WARNING: Current HEAD ($GIT_SHA) differs from last recorded build ($LAST_BUILD)."
+            echo "   Make sure you have built/pushed the current commit before promoting!"
+            echo "   Proceeding with HEAD ($GIT_SHA) in 5 seconds... (Ctrl+C to abort)"
+            sleep 5
+        fi
     fi
 fi
 
