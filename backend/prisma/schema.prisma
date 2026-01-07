@@ -48,8 +48,8 @@ model Customer {
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
   contactId Int?     @map("contact_id") // Optional link to Contact
-  user      User?    @relation(fields: [userId], references: [id])
-  contact   Contact? @relation(fields: [contactId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
   orders    Order[]
 
   isDeleted Boolean  @default(false) @map("is_deleted")
@@ -67,8 +67,8 @@ model Image {
   productId   Int?      @map("product_id")
   orderItemId Int?      @map("order_item_id")
 
-  product     Product?  @relation(fields: [productId], references: [id])
-  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
 
   createdAt   DateTime  @default(now()) @map("created_at")
 
@@ -92,12 +92,12 @@ model Product {
   notes            String?
   
   categoryId       Int         @map("category_id") // Strict FK
-  category         ProductCategory @relation(fields: [categoryId], references: [id])
+  category         ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   createdById Int?     @map("created_by_id")
   updatedById Int?     @map("updated_by_id")
-  createdBy   User?    @relation("ProductCreatedBy", fields: [createdById], references: [id])
-  updatedBy   User?    @relation("ProductUpdatedBy", fields: [updatedById], references: [id])
+  createdBy   User?    @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   images           Image[]
   createdAt        DateTime    @default(now()) @map("created_at")
   isDeleted        Boolean     @default(false) @map("is_deleted")
@@ -156,15 +156,15 @@ model Order {
   isQuickSale   Boolean     @default(false) @map("is_quick_sale")
   deletedAt     DateTime?   @map("deleted_at")
 
-  customer      Customer?   @relation(fields: [customerId], references: [id])
+  customer      Customer?   @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items         OrderItem[]
   payments      Payment[]
   gstInvoice    GstInvoice?
 
   createdById   Int?      @map("created_by_id")
   updatedById   Int?      @map("updated_by_id")
-  createdBy     User?     @relation("OrderCreatedBy", fields: [createdById], references: [id])
-  updatedBy     User?     @relation("OrderUpdatedBy", fields: [updatedById], references: [id])
+  createdBy     User?     @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     User?     @relation("OrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@map("orders")
 }
@@ -201,8 +201,8 @@ model Payment {
 
   createdById Int?     @map("created_by_id")
   updatedById Int?     @map("updated_by_id")
-  createdBy   User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
-  updatedBy   User?    @relation("PaymentUpdatedBy", fields: [updatedById], references: [id])
+  createdBy   User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("PaymentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@map("payments")
 }
@@ -220,7 +220,7 @@ model OrderItem {
   lineTotal   Decimal  @default(0) @map("line_total") @db.Decimal(12, 2)
 
   order       Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product? @relation(fields: [productId], references: [id])
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@map("order_items")
 }
@@ -235,7 +235,7 @@ model AuditLog {
   details    Json?    // Stores the changes or snapshot
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
 
 
   @@map("audit_logs")
@@ -265,7 +265,7 @@ model Contact {
   isDeleted Boolean  @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
-  user      User?    @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
   customers Customer[]
   recipients Recipient[]
   financeParties FinanceParty[]
@@ -280,8 +280,8 @@ model Recipient {
   name      String   // Recipient Name (derived from contact or custom)
   createdAt DateTime @default(now()) @map("created_at")
 
-  contact   Contact? @relation(fields: [contactId], references: [id])
-  user      User?    @relation(fields: [userId], references: [id])
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
   expenses  Expense[]
 
   @@unique([userId, contactId, name]) // Flexible uniqueness
@@ -322,7 +322,7 @@ model LabourSettlement {
 
   createdAt       DateTime @default(now()) @map("created_at")
 
-  labourer        Labourer @relation(fields: [labourerId], references: [id])
+  labourer        Labourer @relation(fields: [labourerId], references: [id], onDelete: Restrict)
 
   @@map("labour_settlements")
 }
@@ -334,7 +334,7 @@ model Attendance {
   value     Decimal  @db.Decimal(3, 1) // 0.5 or 1.0
   createdAt DateTime @default(now()) @map("created_at")
 
-  labourer  Labourer @relation(fields: [labourerId], references: [id])
+  labourer  Labourer @relation(fields: [labourerId], references: [id], onDelete: Restrict)
 
   @@unique([labourerId, date])
   @@map("attendance")
@@ -354,14 +354,14 @@ model Expense {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
-  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
-  recipient   Recipient?      @relation(fields: [recipientId], references: [id])
-  labourer    Labourer?       @relation(fields: [labourerId], references: [id])
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recipient   Recipient?      @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  labourer    Labourer?       @relation(fields: [labourerId], references: [id], onDelete: Restrict)
   
   createdById Int?     @map("created_by_id")
   updatedById Int?     @map("updated_by_id")
-  createdBy   User?    @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
-  updatedBy   User?    @relation("ExpenseUpdatedBy", fields: [updatedById], references: [id])
+  createdBy   User?    @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("ExpenseUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   
   @@map("expenses")
 }
@@ -378,8 +378,8 @@ model FinanceParty {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   contactId Int?     @map("contact_id")
-  user      User?    @relation(fields: [userId], references: [id])
-  contact   Contact? @relation(fields: [contactId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
   transactions FinanceTransaction[]
 
   @@map("finance_parties")
