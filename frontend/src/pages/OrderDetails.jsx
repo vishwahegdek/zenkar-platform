@@ -84,7 +84,18 @@ export default function OrderDetails() {
           setIsDiscountModalOpen(false);
       }
   });
-  // ...
+
+  const updateItemStatusMutation = useMutation({
+     mutationFn: ({ itemId, status }) => api.patch(`/orders/items/${itemId}/status`, { status }),
+     onSuccess: () => {
+        queryClient.invalidateQueries(['orders', id]);
+     }
+  });
+
+  const handleItemStatusChange = (itemId, status) => {
+     updateItemStatusMutation.mutate({ itemId, status });
+  };
+  
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading order details...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Error loading order: {error.message}</div>;
   if (!order) return <div className="p-8 text-center text-gray-500">Order not found.</div>;
@@ -245,9 +256,7 @@ export default function OrderDetails() {
                                   <div className="text-xs text-gray-500">{item.description}</div>
                                </td>
                                <td className="px-2 md:px-4 py-2">
-                                   <span className="inline-block px-1.5 py-0.5 text-[10px] uppercase font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 whitespace-nowrap">
-                                      {item.status || 'CONFIRMED'}
-                                   </span>
+                                   <ItemStatusSelect item={item} onChange={handleItemStatusChange} />
                                </td>
                                <td className="px-2 md:px-4 py-2 text-center text-gray-600">{Number(item.quantity)}</td>
                                <td className="px-2 md:px-4 py-2 text-right text-gray-600">₹{Number(item.unitPrice).toLocaleString()}</td>
@@ -660,6 +669,35 @@ function handleWhatsAppShare(order) {
     window.open(url, '_blank');
 }
 
+const ItemStatusSelect = ({ item, onChange }) => {
+  const styles = {
+    CONFIRMED: 'bg-gray-100 text-gray-700 ring-gray-600/20',
+    IN_PRODUCTION: 'bg-purple-50 text-purple-700 ring-purple-600/20',
+    READY: 'bg-yellow-50 text-yellow-700 ring-yellow-600/20',
+    DELIVERED: 'bg-green-50 text-green-700 ring-green-600/20',
+  };
+
+  const style = styles[item.status] || 'bg-gray-100 text-gray-600';
+
+  return (
+    <div className="relative inline-block" onClick={e => e.stopPropagation()}>
+      <select 
+        value={item.status}
+        onChange={(e) => onChange(item.id, e.target.value)}
+        className={`appearance-none cursor-pointer pl-2 pr-6 py-0.5 rounded-full text-[10px] font-bold ring-1 ring-inset ${style} border-none outline-none focus:ring-2 uppercase tracking-wide`}
+      >
+        <option value="CONFIRMED">Queue</option>
+        <option value="IN_PRODUCTION">In Prod</option>
+        <option value="READY">Ready</option>
+        <option value="DELIVERED">Delivered</option>
+      </select>
+       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          <svg className="h-2 w-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+       </div>
+    </div>
+  );
+};
+
 function StatusBadge({ type, status }) {
     if (!status) return null;
     
@@ -683,12 +721,7 @@ function StatusBadge({ type, status }) {
             PARTIALLY_PAID: { label: 'Part Paid', color: 'bg-orange-50 text-orange-700 border-orange-100' },
             FULLY_PAID: { label: 'Paid', color: 'bg-green-50 text-green-700 border-green-100' },
         },
-        ITEM: {
-            CONFIRMED: { label: 'Queue', color: 'bg-gray-50 text-gray-600 border-gray-200' },
-            IN_PRODUCTION: { label: 'In Prod', color: 'bg-purple-50 text-purple-700 border-purple-100' },
-            READY: { label: 'Ready', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
-            DELIVERED: { label: 'Delivered', color: 'bg-green-50 text-green-700 border-green-100' },
-        }
+        // ITEM removed as it's now handled by Select
     };
 
     const cfg = config[type]?.[status] || { label: status, color: 'bg-gray-100 text-gray-500' };

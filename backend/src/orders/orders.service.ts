@@ -388,6 +388,7 @@ export class OrdersService implements OnModuleInit {
         deliveryStatus: { not: DeliveryStatus.FULLY_DELIVERED },
         isDeleted: false,
       },
+      status: { not: ItemStatus.DELIVERED }, // New: Hide delivered items from queue
       product: {
         categoryId: Number(categoryId),
       },
