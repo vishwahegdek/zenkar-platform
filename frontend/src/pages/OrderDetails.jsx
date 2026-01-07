@@ -13,6 +13,11 @@ export default function OrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: order, isLoading, error } = useQuery({
+    queryKey: ['orders', id],
+    queryFn: () => api.get(`/orders/${id}`),
+  });
+
   const [isGstModalOpen, setIsGstModalOpen] = useState(false); // Kept for safety if referenced elsewhere, but logically unused now. 
   // Actually, better to remove them if I remove usages.
   // Let's check usages. I removed the dropdown usage above.
@@ -31,6 +36,7 @@ export default function OrderDetails() {
   
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
+    documentTitle: order ? `Zenkar Estimate-${order.orderNo || order.id}` : 'Zenkar Estimate',
   });
   
   const [isActionsOpen, setIsActionsOpen] = useState(false);
@@ -53,10 +59,7 @@ export default function OrderDetails() {
       }, 500);
   };
 
-  const { data: order, isLoading, error } = useQuery({
-    queryKey: ['orders', id],
-    queryFn: () => api.get(`/orders/${id}`),
-  });
+
 
   const paymentMutation = useMutation({
     mutationFn: (data) => api.post(`/orders/${id}/payments`, data),
@@ -115,6 +118,12 @@ export default function OrderDetails() {
                        Print Estimate
                     </button>
                     <button
+                       onClick={() => { handleWhatsAppShare(order); setIsActionsOpen(false); }}
+                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600 font-medium"
+                    >
+                       Share on WhatsApp
+                    </button>
+                    <button
                        onClick={() => { navigate(`/orders/${id}/edit`); setIsActionsOpen(false); }}
                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 font-medium"
                     >
@@ -136,7 +145,11 @@ export default function OrderDetails() {
                 <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNo || order.id}</h1>
                 <p className="text-sm text-gray-500">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
              </div>
-             <StatusBadge status={order.status} />
+             <div className="flex gap-2">
+                <StatusBadge type="ORDER" status={order.status} />
+                <StatusBadge type="DELIVERY" status={order.deliveryStatus} />
+                <StatusBadge type="PAYMENT" status={order.paymentStatus} />
+             </div>
           </div>
           
           <div className="p-0 md:p-6 space-y-6">
@@ -218,6 +231,7 @@ export default function OrderDetails() {
                       <thead className="bg-gray-50 text-gray-500 font-medium">
                          <tr>
                             <th className="px-3 md:px-4 py-2 text-left">Item</th>
+                            <th className="px-2 md:px-4 py-2 text-left w-24">Status</th>
                             <th className="px-2 md:px-4 py-2 text-center w-12 md:w-20 whitespace-nowrap">Qty</th>
                             <th className="px-2 md:px-4 py-2 text-right w-16 md:w-24 whitespace-nowrap">Price</th>
                             <th className="px-3 md:px-4 py-2 text-right w-16 md:w-24 whitespace-nowrap">Total</th>
@@ -229,6 +243,11 @@ export default function OrderDetails() {
                                <td className="px-3 md:px-4 py-2">
                                   <div className="font-medium text-gray-900">{item.productName}</div>
                                   <div className="text-xs text-gray-500">{item.description}</div>
+                               </td>
+                               <td className="px-2 md:px-4 py-2">
+                                   <span className="inline-block px-1.5 py-0.5 text-[10px] uppercase font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 whitespace-nowrap">
+                                      {item.status || 'CONFIRMED'}
+                                   </span>
                                </td>
                                <td className="px-2 md:px-4 py-2 text-center text-gray-600">{Number(item.quantity)}</td>
                                <td className="px-2 md:px-4 py-2 text-right text-gray-600">₹{Number(item.unitPrice).toLocaleString()}</td>
@@ -565,22 +584,118 @@ function DiscountModal({ initialValue, onClose, onSubmit, isLoading }) {
     );
   }
 
-function StatusBadge({ status }) {
-  const styles = {
-    enquired: 'bg-orange-50 text-orange-700 ring-orange-600/20',
-    confirmed: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-    production: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
-    ready: 'bg-green-50 text-green-700 ring-green-600/20',
-    delivered: 'bg-gray-100 text-gray-700 ring-gray-500/20',
-    closed: 'bg-gray-800 text-white ring-gray-700/20',
-    cancelled: 'bg-red-50 text-red-700 ring-red-600/20',
-  };
-  
-  const style = styles[status?.toLowerCase()] || 'bg-gray-100 text-gray-600';
+function formatEstimateText(order) {
+    if (!order) return '';
 
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${style}`}>
-      {status}
-    </span>
-  );
+    const date = format(new Date(order.orderDate), 'dd/MM/yyyy');
+    const total = Number(order.totalAmount || 0);
+    const paid = Number(order.paidAmount || 0);
+    const discount = Number(order.discount || 0);
+    // Calculate Net Total logic consistent with BillView
+    // BillView: total = subtotal - discount. API provides totalAmount which is usually gross? 
+    // Wait, in BillView fix we did: total = subtotal - discount.
+    // Here we should rely on what the order object has.
+    // If order.totalAmount is stored as Gross in DB, then we do:
+    // Net = Total - Discount.
+    
+    // Let's replicate BillView logic exactly for consistency.
+    const items = order.items || [];
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
+    const netTotal = subtotal - discount;
+    const balance = netTotal - paid;
+
+    let text = `*ESTIMATE* #${order.orderNo || order.id}\n`;
+    text += `Date: ${date}\n`;
+    text += `Customer: ${order.customer?.name || 'Walk-in'}\n\n`;
+
+    text += `*Items:*\n`;
+    items.forEach((item, i) => {
+        text += `${i+1}. ${item.productName} x ${item.quantity} = ₹${Number(item.lineTotal).toLocaleString()}\n`;
+    });
+    
+    text += `\n-------------------\n`;
+    text += `Subtotal: ₹${subtotal.toLocaleString()}\n`;
+    
+    if (discount > 0) {
+        text += `Discount: -₹${discount.toLocaleString()}\n`;
+    }
+    
+    text += `*Total: ₹${netTotal.toLocaleString()}*\n`;
+    
+    if (paid > 0) {
+        text += `Paid: -₹${paid.toLocaleString()}\n`;
+    }
+    
+    if (balance > 0) {
+        text += `*Balance Due: ₹${balance.toLocaleString()}*\n`;
+    }
+    
+    text += `\nGenerated via Zenkar Industries`;
+    return text;
+}
+
+function handleWhatsAppShare(order) {
+    if (!order) return;
+    
+    const customerPhone = order.customer?.phone;
+    if (!customerPhone) {
+        alert("Customer phone number is missing. Cannot share via WhatsApp.");
+        return;
+    }
+    
+    // Sanitize phone number (remove spaces, dashes)
+    let phone = customerPhone.replace(/\D/g, '');
+    
+    // Assuming Indian numbers if no country code, prepend 91 if length is 10
+    if (phone.length === 10) {
+        phone = '91' + phone;
+    }
+    
+    const text = formatEstimateText(order);
+    const encodedText = encodeURIComponent(text);
+    
+    // Use https://wa.me/ to open standard WhatsApp interface (App on Mobile, Page on Desktop)
+    const url = `https://wa.me/${phone}?text=${encodedText}`;
+    
+    window.open(url, '_blank');
+}
+
+function StatusBadge({ type, status }) {
+    if (!status) return null;
+    
+    // Config
+    const config = {
+        ORDER: {
+            ENQUIRED: { label: 'Enquired', color: 'bg-orange-50 text-orange-700 border-orange-100' },
+            CONFIRMED: { label: 'Confirmed', color: 'bg-blue-50 text-blue-700 border-blue-100' },
+            CLOSED: { label: 'Closed', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+            CANCELLED: { label: 'Cancelled', color: 'bg-red-50 text-red-700 border-red-100' },
+        },
+        DELIVERY: {
+            CONFIRMED: { label: 'Queue', color: 'bg-gray-50 text-gray-600 border-gray-200' },
+            IN_PRODUCTION: { label: 'In Prod', color: 'bg-purple-50 text-purple-700 border-purple-100' },
+            READY: { label: 'Ready', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
+            PARTIALLY_DELIVERED: { label: 'Part. Del', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
+            FULLY_DELIVERED: { label: 'Delivered', color: 'bg-green-50 text-green-700 border-green-100' },
+        },
+        PAYMENT: {
+            UNPAID: { label: 'Unpaid', color: 'bg-red-50 text-red-700 border-red-100' },
+            PARTIALLY_PAID: { label: 'Part Paid', color: 'bg-orange-50 text-orange-700 border-orange-100' },
+            FULLY_PAID: { label: 'Paid', color: 'bg-green-50 text-green-700 border-green-100' },
+        },
+        ITEM: {
+            CONFIRMED: { label: 'Queue', color: 'bg-gray-50 text-gray-600 border-gray-200' },
+            IN_PRODUCTION: { label: 'In Prod', color: 'bg-purple-50 text-purple-700 border-purple-100' },
+            READY: { label: 'Ready', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
+            DELIVERED: { label: 'Delivered', color: 'bg-green-50 text-green-700 border-green-100' },
+        }
+    };
+
+    const cfg = config[type]?.[status] || { label: status, color: 'bg-gray-100 text-gray-500' };
+
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${cfg.color}`}>
+            {cfg.label}
+        </span>
+    );
 }

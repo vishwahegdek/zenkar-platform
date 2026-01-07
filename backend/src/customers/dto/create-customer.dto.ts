@@ -4,7 +4,10 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { MinLength } from 'class-validator';
 
 export class CreateCustomerDto {
-  @ApiPropertyOptional({ example: 'Alice Smith', description: 'Name of the customer (Min 6 chars if provided)' })
+  @ApiPropertyOptional({
+    example: 'Alice Smith',
+    description: 'Name of the customer (Min 6 chars if provided)',
+  })
   @IsOptional()
   @IsString()
   @MinLength(6)
@@ -23,4 +26,11 @@ export class CreateCustomerDto {
   @ApiPropertyOptional({ example: 1, description: 'Linked Contact ID' })
   @IsOptional()
   contactId?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Skip Google Contact Sync',
+  })
+  @IsOptional()
+  skipGoogleSync?: boolean;
 }

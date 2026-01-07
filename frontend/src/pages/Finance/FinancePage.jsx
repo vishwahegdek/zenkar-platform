@@ -15,7 +15,7 @@ export default function FinancePage() {
 
   const { data: parties = [], isLoading, refetch } = useQuery({
     queryKey: ['finance-parties', activeTab],
-    queryFn: () => api.get(`/finance/parties?type=${activeTab}`).then(res => res.data)
+    queryFn: () => api.get(`/finance/parties?type=${activeTab}`).then(res => res)
   });
 
   const filteredParties = parties.filter(p => 
@@ -120,10 +120,10 @@ export default function FinancePage() {
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">
-                            {(p.name || '?').charAt(0).toUpperCase()}
+                            {(party.name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-900 text-lg leading-tight">{p.name || 'Unknown Party'}</h3>
+                            <h3 className="font-semibold text-gray-900 text-lg leading-tight">{party.name || 'Unknown Party'}</h3>
                             <p className="text-xs text-gray-500 mt-1">{party.phone || 'No phone'}</p>
                         </div>
                     </div>

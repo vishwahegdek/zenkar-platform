@@ -38,14 +38,14 @@ describe('ProductsService', () => {
       const query = 'test';
       await service.findAll(query);
 
-      expect(mockPrismaService.product.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({
-          isDeleted: false,
-          OR: [
-             { name: { contains: query, mode: 'insensitive' } }
-          ]
-        })
-      }));
+      expect(mockPrismaService.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isDeleted: false,
+            OR: [{ name: { contains: query, mode: 'insensitive' } }],
+          }),
+        }),
+      );
     });
   });
 
@@ -59,12 +59,12 @@ describe('ProductsService', () => {
 
       expect(mockPrismaService.product.update).toHaveBeenCalledWith({
         where: { id },
-        data: { 
-          isDeleted: true, 
-          deletedAt: date 
+        data: {
+          isDeleted: true,
+          deletedAt: date,
         },
       });
-      
+
       jest.useRealTimers();
     });
   });
@@ -74,11 +74,11 @@ describe('ProductsService', () => {
       const dto = { name: 'P1', defaultUnitPrice: 10 };
       await service.create(dto);
       expect(mockPrismaService.product.create).toHaveBeenCalledWith({
-        data: { 
+        data: {
           name: dto.name,
           defaultUnitPrice: dto.defaultUnitPrice,
-          notes: undefined 
-        }
+          notes: undefined,
+        },
       });
     });
   });

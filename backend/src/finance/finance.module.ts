@@ -8,6 +8,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [AuthModule, PrismaModule],
   controllers: [FinanceController],
   providers: [FinanceService],
-  exports: [FinanceService] // Export if needed elsewhere
+  exports: [FinanceService], // Export if needed elsewhere
 })
 export class FinanceModule {}

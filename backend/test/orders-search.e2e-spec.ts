@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -24,7 +23,7 @@ describe('OrdersController (Search)', () => {
   });
 
   afterEach(async () => {
-      await app.close();
+    await app.close();
   });
 
   it('/orders (GET) - should return structure with data and meta', async () => {
@@ -39,20 +38,23 @@ describe('OrdersController (Search)', () => {
   });
 
   it('/orders (GET) with search - should return filtered results', async () => {
-     const response = await request(app.getHttpServer())
-         .get('/orders?search=NonExistentCustomerXYZ')
-         .set('Authorization', `Bearer ${authToken}`);
-     
-     if (response.status !== 200) {
-         console.error('Test Failed Status:', response.status);
-         console.error('Test Failed Body:', JSON.stringify(response.body, null, 2));
-     }
-     expect(response.status).toBe(200);
-         
-     expect(response.body.data).toEqual([]);
-     expect(response.body.meta.total).toBe(0);
+    const response = await request(app.getHttpServer())
+      .get('/orders?search=NonExistentCustomerXYZ')
+      .set('Authorization', `Bearer ${authToken}`);
+
+    if (response.status !== 200) {
+      console.error('Test Failed Status:', response.status);
+      console.error(
+        'Test Failed Body:',
+        JSON.stringify(response.body, null, 2),
+      );
+    }
+    expect(response.status).toBe(200);
+
+    expect(response.body.data).toEqual([]);
+    expect(response.body.meta.total).toBe(0);
   });
-  
+
   // NOTE: If we want to test positive search, we'd need to seed data in test or use existing seed.
   // For now, testing structure safety.
 });

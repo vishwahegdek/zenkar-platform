@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
@@ -24,23 +23,23 @@ export class UsersService {
       select: {
         id: true,
         username: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
   }
   async updateGoogleCredentials(userId: number, refreshToken: string | null) {
-      // Only update if refreshToken is provided (it might be null on subsequent logins if prompt is not consent)
-      // But we forced prompt='consent', so it should be there.
-      // If it is null, we shouldn't overwrite existing token with null unless intended.
-      
-      const data: any = { lastSyncAt: new Date() };
-      if (refreshToken) {
-          data.googleRefreshToken = refreshToken;
-      }
+    // Only update if refreshToken is provided (it might be null on subsequent logins if prompt is not consent)
+    // But we forced prompt='consent', so it should be there.
+    // If it is null, we shouldn't overwrite existing token with null unless intended.
 
-      return this.prisma.user.update({
-          where: { id: userId },
-          data: data
-      });
+    const data: any = { lastSyncAt: new Date() };
+    if (refreshToken) {
+      data.googleRefreshToken = refreshToken;
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: data,
+    });
   }
 }

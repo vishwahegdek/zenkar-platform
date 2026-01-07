@@ -1,11 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 
 export enum TransactionType {
-  BORROWED = 'BORROWED',   // We owe more
-  REPAID = 'REPAID',       // We owe less
-  LENT = 'LENT',           // They owe us more
-  COLLECTED = 'COLLECTED'  // They owe us less
+  BORROWED = 'BORROWED', // We owe more
+  REPAID = 'REPAID', // We owe less
+  LENT = 'LENT', // They owe us more
+  COLLECTED = 'COLLECTED', // They owe us less
 }
 
 export class CreateFinanceTransactionDto {

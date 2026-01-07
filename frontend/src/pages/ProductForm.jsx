@@ -11,9 +11,16 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
   const id = paramId;
   const isEdit = Boolean(id);
 
+  // Fetch Categories
+  const { data: categories, isError: isCategoriesError, refetch: refetchCategories } = useQuery({
+      queryKey: ['productCategories'],
+      queryFn: () => api.get('/product-categories').then(res => res || [])
+  });
+
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     defaultUnitPrice: 0,
+    categoryId: '',
     notes: '',
   });
 
@@ -30,12 +37,19 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
       setFormData({
         name: product.name || '',
         defaultUnitPrice: Number(product.defaultUnitPrice) || 0,
+        categoryId: product.categoryId || '',
         notes: product.notes || '',
       });
-    } else if (initialData?.name && !isEdit) {
-       setFormData(prev => ({ ...prev, name: initialData.name }));
+    } else if (categories && !isEdit) {
+       // Default to "General"
+       const generalCat = categories.find(c => c.name === 'General');
+       setFormData(prev => ({ 
+           ...prev, 
+           name: initialData?.name || prev.name,
+           categoryId: generalCat ? generalCat.id : prev.categoryId 
+       }));
     }
-  }, [product, initialData, isEdit]);
+  }, [product, initialData, isEdit, categories]);
 
   // Mutations
   const mutation = useMutation({
@@ -43,6 +57,7 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
        const payload = {
           ...data,
           defaultUnitPrice: Number(data.defaultUnitPrice) || 0,
+          categoryId: Number(data.categoryId)
        };
        return isEdit ? api.patch(`/products/${id}`, payload) : api.post('/products', payload);
     },
@@ -84,6 +99,28 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
              placeholder="e.g. Wooden Chair"
              autoFocus
           />
+        </div>
+
+        <div>
+           <label htmlFor="productFormCategory" className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+           {isCategoriesError ? (
+               <div className="text-red-500 text-xs mb-1">
+                   Failed to load categories. 
+                   <button type="button" onClick={() => refetchCategories()} className="underline ml-1">Retry</button>
+               </div>
+           ) : null}
+           <select
+              id="productFormCategory"
+              className="input-field"
+              value={formData.categoryId}
+              onChange={e => setFormData({...formData, categoryId: e.target.value})}
+              required
+           >
+               <option value="">Select Category</option>
+               {categories?.map(cat => (
+                   <option key={cat.id} value={cat.id}>{cat.name}</option>
+               ))}
+           </select>
         </div>
 
         <div>

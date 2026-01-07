@@ -75,11 +75,24 @@ model Image {
   @@map("images")
 }
 
+
+model ProductCategory {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("product_categories")
+}
+
 model Product {
   id               Int         @id @default(autoincrement())
   name             String
   defaultUnitPrice Decimal     @default(0) @map("default_unit_price") @db.Decimal(10, 2)
   notes            String?
+  
+  categoryId       Int         @map("category_id") // Strict FK
+  category         ProductCategory @relation(fields: [categoryId], references: [id])
 
   createdById Int?     @map("created_by_id")
   updatedById Int?     @map("updated_by_id")
@@ -94,6 +107,34 @@ model Product {
   @@map("products")
 }
 
+enum OrderStatus {
+  ENQUIRED
+  CONFIRMED
+  CLOSED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  CONFIRMED
+  IN_PRODUCTION
+  READY
+  PARTIALLY_DELIVERED
+  FULLY_DELIVERED
+}
+
+enum ItemStatus {
+  CONFIRMED
+  IN_PRODUCTION
+  READY
+  DELIVERED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  FULLY_PAID
+}
+
 model Order {
   id            Int         @id @default(autoincrement())
   orderNo       String?     @map("order_no")
@@ -101,7 +142,11 @@ model Order {
   orderDate     DateTime    @default(now()) @map("order_date") @db.Date
   dueDate       DateTime?   @map("due_date") @db.Date
   deliveryDate  DateTime?   @map("delivery_date") @db.Date
-  status        String      @default("confirmed") // enquired, confirmed, production, ready, delivered, cancelled
+  
+  status        OrderStatus @default(CONFIRMED)
+  deliveryStatus DeliveryStatus? @map("delivery_status")
+  paymentStatus  PaymentStatus?  @map("payment_status")
+
   totalAmount   Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
   discount      Decimal     @default(0) @db.Decimal(12, 2)
   notes         String?
@@ -168,6 +213,7 @@ model OrderItem {
   productId   Int?     @map("product_id")
   productName String?  @map("product_name")
   description String?
+  status      ItemStatus @default(CONFIRMED)
   images      Image[]
   quantity    Decimal  @default(0) @db.Decimal(10, 2)
   unitPrice   Decimal  @default(0) @map("unit_price") @db.Decimal(10, 2)

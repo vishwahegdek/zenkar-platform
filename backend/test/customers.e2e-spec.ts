@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -14,14 +13,16 @@ describe('CustomersSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     // Login to get token
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ username: 'admin', password: 'admin123' });
-      
+
     authToken = loginRes.body.access_token;
   });
 
@@ -45,31 +46,31 @@ describe('CustomersSystem (e2e)', () => {
     });
 
     it('should accept pagination params', async () => {
-        const response = await request(app.getHttpServer())
-          .get('/customers?page=1&limit=5')
-          .set('Authorization', `Bearer ${authToken}`)
-          .expect(200);
-          
-        expect(response.body.data.length).toBeLessThanOrEqual(5);
-        expect(Number(response.body.meta.page)).toBe(1);
+      const response = await request(app.getHttpServer())
+        .get('/customers?page=1&limit=5')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.data.length).toBeLessThanOrEqual(5);
+      expect(Number(response.body.meta.page)).toBe(1);
     });
 
     it('should filter by search query', async () => {
-        // First create a unique customer to search for
-        const uniqueName = `SearchTarget_${Date.now()}`;
-        await request(app.getHttpServer())
-          .post('/customers')
-          .set('Authorization', `Bearer ${authToken}`)
-          .send({ name: uniqueName, mobile: '1122334455', place: 'SearchCity' })
-          .expect(201);
+      // First create a unique customer to search for
+      const uniqueName = `SearchTarget_${Date.now()}`;
+      await request(app.getHttpServer())
+        .post('/customers')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ name: uniqueName, mobile: '1122334455', place: 'SearchCity' })
+        .expect(201);
 
-        const response = await request(app.getHttpServer())
-          .get(`/customers?query=${uniqueName}`)
-          .set('Authorization', `Bearer ${authToken}`)
-          .expect(200);
-        
-        expect(response.body.data.length).toBeGreaterThan(0);
-        expect(response.body.data[0].name).toBe(uniqueName);
+      const response = await request(app.getHttpServer())
+        .get(`/customers?query=${uniqueName}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expect(response.body.data[0].name).toBe(uniqueName);
     });
   });
 
@@ -79,7 +80,7 @@ describe('CustomersSystem (e2e)', () => {
         .post('/customers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          place: 'Bangalore'
+          place: 'Bangalore',
         })
         .expect(400);
     });

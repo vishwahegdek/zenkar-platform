@@ -115,7 +115,7 @@ export default function QuickSale() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (options = {}) => {
     // 1. Validate Customer
     if (!customer.name) {
        setIsCustomerInvalid(true);
@@ -156,24 +156,19 @@ export default function QuickSale() {
     setIsSaving(true);
     try {
         const payload = {
-            customerId: customer.id || 0, // 0 triggers new customer logic if needed, but we rely on isQuickSale + name
+            customerId: customer.id || 0, // 0 triggers implicit creation if name != Walk-In
             customerName: customer.name,
-            customerPhone: customer.phone, // Send phone for creation from contact
-            contactId: customer.contactId, // Pass contactId for linking
+            customerPhone: customer.phone, 
+            contactId: customer.contactId, 
             isQuickSale: true,
-            status: 'closed', // Automatically closed
+            status: 'closed', 
             orderDate: new Date().toISOString(),
             totalAmount: calculateTotal(),
-
-            // Logic for payments:
-            // If Due -> payments = [] (balance remains)
-            // If Custom -> payments = customPayments
-            // Else -> payments = [{ amount: total, method: paymentMethod }]
             payments: paymentMethod === 'Due' ? [] 
                     : paymentMethod === 'Custom' ? customPayments.map(p => ({ ...p, amount: Number(p.amount) }))
                     : [{ amount: calculateTotal(), method: paymentMethod }],
             
-            advanceAmount: 0, // Legacy fallback, handled by payments now
+            advanceAmount: 0, 
             paymentMethod: paymentMethod === 'Custom' ? 'Split' : paymentMethod,
             notes: internalNotes,
             items: validItems.map(i => ({
@@ -181,7 +176,8 @@ export default function QuickSale() {
                 quantity: Number(i.quantity),
                 unitPrice: Number(i.unitPrice),
                 lineTotal: Number(i.lineTotal)
-            }))
+            })),
+            ...options // Merge options like skipGoogleSync
         };
 
         console.log("Starting Quick Sale Save...", payload);
@@ -189,15 +185,21 @@ export default function QuickSale() {
         console.log("API Success:", result);
         
         toast.success('Quick Sale Completed!');
-        
-        console.log("Invalidating queries...");
         await queryClient.invalidateQueries(['orders']);
-        
-        console.log("Navigating to history...");
         navigate('/orders?view=history');
-        console.log("Navigation called.");
     } catch (err) {
         console.error("Save Failed:", err);
+        
+        // Handle Google Sync Failure (424) for Implicit Creation
+        if (err.response?.status === 424) {
+             if (window.confirm("Google Contact Sync failed for new customer.\n\nDo you want to save locally without syncing?")) {
+                 // Retry with skipGoogleSync
+                 setIsSaving(false); // Reset to allow re-entry or just call directly
+                 await handleSave({ skipGoogleSync: true });
+                 return;
+             }
+        }
+
         toast.error('Failed to complete sale: ' + (err.response?.data?.message || err.message));
     } finally {
         setIsSaving(false);
@@ -209,7 +211,7 @@ export default function QuickSale() {
       <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
          <h1 className="text-2xl font-bold text-gray-800">Quick Sale</h1>
          <button 
-           onClick={handleSave}
+           onClick={() => handleSave()}
            disabled={isSaving}
            className="hidden md:block bg-green-600 text-white px-6 py-2 rounded-full font-bold hover:bg-green-700 shadow-lg disabled:opacity-50 transform transition active:scale-95"
          >
@@ -459,7 +461,7 @@ export default function QuickSale() {
 
       {/* Mobile FAB for Complete Sale */}
       <button 
-        onClick={handleSave}
+        onClick={() => handleSave()}
         disabled={isSaving}
         className="md:hidden fixed bottom-6 right-6 bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-green-700 z-50 text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
       >

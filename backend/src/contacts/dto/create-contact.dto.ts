@@ -12,12 +12,12 @@ export class CreateContactDto {
   @IsString()
   phone: string;
 
-  @ApiPropertyOptional({ example: 'Family', description: 'Group name' })
+  @ApiPropertyOptional({ example: 'Family', description: 'Group Name' })
   @IsOptional()
   @IsString()
   group?: string;
 
-  @ApiPropertyOptional({ example: false, description: 'Skip syncing to Google Contacts' })
+  @ApiPropertyOptional({ example: false, description: 'Skip Google Sync' })
   @IsOptional()
   skipGoogleSync?: boolean;
 }

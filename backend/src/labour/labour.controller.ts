@@ -1,5 +1,14 @@
-
-import { Controller, Get, Post, Body, Query, UseGuards, Request, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { LabourService } from './labour.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -24,49 +33,73 @@ export class LabourController {
 
   @Post('daily')
   updateDailyView(@Request() req, @Body() body: UpdateDailyViewDto) {
-    return this.labourService.updateDailyView(req.user.userId, body.date, body.updates);
+    return this.labourService.updateDailyView(
+      req.user.userId,
+      body.date,
+      body.updates,
+    );
   }
 
   @Get('report')
-  getReport(@Request() req, @Query('from') from?: string, @Query('to') to?: string, @Query('labourerId') labourerId?: string, @Query('settlementId') settlementId?: string) {
-    return this.labourService.getReport(from, to, labourerId ? Number(labourerId) : undefined, settlementId ? Number(settlementId) : undefined);
+  getReport(
+    @Request() req,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('labourerId') labourerId?: string,
+    @Query('settlementId') settlementId?: string,
+  ) {
+    return this.labourService.getReport(
+      from,
+      to,
+      labourerId ? Number(labourerId) : undefined,
+      settlementId ? Number(settlementId) : undefined,
+    );
   }
 
   @Post()
   create(@Request() req, @Body() body: CreateLabourerDto) {
-      return this.labourService.createLabourer(body);
+    return this.labourService.createLabourer(body);
   }
 
-  @Get() 
+  @Get()
   findAll(@Request() req) {
-      // We can reuse getReport or just get basic list
-      // Let's use getReport for now or just simple list without report data?
-      // LabourManage needs simple list. Reuse partial reasoning of getDailyView or just fetch.
-      // Ideally separate method, but for speed let's just use getReport or add findAll in service.
-      // Actually, LabourManage calls /contacts currently. We need to redirect it to /labour.
-      // Let's add simple list method.
-      return this.labourService.getReport(); // Report returns list with details, heavy but works.
+    // We can reuse getReport or just get basic list
+    // Let's use getReport for now or just simple list without report data?
+    // LabourManage needs simple list. Reuse partial reasoning of getDailyView or just fetch.
+    // Ideally separate method, but for speed let's just use getReport or add findAll in service.
+    // Actually, LabourManage calls /contacts currently. We need to redirect it to /labour.
+    // Let's add simple list method.
+    return this.labourService.getReport(); // Report returns list with details, heavy but works.
   }
 
   @Post(':id') // Using POST for update to avoid PATCH complexity/CORS sometimes
-  update(@Request() req, @Param('id') id: string, @Body() body: CreateLabourerDto) {
-      return this.labourService.updateLabourer(Number(id), body);
+  update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: CreateLabourerDto,
+  ) {
+    return this.labourService.updateLabourer(Number(id), body);
   }
 
   @Delete(':id')
   delete(@Request() req, @Param('id') id: string) {
-      return this.labourService.deleteLabourer(Number(id));
+    return this.labourService.deleteLabourer(Number(id));
   }
 
   @Post(':id/settle')
   @ApiOperation({ summary: 'Create a settlement (Zero Date)' })
   createSettlement(@Param('id') id: string, @Body() body: CreateSettlementDto) {
-      return this.labourService.createSettlement(Number(id), new Date(body.settlementDate), body.note, body.isCarryForward);
+    return this.labourService.createSettlement(
+      Number(id),
+      new Date(body.settlementDate),
+      body.note,
+      body.isCarryForward,
+    );
   }
 
   @Get(':id/settlements')
   @ApiOperation({ summary: 'Get history of settlements' })
   getSettlements(@Param('id') id: string) {
-      return this.labourService.getSettlements(Number(id));
+    return this.labourService.getSettlements(Number(id));
   }
 }

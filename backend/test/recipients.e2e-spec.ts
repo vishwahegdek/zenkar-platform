@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -14,7 +13,9 @@ describe('RecipientsSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     const loginRes = await request(app.getHttpServer())
@@ -37,13 +38,13 @@ describe('RecipientsSystem (e2e)', () => {
 
     expect(Array.isArray(response.body)).toBe(true);
   });
-  
+
   it('/recipients (GET) - Search Query', async () => {
     const response = await request(app.getHttpServer())
       .get('/recipients?query=Test')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
-      
+
     expect(Array.isArray(response.body)).toBe(true);
   });
 });

@@ -42,13 +42,13 @@ export class ExpensesController {
     @Query('search') search?: string,
   ) {
     const where: Prisma.ExpenseWhereInput = {};
-    
+
     if (categoryId) {
       where.categoryId = parseInt(categoryId);
     }
 
     if (date) {
-        where.date = new Date(date);
+      where.date = new Date(date);
     } else if (from || to) {
       where.date = {};
       if (from) where.date.gte = new Date(from);
@@ -60,9 +60,9 @@ export class ExpensesController {
       // Since Prisma search on relations can be tricky with OR, we might need advanced filtering or just simple contains on Description.
       // For now, let's search description. Relation search (Recipient/Labourer name) requires joined filtering which Prisma supports via 'some'.
       where.OR = [
-          { description: { contains: search, mode: 'insensitive' } },
-          { recipient: { name: { contains: search, mode: 'insensitive' } } },
-          { labourer: { name: { contains: search, mode: 'insensitive' } } }
+        { description: { contains: search, mode: 'insensitive' } },
+        { recipient: { name: { contains: search, mode: 'insensitive' } } },
+        { labourer: { name: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
@@ -81,7 +81,7 @@ export class ExpensesController {
   createCategory(@Body() body: CreateCategoryDto) {
     return this.expensesService.createCategory(body.name);
   }
-  
+
   // Payee endpoints moved to ContactsController
 
   @Get(':id')
@@ -90,8 +90,16 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateExpenseDto: Prisma.ExpenseUpdateInput, @Req() req) {
-    return this.expensesService.updateExpense(+id, updateExpenseDto, req.user?.id);
+  update(
+    @Param('id') id: string,
+    @Body() updateExpenseDto: Prisma.ExpenseUpdateInput,
+    @Req() req,
+  ) {
+    return this.expensesService.updateExpense(
+      +id,
+      updateExpenseDto,
+      req.user?.id,
+    );
   }
 
   @Delete(':id')

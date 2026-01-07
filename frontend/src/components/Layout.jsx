@@ -31,6 +31,8 @@ export default function Layout() {
               <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/orders">Orders</NavLink>
               <NavLink to="/expenses">Expenses</NavLink>
+              <NavLink to="/finance">Finance Book</NavLink>
+              <NavLink to="/production">Production</NavLink>
               <NavLink to="/contacts">Contacts</NavLink>
               <NavLink to="/labour">Labour</NavLink>
               <NavLink to="/customers">Customers</NavLink>
@@ -66,6 +68,8 @@ export default function Layout() {
               <NavLink to="/dashboard" mobile>Dashboard</NavLink>
               <NavLink to="/orders" mobile>Orders</NavLink>
               <NavLink to="/expenses" mobile>Expenses</NavLink>
+              <NavLink to="/finance" mobile>Finance Book</NavLink>
+              <NavLink to="/production" mobile>Production</NavLink>
               <NavLink to="/contacts" mobile>Contacts</NavLink>
               <NavLink to="/labour" mobile>Labour</NavLink>
               <NavLink to="/customers" mobile>Customers</NavLink>

@@ -14,6 +14,7 @@ import ManageExpenses from './pages/ManageExpenses';
 import ContactsManager from './pages/ContactsManager';
 
 import FinancePage from './pages/Finance/FinancePage';
+import ProductionPage from './pages/ProductionPage';
 import LabourLayout from './pages/Labour/LabourLayout';
 import LabourEntry from './pages/Labour/LabourEntry';
 import LabourManage from './pages/Labour/LabourManage';
@@ -59,6 +60,8 @@ function App() {
               <Route path="orders/new" element={<OrderForm />} />
               <Route path="orders/:id" element={<OrderDetails />} />
               <Route path="orders/:id/edit" element={<OrderForm />} />
+              
+              <Route path="production" element={<ProductionPage />} />
               
               <Route path="products" element={<ProductsList />} />
               <Route path="products/new" element={<ProductForm />} />

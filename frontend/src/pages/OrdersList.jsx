@@ -3,6 +3,7 @@ import { api } from '../api';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
+import { Package, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 export default function OrdersList() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,40 +13,30 @@ export default function OrdersList() {
   const filter = searchParams.get('filter') || 'All';
   const search = searchParams.get('search') || '';
   
-  // Local state for search input to prevent losing focus
   const [searchInput, setSearchInput] = useState(search);
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const debounceTimer = useRef(null);
 
-  // Sync searchInput with URL param when search changes EXTERNALLY only
   useEffect(() => {
     setSearchInput(search);
     setDebouncedSearch(search);
   }, [search]);
 
   const updateParams = (newParams) => {
-    // Merge new params with existing ones
     const next = new URLSearchParams(searchParams);
     Object.entries(newParams).forEach(([k, v]) => {
-       if (v === null || v === '') next.delete(k); // cleanup empty
+       if (v === null || v === '') next.delete(k);
        else next.set(k, v);
     });
     setSearchParams(next, { replace: true });
   };
 
-  const setView = (val) => updateParams({ view: val });
+  const setView = (val) => updateParams({ view: val, filter: 'All' });
   const setFilter = (val) => updateParams({ filter: val });
   
-  // Debounced search handler
   const handleSearchChange = (value) => {
     setSearchInput(value);
-    
-    // Clear existing timer
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    
-    // Set new timer to update both URL params and debounced state after 500ms
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(value);
       updateParams({ search: value });
@@ -57,33 +48,22 @@ export default function OrdersList() {
       fetchNextPage,
       hasNextPage,
       isFetchingNextPage,
-      isLoading,
-      isError,
-      error
+      isLoading
   } = useInfiniteQuery({
-      queryKey: ['orders', view, debouncedSearch], // Use debouncedSearch instead of search
+      queryKey: ['orders', view, debouncedSearch],
       queryFn: async ({ pageParam = 1 }) => {
           const res = await api.get(`/orders?view=${view}&search=${debouncedSearch}&page=${pageParam}&limit=20`);
           return res;
       },
-      getNextPageParam: (lastPage, pages) => {
-           // lastPage might be undefined if API fails and returns nothing despite successful promise resolution
+      getNextPageParam: (lastPage) => {
            if (!lastPage || !lastPage.meta) return undefined;
-           
-           if (lastPage.meta.page < lastPage.meta.totalPages) {
-               return lastPage.meta.page + 1;
-           }
+           if (lastPage.meta.page < lastPage.meta.totalPages) return lastPage.meta.page + 1;
            return undefined;
       }
   });
 
   const orders = data?.pages.flatMap(page => page.data || []).filter(Boolean) || [];
   const queryClient = useQueryClient();
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => api.delete(`/orders/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['orders']),
-  });
 
   const updateStatusMutation = useMutation({
      mutationFn: ({ id, status }) => api.patch(`/orders/${id}`, { status }),
@@ -93,87 +73,31 @@ export default function OrdersList() {
   const handleStatusChange = (id, status) => {
      updateStatusMutation.mutate({ id, status });
   };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const handleCopy = async (order) => {
-    // Copy Logic with Clipboard API
-    if (!order) return; 
-
-    // Formatting Logic duplicated for now (ideal refactor: move to utils)
-    const lines = [
-      `*Order #${order.orderNo || order.id}*`,
-      `Customer: ${order.customer?.name}${order.customer?.address ? `, ${order.customer.address}` : ''}`,
-      `Phone: ${order.customer?.phone || 'N/A'}`,
-      '',
-      '*Items:*',
-      ...order.items.map(i => `- ${i.productName} (${i.description || 'Std'}): ${Number(i.quantity)} x ₹${i.unitPrice}`),
-      '',
-      `Total: ₹${Number(order.totalAmount).toLocaleString()}`,
-      `Advance: ₹${Number(order.advanceAmount).toLocaleString()}`,
-      `Balance: ₹${(Number(order.totalAmount) - Number(order.advanceAmount)).toLocaleString()}`,
-      '',
-      `Due: ${order.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}`
-    ];
-    
-    const text = lines.join('\n');
-
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        alert('Order details copied to clipboard!');
-      } else {
-        // Robust Fallback for Mobile (iOS/Android compliant)
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        
-        // Ensure element is part of DOM, visible to browser but invisible to user
-        textArea.style.position = "fixed";
-        textArea.style.left = "0";
-        textArea.style.top = "0";
-        textArea.style.opacity = "0";
-        textArea.style.pointerEvents = "none";
-        textArea.setAttribute('readonly', '');
-        
-        document.body.appendChild(textArea);
-        
-        // Selection strategy
-        const range = document.createRange();
-        range.selectNodeContents(textArea);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        textArea.setSelectionRange(0, 999999); // iOS
-
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        selection.removeAllRanges();
-
-        if (!successful) throw new Error('Copy command returned false');
-        alert('Copied to clipboard!');
-      }
-    } catch (err) {
-      console.error('Copy failed:', err);
-      // If automatic copy fails, show prompt for manual copy
-      const manuallyCopied = prompt('Automatic copy not supported on this device. Key-combo copy (Ctrl+C / Cmd+C) might work, or select text below:', text);
-    }
-  };
-
+  
+  // Client-Side Filtering Logic
   const filteredOrders = orders.filter(order => {
     if (!order) return false;
-    // Status Filter (Client Side)
-    // Safe access
-    const matchesFilter = filter === 'All' || (order.status && order.status.toLowerCase() === filter.toLowerCase());
-    return matchesFilter;
+    if (filter === 'All') return true;
+    
+    // Status Mapping
+    const s = order.status;
+    const d = order.deliveryStatus;
+    
+    if (filter === 'Enquired') return s === 'ENQUIRED';
+    if (filter === 'Confirmed') return s === 'CONFIRMED';
+    if (filter === 'Production') return d === 'IN_PRODUCTION';
+    if (filter === 'Ready') return d === 'READY';
+    if (filter === 'Delivered') return d === 'FULLY_DELIVERED' || d === 'PARTIALLY_DELIVERED';
+    
+    if (filter === 'Closed') return s === 'CLOSED';
+    if (filter === 'Cancelled') return s === 'CANCELLED';
+    
+    return true;
   });
 
   return (
     <div className="space-y-6">
-      {/* ... Header ... */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
@@ -216,7 +140,6 @@ export default function OrdersList() {
       <div className="bg-white md:rounded-xl shadow-sm md:border border-y border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
            <input 
-              id="orders-search-input"
               type="text" 
               placeholder="Search orders..." 
               className="w-full md:w-80 px-4 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -226,7 +149,6 @@ export default function OrdersList() {
            />
         </div>
 
-        {/* Content Area with Loading State */}
         {isLoading ? (
              <div className="p-12 text-center text-gray-500">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
@@ -234,7 +156,6 @@ export default function OrdersList() {
              </div>
         ) : (
         <>
-
         {/* Mobile View: Cards */}
         <div className="md:hidden divide-y divide-gray-100">
           {filteredOrders.map(order => (
@@ -251,23 +172,26 @@ export default function OrdersList() {
                   )}
                   <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'dd/MM/yyyy')}</p>
                 </div>
-                <StatusSelect order={order} onChange={handleStatusChange} />
+                <div className="flex flex-col items-end gap-1">
+                    <StatusSelect order={order} onChange={handleStatusChange} />
+                    {order.deliveryStatus && !order.isQuickSale && <StatusBadge type="DELIVERY" status={order.deliveryStatus} />}
+                </div>
               </div>
               
               <div className="flex justify-between items-start text-sm">
                  <div className="space-y-0.5">
                     <div className="font-medium text-gray-900">{order.customer?.name}</div>
                     <div className="text-xs text-gray-500">{order.customer?.address}</div>
-                    <div className="text-xs text-gray-400">{order.customer?.phone}</div>
                  </div>
                  <div className="text-right">
                     <div className="font-bold text-gray-900">₹{Number(order.totalAmount).toLocaleString()}</div>
-                     <div className="text-xs text-red-600 font-medium">Bal: ₹{Number(order.remainingBalance || 0).toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 mt-1">Due: {order.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}</div>
+                     <div className="text-xs text-gray-500 mt-0.5">
+                        Bal: <span className={Number(order.remainingBalance) > 0 ? 'text-red-600 font-bold' : 'text-green-600'}>
+                             ₹{Number(order.remainingBalance || 0).toLocaleString()}
+                        </span>
+                     </div>
                  </div>
               </div>
-
-
             </div>
           ))}
           {filteredOrders.length === 0 && (
@@ -282,11 +206,10 @@ export default function OrdersList() {
               <tr>
                 <th className="px-6 py-3 w-28">Order No</th>
                 <th className="px-6 py-3">Customer</th>
-                <th className="px-6 py-3 w-32">Status</th>
+                <th className="px-6 py-3" style={{ width: '200px' }}>Status</th>
                 <th className="px-6 py-3 text-right">Amount</th>
                 <th className="px-6 py-3 text-right text-red-600">Balance</th>
                 <th className="px-6 py-3 w-32">Due Date</th>
-
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -310,12 +233,13 @@ export default function OrdersList() {
                     <div className="font-medium text-gray-900">{order.customer?.name}</div>
                     <div className="text-xs text-gray-500">
                       {order.customer?.address || ''}
-                      {order.customer?.address && order.customer?.phone ? ' • ' : ''}
-                      {order.customer?.phone}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <StatusSelect order={order} onChange={handleStatusChange} />
+                    <div className="flex flex-col gap-1 items-start">
+                        <StatusSelect order={order} onChange={handleStatusChange} />
+                        {order.deliveryStatus && !order.isQuickSale && <StatusBadge type="DELIVERY" status={order.deliveryStatus} />}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right font-medium">
                      ₹{Number(order.totalAmount).toLocaleString()}
@@ -326,12 +250,11 @@ export default function OrdersList() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                    {format(new Date(order.orderDate), 'dd/MM/yyyy')}
                  </td>
-
                 </tr>
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                   <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                   <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                       No orders found matching your filters.
                    </td>
                 </tr>
@@ -360,37 +283,32 @@ export default function OrdersList() {
 }
 
 const StatusSelect = ({ order, onChange }) => {
+  // Map DB ENUMs to Styles
   const styles = {
-    enquired: 'bg-orange-50 text-orange-700 ring-orange-600/20',
-    confirmed: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-    production: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
-    ready: 'bg-green-50 text-green-700 ring-green-600/20',
-    delivered: 'bg-gray-100 text-gray-700 ring-gray-500/20',
-    closed: 'bg-gray-800 text-white ring-gray-700/20',
-    cancelled: 'bg-red-50 text-red-700 ring-red-600/20',
+    ENQUIRED: 'bg-orange-50 text-orange-700 ring-orange-600/20',
+    CONFIRMED: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+    CLOSED: 'bg-gray-800 text-white ring-gray-700/20',
+    CANCELLED: 'bg-red-50 text-red-700 ring-red-600/20',
   };
 
-  const style = styles[order.status?.toLowerCase()] || 'bg-gray-100 text-gray-600';
+  const style = styles[order.status] || 'bg-gray-100 text-gray-600';
   
   return (
     <div className="relative inline-block" onClick={e => e.stopPropagation()}>
       <select 
         value={order.status}
         onChange={(e) => {
-           if (e.target.value === 'closed') {
+           if (e.target.value === 'CLOSED') {
              if (!window.confirm('Closing this order will write off any remaining balance as a discount. Continue?')) return;
            }
            onChange(order.id, e.target.value);
         }}
-        className={`appearance-none cursor-pointer pl-2.5 pr-6 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${style} border-none outline-none focus:ring-2`}
+        className={`appearance-none cursor-pointer pl-2.5 pr-6 py-0.5 rounded-full text-xs font-bold ring-1 ring-inset ${style} border-none outline-none focus:ring-2 uppercase tracking-wide`}
       >
-        <option value="enquired">Enquired</option>
-        <option value="confirmed">Confirmed</option>
-        <option value="production">Production</option>
-        <option value="ready">Ready</option>
-        <option value="delivered">Delivered</option>
-        <option value="closed">Closed</option>
-        <option value="cancelled">Cancelled</option>
+        <option value="ENQUIRED">Enquired</option>
+        <option value="CONFIRMED">Confirmed</option>
+        <option value="CLOSED">Closed</option>
+        <option value="CANCELLED">Cancelled</option>
       </select>
        {/* Tiny arrow hint */}
        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -398,4 +316,27 @@ const StatusSelect = ({ order, onChange }) => {
        </div>
     </div>
   );
+};
+
+const StatusBadge = ({ type, status }) => {
+    if (!status) return null;
+    
+    // Config
+    const config = {
+        DELIVERY: {
+            CONFIRMED: { label: 'Queue', color: 'bg-gray-50 text-gray-600 border-gray-200' },
+            IN_PRODUCTION: { label: 'In Prod', color: 'bg-purple-50 text-purple-700 border-purple-100' },
+            READY: { label: 'Ready', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
+            PARTIALLY_DELIVERED: { label: 'Part. Del', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
+            FULLY_DELIVERED: { label: 'Delivered', color: 'bg-green-50 text-green-700 border-green-100' },
+        }
+    };
+
+    const cfg = config[type]?.[status] || { label: status, color: 'bg-gray-100 text-gray-500' };
+
+    return (
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${cfg.color}`}>
+            {cfg.label}
+        </span>
+    );
 };

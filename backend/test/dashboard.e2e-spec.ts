@@ -13,7 +13,9 @@ describe('Dashboard (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     // Login
@@ -37,7 +39,7 @@ describe('Dashboard (e2e)', () => {
     expect(response.body).toHaveProperty('totalSales');
     expect(response.body).toHaveProperty('totalReceived');
     expect(response.body).toHaveProperty('transactionsCount');
-    
+
     // Values might be strings (Decimal from DB) or numbers depending on serialization
     // Frontend handles both, but let's check what we get
     console.log('Dashboard Stats:', response.body);
@@ -51,9 +53,9 @@ describe('Dashboard (e2e)', () => {
 
     expect(Array.isArray(response.body)).toBe(true);
     if (response.body.length > 0) {
-        expect(response.body[0]).toHaveProperty('customerName');
-        expect(response.body[0]).toHaveProperty('amount');
-        expect(response.body[0]).toHaveProperty('date');
+      expect(response.body[0]).toHaveProperty('customerName');
+      expect(response.body[0]).toHaveProperty('amount');
+      expect(response.body[0]).toHaveProperty('date');
     }
   });
 
@@ -65,8 +67,8 @@ describe('Dashboard (e2e)', () => {
 
     expect(Array.isArray(response.body)).toBe(true);
     if (response.body.length > 0) {
-        expect(response.body[0]).toHaveProperty('action');
-        expect(response.body[0]).toHaveProperty('resource');
+      expect(response.body[0]).toHaveProperty('action');
+      expect(response.body[0]).toHaveProperty('resource');
     }
   });
 });

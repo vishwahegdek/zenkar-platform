@@ -1,4 +1,3 @@
-
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { Injectable } from '@nestjs/common';
@@ -10,7 +9,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID || 'dummy_client_id',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy_client_secret',
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        'http://localhost:3000/api/auth/google/callback',
       accessType: 'offline',
       prompt: 'consent',
     } as any);
@@ -21,7 +22,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     return {
       access_type: 'offline',
       prompt: 'consent',
-      scope: 'email profile https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/contacts',
+      scope:
+        'email profile https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/contacts',
     };
   }
 

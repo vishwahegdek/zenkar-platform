@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -15,7 +14,9 @@ describe('ProductsSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     const loginRes = await request(app.getHttpServer())
@@ -35,7 +36,7 @@ describe('ProductsSystem (e2e)', () => {
       .send({
         name: 'Test Product E2E',
         defaultUnitPrice: 1500,
-        notes: 'Created by E2E'
+        notes: 'Created by E2E',
       })
       .expect(201);
 
@@ -51,7 +52,7 @@ describe('ProductsSystem (e2e)', () => {
       .expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
-    const product = response.body.find(p => p.id === createdProductId);
+    const product = response.body.find((p) => p.id === createdProductId);
     expect(product).toBeDefined();
   });
 
@@ -70,7 +71,7 @@ describe('ProductsSystem (e2e)', () => {
       .patch(`/products/${createdProductId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        defaultUnitPrice: 2000
+        defaultUnitPrice: 2000,
       })
       .expect(200);
 
@@ -84,15 +85,15 @@ describe('ProductsSystem (e2e)', () => {
       .expect(200);
 
     // Verify deletion (it might be soft delete so check properties or 404 depending on logic)
-    // ProductsController comments said "soft delete". 
+    // ProductsController comments said "soft delete".
     // Usually findAll filters out deleted.
-    
+
     const response = await request(app.getHttpServer())
       .get('/products')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
-      
-    const product = response.body.find(p => p.id === createdProductId);
+
+    const product = response.body.find((p) => p.id === createdProductId);
     expect(product).toBeUndefined();
   });
 });

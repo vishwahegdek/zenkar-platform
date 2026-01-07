@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -6,9 +5,9 @@ import { AppModule } from '../src/app.module';
 
 describe('UsersSystem (e2e)', () => {
   let app: INestApplication;
-  // No auth token needed for creation according to some patterns, 
-  // but listing usually needs it. Let's check. 
-  // Step 79: UsersController doesn't have @UseGuards at class level, 
+  // No auth token needed for creation according to some patterns,
+  // but listing usually needs it. Let's check.
+  // Step 79: UsersController doesn't have @UseGuards at class level,
   // but it's possible methods have it or it's global.
   // Actually Step 79 shows NO guards on UsersController!
   // This might be a security finding, but for now we write tests as is.
@@ -20,9 +19,11 @@ describe('UsersSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
-    
+
     // Login for token
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
@@ -41,7 +42,7 @@ describe('UsersSystem (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         username: uniqueName,
-        password: 'password123'
+        password: 'password123',
       })
       .expect(201);
 

@@ -3,10 +3,13 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import { api } from '../api';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import ManageCategoriesModal from './ManageCategoriesModal';
+
 export default function ProductsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParam = searchParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(searchParam);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   
   // Sync URL to Local on Mount/Back
   useEffect(() => {
@@ -61,27 +64,27 @@ export default function ProductsList() {
     }
   };
 
-  // Filter using local searchTerm for instant feedback (Client-side filtering still useful for rapid filtering within loaded set, 
-  // but main search should be server-side. Here we rely on server-side search via searchParam)
-  // We can just use 'products' directly if server search is active.
-  // Existing logic: filteredProducts = products.filter(...)
-  // Since we pass 'query' to server, 'products' is already filtered by server.
-  // But local searchTerm might be "ahead" of debounce. 
-  // Let's keep local filter for UX smoothness but rely on server mostly.
-  
-  const filteredProducts = products; // Simplified for infinite scroll, relying on server search.
+  const filteredProducts = products; 
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
         
-        <Link 
-          to="/products/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
-        >
-          + New Product
-        </Link>
+        <div className="flex gap-2 w-full md:w-auto">
+            <button 
+                onClick={() => setIsManageModalOpen(true)}
+                className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm flex-1 md:flex-none justify-center flex"
+            >
+                Categories
+            </button>
+            <Link 
+              to="/products/new"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm flex-1 md:flex-none justify-center flex"
+            >
+              + New Product
+            </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -199,6 +202,10 @@ export default function ProductsList() {
             </>
         )}
       </div>
+      
+      {isManageModalOpen && (
+          <ManageCategoriesModal onClose={() => setIsManageModalOpen(false)} />
+      )}
     </div>
   );
 }

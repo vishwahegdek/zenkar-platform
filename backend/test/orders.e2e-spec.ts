@@ -14,7 +14,9 @@ describe('OrdersSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     // Login for token
@@ -51,13 +53,11 @@ describe('OrdersSystem (e2e)', () => {
           quantity: 1,
           unitPrice: 15000,
           lineTotal: 15000,
-        }
+        },
       ],
       totalAmount: 15000,
       // advanceAmount: 5000, // Removed by strict DTO
-      payments: [
-        { amount: 5000, method: 'CASH', date: '2025-10-01' }
-      ],
+      payments: [{ amount: 5000, method: 'CASH', date: '2025-10-01' }],
       paymentMethod: 'CASH',
     };
 
@@ -76,7 +76,7 @@ describe('OrdersSystem (e2e)', () => {
     const paymentData = {
       amount: 5000,
       date: '2025-10-05',
-      note: 'UPI Payment'
+      note: 'UPI Payment',
     };
 
     await request(app.getHttpServer())
@@ -95,7 +95,7 @@ describe('OrdersSystem (e2e)', () => {
     // Total: 15000. Advance: 5000 (from create). Payment: 5000. Total Paid: 10000. Balance: 5000.
     // Note: create() logic: "Capture initial advance... Create Initial Payment".
     // So there should be 2 payments now.
-    
+
     const paidAmount = response.body.paidAmount; // Helper we added returns this
     const remainingBalance = response.body.remainingBalance;
 
@@ -134,13 +134,13 @@ describe('OrdersSystem (e2e)', () => {
 
     const items: any[] = [];
     for (let i = 0; i < 20; i++) {
-        items.push({
-            productId: 0,
-            productName: `Bulk Item ${i}`,
-            quantity: 1,
-            unitPrice: 100,
-            lineTotal: 100
-        });
+      items.push({
+        productId: 0,
+        productName: `Bulk Item ${i}`,
+        quantity: 1,
+        unitPrice: 100,
+        lineTotal: 100,
+      });
     }
 
     const response = await request(app.getHttpServer())
@@ -155,10 +155,10 @@ describe('OrdersSystem (e2e)', () => {
         totalAmount: 2000,
         advanceAmount: 0,
         paymentMethod: 'CASH',
-        items: items
+        items: items,
       })
       .expect(201);
-      
+
     largeOrderId = response.body.id;
   });
 
@@ -176,7 +176,7 @@ describe('OrdersSystem (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         customerId: secondCustId,
-        customerName: 'Another Customer'
+        customerName: 'Another Customer',
       })
       .expect(200);
 
@@ -201,8 +201,8 @@ describe('OrdersSystem (e2e)', () => {
         customerId: 0, // Restore: Required to trigger New Customer from Contact in Update logic
         customerName: 'Contact Converted User',
         customerPhone: '5555555555',
-        contactId: contactId, 
-        paymentMethod: 'CASH', 
+        contactId: contactId,
+        paymentMethod: 'CASH',
       })
       .expect(200);
 
@@ -210,7 +210,7 @@ describe('OrdersSystem (e2e)', () => {
     expect(response.body.customer.name).toBe('Contact For Order');
     expect(response.body.customer.phone).toBe('5555555555');
     expect(response.body.customer.contactId).toBe(contactId);
-    expect(response.body.customerId).not.toBe(0); 
+    expect(response.body.customerId).not.toBe(0);
   });
 
   it('/orders (POST) - Create New Order with New Customer from Contact', async () => {
@@ -234,7 +234,15 @@ describe('OrdersSystem (e2e)', () => {
         orderDate: '2025-10-10',
         totalAmount: 500,
         paymentMethod: 'CASH',
-        items: [{ productId: 0, productName: 'Item A', quantity: 1, unitPrice: 500, lineTotal: 500 }]
+        items: [
+          {
+            productId: 0,
+            productName: 'Item A',
+            quantity: 1,
+            unitPrice: 500,
+            lineTotal: 500,
+          },
+        ],
       })
       .expect(201);
 
@@ -263,7 +271,15 @@ describe('OrdersSystem (e2e)', () => {
         orderDate: '2025-10-12',
         totalAmount: 200,
         paymentMethod: 'CASH',
-        items: [{ productId: 0, productName: 'Quick Item', quantity: 1, unitPrice: 200, lineTotal: 200 }]
+        items: [
+          {
+            productId: 0,
+            productName: 'Quick Item',
+            quantity: 1,
+            unitPrice: 200,
+            lineTotal: 200,
+          },
+        ],
       })
       .expect(201);
 
@@ -274,14 +290,14 @@ describe('OrdersSystem (e2e)', () => {
 
   it('/orders/:id (DELETE) - Cleanup', async () => {
     if (createdOrderId) {
-        await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .delete(`/orders/${createdOrderId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
     }
-    
+
     if (largeOrderId) {
-        await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .delete(`/orders/${largeOrderId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);

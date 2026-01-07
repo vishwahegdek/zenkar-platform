@@ -18,11 +18,25 @@ import { LabourModule } from './labour/labour.module';
 import { RecipientsModule } from './recipients/recipients.module';
 import { NoCacheInterceptor } from './common/interceptors/no-cache.interceptor';
 import { FinanceModule } from './finance/finance.module';
+import { ProductCategoriesModule } from './product-categories.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    PrismaModule, CustomersModule, RecipientsModule, ProductsModule, OrdersModule, UsersModule, AuthModule, AuditModule, DashboardModule, ExpensesModule, ContactsModule, LabourModule, FinanceModule
+    PrismaModule,
+    CustomersModule,
+    RecipientsModule,
+    ProductsModule,
+    OrdersModule,
+    UsersModule,
+    AuthModule,
+    AuditModule,
+    DashboardModule,
+    ExpensesModule,
+    ContactsModule,
+    LabourModule,
+    FinanceModule,
+    ProductCategoriesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -32,9 +46,9 @@ import { FinanceModule } from './finance/finance.module';
       useClass: JwtAuthGuard,
     },
     {
-       provide: APP_INTERCEPTOR,
-       useClass: NoCacheInterceptor,
-    }
+      provide: APP_INTERCEPTOR,
+      useClass: NoCacheInterceptor,
+    },
   ],
 })
 export class AppModule implements NestModule {

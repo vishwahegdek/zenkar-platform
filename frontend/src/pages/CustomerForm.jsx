@@ -55,7 +55,21 @@ export default function CustomerForm({ onSuccess, initialData, id: propId, isMod
           navigate('/customers');
       }
     },
-    onError: (err) => toast.error('Failed: ' + err.message)
+    onError: (err, variables) => {
+        // Handle Google Sync Failure (424)
+        if (err.response?.status === 424) {
+            // Use setTimeout to avoid Modal focus fighting or state updates blocking alert
+            setTimeout(() => {
+                if (window.confirm("Google Contact Sync failed.\n\nDo you want to save locally without syncing?")) {
+                    // Retry with skipGoogleSync = true
+                    const retryData = { ...variables, skipGoogleSync: true };
+                    mutation.mutate(retryData);
+                }
+            }, 100);
+            return;
+        }
+        toast.error('Failed: ' + (err.response?.data?.message || err.message));
+    }
   });
 
   const handleSubmit = (e) => {

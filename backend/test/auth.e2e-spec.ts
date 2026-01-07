@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -35,9 +34,7 @@ describe('AuthController (e2e)', () => {
   });
 
   it('/orders (GET) - Fail without token', () => {
-    return request(app.getHttpServer())
-      .get('/orders')
-      .expect(401);
+    return request(app.getHttpServer()).get('/orders').expect(401);
   });
 
   it('/orders (GET) - Success with token', async () => {

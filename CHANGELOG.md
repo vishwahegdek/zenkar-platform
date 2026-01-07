@@ -2,6 +2,43 @@
 
 All notable changes to the Zenkar Platform will be documented in this file.
 
+## [v1.10.0] - 2026-01-07 (Production Module & Status Refactor)
+### 🏭 Production Module
+- **New Page**: Launched `/production` for managing manufacturing workflow.
+- **Workflow**: Track items from `Confirmed` -> `In Production` -> `Ready` -> `Delivered`.
+- **Filtering**:
+    - **Category Filter**: Filter production queue by Product Category (default: "Bee boxes").
+    - **Product Filter**: Further refine by specific products.
+- **Interactive Queue**:
+    - **Clickable Rows**: Navigate directly to Order Details from the queue.
+    - **Status Updates**: Update item status directly from the list; updates propagate to Order status.
+
+### 🏗️ Status Refactoring (Major)
+- **Granular Statuses**: Migrated from simple string statuses to strict **Prisma Enums**.
+    - **Order Status**: `ENQUIRED`, `CONFIRMED`, `CLOSED`, `CANCELLED`.
+    - **Delivery Status**: `CONFIRMED`, `IN_PRODUCTION`, `READY`, `PARTIALLY_DELIVERED`, `FULLY_DELIVERED`.
+    - **Payment Status**: `UNPAID`, `PARTIALLY_PAID`, `FULLY_PAID`.
+- **Logic Overhaul**:
+    - **Auto-Calculated**: Delivery and Payment statuses are now derived from Item Statuses and Transaction History.
+    - **Closing Rules**: An order can only be `CLOSED` if it is both `FULLY_DELIVERED` and `FULLY_PAID`.
+
+### ⚡ UI/UX Improvements
+- **Orders List**:
+    - **Revert**: Restored the classic "Editable Status Dropdown" for quick status changes.
+    - **Clarity**: Split Status into "Order Status" (Editable) and "Delivery Status" (Badge). Removed Payment Status to reduce clutter.
+    - **Tags**: Hidden "Delivery Status" tag for **Quick Sale** orders to reduce noise.
+- **Order Details**:
+    - **Header**: Displaying distinct badges for Order, Delivery, and Payment statuses.
+    - **Items Table**: Added visible Status column for individual items.
+
+### 📦 Product Categories
+- **Management**: New "Manage Categories" modal in Products list.
+- **Organization**: Assign categories to products for better filtering in Production and Reports.
+
+### 🔧 Backend
+- **Migration**: Added formal migration `20260107140000_status_refactor` to handle data conversion to Enums.
+- **API**: Updated `OrdersService` to expose `updateItemStatus` and `findProductionItems` (with `orderId`).
+
 ## [v1.9.1] - 2026-01-05 (Hotfix)
 ### 🐛 Bug Fixes
 - **Regression**: Fixed missing database column `google_refresh_token` that caused 500 Error on deployment.

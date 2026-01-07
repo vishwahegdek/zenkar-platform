@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -11,7 +20,10 @@ export class ProductsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
-  @ApiResponse({ status: 201, description: 'The product has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The product has been successfully created.',
+  })
   create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
@@ -19,8 +31,18 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Retrieve all products' })
   @ApiResponse({ status: 200, description: 'List of all products.' })
-  findAll(@Query('query') query: string, @Query('page') page: string, @Query('limit') limit: string) {
-    return this.productsService.findAll(query, +page || 1, +limit || 20);
+  findAll(
+    @Query('query') query: string,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Query('categoryId') categoryId: string,
+  ) {
+    return this.productsService.findAll(
+      query,
+      +page || 1,
+      +limit || 20,
+      categoryId ? +categoryId : undefined,
+    );
   }
 
   @Get(':id')
@@ -44,5 +66,4 @@ export class ProductsController {
   remove(@Param('id') id: string) {
     return this.productsService.remove(+id);
   }
-
 }

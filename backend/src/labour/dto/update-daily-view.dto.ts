@@ -3,15 +3,18 @@ import { IsDateString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class LabourUpdateItem {
-    @ApiProperty({ example: 1, description: 'ID of the labourer' })
-    labourerId: number;
-    
-    // Add other properties as needed based on logic, likely presence or wage override
-    @ApiProperty({ example: true, description: 'Whether the labourer was present' })
-    isPresent: boolean;
+  @ApiProperty({ example: 1, description: 'ID of the labourer' })
+  labourerId: number;
 
-    @ApiProperty({ example: 500, description: 'Wage for the day' })
-    wage: number;
+  // Add other properties as needed based on logic, likely presence or wage override
+  @ApiProperty({
+    example: true,
+    description: 'Whether the labourer was present',
+  })
+  isPresent: boolean;
+
+  @ApiProperty({ example: 500, description: 'Wage for the day' })
+  wage: number;
 }
 
 export class UpdateDailyViewDto {
@@ -19,7 +22,10 @@ export class UpdateDailyViewDto {
   @IsDateString()
   date: string;
 
-  @ApiProperty({ type: [LabourUpdateItem], description: 'List of updates for labourers' })
+  @ApiProperty({
+    type: [LabourUpdateItem],
+    description: 'List of updates for labourers',
+  })
   @IsArray()
   // @ValidateNested({ each: true }) // Requires Type
   // @Type(() => LabourUpdateItem)

@@ -11,8 +11,12 @@ export class CreateProductDto {
   @IsNumber()
   defaultUnitPrice: number;
 
-  @ApiPropertyOptional({ example: 'A widget that does super things', description: 'Notes or description' })
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({ example: 1, description: 'Category ID' })
+  @IsNumber()
+  @IsNotEmpty()
+  categoryId: number;
 }

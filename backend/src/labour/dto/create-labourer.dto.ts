@@ -7,7 +7,10 @@ export class CreateLabourerDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 500, description: 'Default daily wage for the labourer' })
+  @ApiProperty({
+    example: 500,
+    description: 'Default daily wage for the labourer',
+  })
   @IsNumber()
   defaultDailyWage: number;
 }

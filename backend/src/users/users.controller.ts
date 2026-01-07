@@ -11,7 +11,7 @@ export class UsersController {
 
   @Get()
   async findAll() {
-      return this.usersService.findAll();
+    return this.usersService.findAll();
   }
 
   @Public()
@@ -19,7 +19,10 @@ export class UsersController {
   async create(@Body() createUserDto: CreateUserDto) {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-    const user = await this.usersService.create({ ...createUserDto, password: hashedPassword });
+    const user = await this.usersService.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
     const { password, ...result } = user;
     return result;
   }

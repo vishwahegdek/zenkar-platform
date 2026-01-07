@@ -7,7 +7,7 @@ export class RecipientsService {
 
   async findAll(userId: number, query?: string) {
     const where: any = {};
-    
+
     if (query) {
       where.name = { contains: query, mode: 'insensitive' };
     }
@@ -15,7 +15,7 @@ export class RecipientsService {
     return this.prisma.recipient.findMany({
       where,
       orderBy: { name: 'asc' },
-      take: 20 // Limit results for dropdown
+      take: 20, // Limit results for dropdown
     });
   }
 }

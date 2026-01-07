@@ -82,6 +82,20 @@ export default function FinancePartyModal({ isOpen, onClose, onSuccess, party, d
                         placeholder="Search contacts..." 
                         endpoint="/contacts"
                         onSelect={handleContactSelect}
+                        onChange={(val) => {
+                            // If user clears the input or types something new, we should unlink the contact
+                            // (Strict mode: Only link if selected from list. If text changes, unlink)
+                            if (formData.contactId) {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    contactId: null,
+                                    // Optional: Clear name/phone too? Or leave them?
+                                    // User flow: They linked, then decided to change. 
+                                    // Better to keep the text but enable the fields?
+                                    // Actually if they clear the Autocomplete completely, we assume unlink.
+                                }));
+                            }
+                        }}
                         displayKey="name"
                         subDisplayKey="phone"
                     />

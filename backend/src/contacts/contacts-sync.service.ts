@@ -15,7 +15,7 @@ export class ContactsSyncService {
   @Cron(CronExpression.EVERY_HOUR)
   async handleCron() {
     this.logger.log('Starting hourly Google Contacts sync...');
-    
+
     const users = await this.prisma.user.findMany({
       where: {
         googleRefreshToken: { not: null },
@@ -41,15 +41,16 @@ export class ContactsSyncService {
         const newAccessToken = credentials.access_token;
 
         if (newAccessToken) {
-           await this.contactsService.importContacts(user.id, newAccessToken);
-           
-           await this.prisma.user.update({
-               where: { id: user.id },
-               data: { lastSyncAt: new Date() }
-           });
-           this.logger.log(`Synced contacts for user ${user.username} (${user.id})`);
-        }
+          await this.contactsService.importContacts(user.id, newAccessToken);
 
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { lastSyncAt: new Date() },
+          });
+          this.logger.log(
+            `Synced contacts for user ${user.username} (${user.id})`,
+          );
+        }
       } catch (error) {
         this.logger.error(
           `Failed to sync contacts for user ${user.id}: ${error.message}`,

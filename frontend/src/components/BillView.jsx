@@ -12,8 +12,9 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
   // Calculations handled in source for GST, or derived for Estimate
   const subtotal = source.subtotal !== undefined ? Number(source.subtotal) : items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
   const discount = Number(source.discount) || 0;
-  const total = Number(source.totalAmount) || 0;
-  const paid = Number(source.paidAmount || order?.paidAmount || 0); // Paid amount usually comes from Order payments even in GST
+  // USER FIX: Total should be Subtotal - Discount (Net Payable)
+  const total = subtotal - discount;
+  const paid = Number(source.paidAmount || order?.paidAmount || 0);
   const balance = total - paid;
   
   const displayTitle = title || (mode === 'GST' ? 'GST INVOICE' : 'ESTIMATE');
@@ -28,31 +29,43 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
           <div className="text-gray-600 font-medium"># {invoiceNo}</div>
         </div>
         <div className="text-right">
-          <h2 className="text-xl font-bold">Zenkar</h2>
+          <h2 className="text-xl font-bold">Zenkar Industries</h2>
           <p className="text-gray-500 text-xs mt-1">
-             123, Platform Road<br/>
-             Bangalore, KA 560001
+             Kavalkuli, Sampakhanda<br/>
+             Sirsi, Karnataka<br/>
+             581315
           </p>
+          <div className="text-gray-500 text-xs mt-2 space-y-0.5">
+             <div>Ganapati Hegde : 9483485616</div>
+             <div>Vishwa Hegde : 9482416347</div>
+          </div>
         </div>
       </div>
 
       {/* Bill To & Details */}
       <div className="flex justify-between mb-8">
         <div>
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Bill To</h3>
-          <div className="font-bold text-lg">{source.customerName || order?.customer?.name}</div>
-          <div className="text-gray-600 max-w-[200px]">{order?.customer?.address}</div>
-          <div className="text-gray-600">{order?.customer?.phone}</div>
+          {/* Hide if Walk-in */}
+          {source.customerName !== 'Walk-in' && order?.customer?.name !== 'Walk-in' && (
+              <>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Bill To</h3>
+                <div className="font-bold text-lg">{source.customerName || order?.customer?.name}</div>
+                <div className="text-gray-600 max-w-[200px]">{order?.customer?.address}</div>
+                <div className="text-gray-600">{order?.customer?.phone}</div>
+              </>
+          )}
         </div>
         <div className="text-right space-y-1">
           <div className="flex justify-between w-48 border-b border-gray-100 pb-1">
              <span className="text-gray-500">Date:</span>
              <span className="font-medium">{format(new Date(order?.orderDate || new Date()), 'dd/MM/yyyy')}</span>
           </div>
-          <div className="flex justify-between w-48 border-b border-gray-100 pb-1">
-             <span className="text-gray-500">Due Date:</span>
-             <span className="font-medium">{order?.dueDate ? format(new Date(order.dueDate), 'dd/MM/yyyy') : '—'}</span>
-          </div>
+          {order?.dueDate && (
+             <div className="flex justify-between w-48 border-b border-gray-100 pb-1">
+                <span className="text-gray-500">Due Date:</span>
+                <span className="font-medium">{format(new Date(order.dueDate), 'dd/MM/yyyy')}</span>
+             </div>
+          )}
         </div>
       </div>
 
@@ -80,7 +93,6 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
               <td className="py-3 px-3 text-right font-medium text-gray-900 align-top">₹{Number(item.lineTotal).toLocaleString()}</td>
             </tr>
           ))}
-          {/* Minimum rows filler to look professional? Optional. */}
         </tbody>
       </table>
 
@@ -92,7 +104,7 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
                  <thead>
                     <tr className="border-b border-gray-200 text-gray-500">
                         <th className="py-1 text-left font-medium">Date</th>
-                        <th className="py-1 text-left font-medium">Method/Note</th>
+                        <th className="py-1 text-left font-medium">Method</th>
                         <th className="py-1 text-right font-medium">Amount</th>
                     </tr>
                  </thead>
@@ -100,7 +112,7 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
                     {order.payments.map((p, idx) => (
                         <tr key={idx}>
                            <td className="py-1 text-gray-700">{format(new Date(p.date), 'dd/MM/yyyy')}</td>
-                           <td className="py-1 text-gray-600">{p.method || 'CASH'} {p.note ? `• ${p.note}` : ''}</td>
+                           <td className="py-1 text-gray-600">{p.method || 'CASH'}</td>
                            <td className="py-1 text-right font-medium text-gray-900">₹{Number(p.amount).toLocaleString()}</td>
                         </tr>
                     ))}
@@ -126,15 +138,18 @@ const BillView = forwardRef(({ order, data, mode = 'ESTIMATE', title }, ref) => 
                <span>Total</span>
                <span>₹{total.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-green-700 pt-1">
-               <span>Paid</span>
-               <span>−₹{paid.toLocaleString()}</span>
-            </div>
-            {/* Show Balance only if relevant? Usually yes. */}
-            <div className="flex justify-between font-bold text-red-600 pt-2 border-t border-gray-300">
-               <span>Balance Due</span>
-               <span>₹{balance.toLocaleString()}</span>
-            </div>
+            {paid > 0 && (
+              <div className="flex justify-between text-green-700 pt-1">
+                 <span>Paid</span>
+                 <span>−₹{paid.toLocaleString()}</span>
+              </div>
+            )}
+            {balance > 0 && (
+               <div className="flex justify-between font-bold text-red-600 pt-2 border-t border-gray-300">
+                  <span>Balance Due</span>
+                  <span>₹{balance.toLocaleString()}</span>
+               </div>
+            )}
          </div>
       </div>
 

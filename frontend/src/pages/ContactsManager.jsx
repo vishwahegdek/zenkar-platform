@@ -68,17 +68,22 @@ export default function ContactsManager() {
       toast.success('Contact added');
     },
     onError: async (error, variables) => {
+        // Strict check for 424 (Sync Failed)
         if (error.response?.status === 424) {
-            if (window.confirm("Unable to save to Google Contacts (Network/Auth Error).\n\nDo you want to save strictly to the App only?")) {
-                try {
-                    await api.post('/contacts', { ...variables, userId: user?.id, skipGoogleSync: true });
-                    queryClient.invalidateQueries(['contacts']);
-                    reset();
-                    toast.success('Contact added (Local Only)');
-                } catch (retryError) {
-                    toast.error("Failed to save contact locally.");
+            // Delay confirm slightly to ensure UI renders
+            setTimeout(async () => {
+                if (window.confirm("Google Contact Sync failed/skipped.\n\nDo you want to save this contact strictly to the App only (Local Save)?")) {
+                    try {
+                         // Retry with skipGoogleSync
+                         await api.post('/contacts', { ...variables, userId: user?.id, skipGoogleSync: true });
+                         queryClient.invalidateQueries(['contacts']);
+                         reset();
+                         toast.success('Contact added (Local Only)');
+                    } catch (retryError) {
+                        toast.error("Failed to save contact locally: " + retryError.message);
+                    }
                 }
-            }
+            }, 100);
         } else {
             toast.error(error.message || "Failed to create contact");
         }

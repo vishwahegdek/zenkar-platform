@@ -10,27 +10,42 @@ export class CreateExpenseDto {
   @IsNumber()
   categoryId: number;
 
-  @ApiPropertyOptional({ example: 'Office supplies', description: 'Description of the expense' })
+  @ApiPropertyOptional({
+    example: 'Office supplies',
+    description: 'Description of the expense',
+  })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 'Staples', description: 'Name of the recipient/payee' })
+  @ApiPropertyOptional({
+    example: 'Staples',
+    description: 'Name of the recipient/payee',
+  })
   @IsOptional()
   @IsString()
   recipientName?: string;
 
-  @ApiPropertyOptional({ example: 1, description: 'ID of the contact associated with this expense' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'ID of the contact associated with this expense',
+  })
   @IsOptional()
   @IsNumber()
   contactId?: number;
 
-  @ApiPropertyOptional({ example: 1, description: 'ID of the recipient associated with this expense' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'ID of the recipient associated with this expense',
+  })
   @IsOptional()
   @IsNumber()
   recipientId?: number;
 
-  @ApiPropertyOptional({ example: '2023-10-25T10:00:00Z', description: 'Date of the expense (ISO String)' })
+  @ApiPropertyOptional({
+    example: '2023-10-25T10:00:00Z',
+    description: 'Date of the expense (ISO String)',
+  })
   @IsOptional()
   @IsDateString()
   date?: string;

@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -16,7 +15,9 @@ describe('ExpensesSystem (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
     await app.init();
 
     const loginRes = await request(app.getHttpServer())
@@ -51,7 +52,7 @@ describe('ExpensesSystem (e2e)', () => {
       .expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
-    const cat = response.body.find(c => c.id === createdCategoryId);
+    const cat = response.body.find((c) => c.id === createdCategoryId);
     expect(cat).toBeDefined();
   });
 
@@ -65,7 +66,7 @@ describe('ExpensesSystem (e2e)', () => {
         amount: 500,
         categoryId: createdCategoryId,
         description: 'Test Expense',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
       })
       .expect(201);
 
@@ -81,7 +82,7 @@ describe('ExpensesSystem (e2e)', () => {
       .expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
-    const expense = response.body.find(e => e.id === createdExpenseId);
+    const expense = response.body.find((e) => e.id === createdExpenseId);
     expect(expense).toBeDefined();
   });
 
@@ -93,16 +94,16 @@ describe('ExpensesSystem (e2e)', () => {
 
     expect(Array.isArray(response.body)).toBe(true);
     // Should be at least one (the one we created)
-    expect(response.body.some(e => e.id === createdExpenseId)).toBe(true);
+    expect(response.body.some((e) => e.id === createdExpenseId)).toBe(true);
   });
 
   it('/expenses/:id (PATCH) - Update Expense', async () => {
     const response = await request(app.getHttpServer())
-        .patch(`/expenses/${createdExpenseId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ amount: 600 })
-        .expect(200);
-    
+      .patch(`/expenses/${createdExpenseId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ amount: 600 })
+      .expect(200);
+
     expect(Number(response.body.amount)).toBe(600);
   });
 
@@ -116,21 +117,21 @@ describe('ExpensesSystem (e2e)', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({ amount: 100, categoryId: createdCategoryId, date: today })
       .expect(201);
-    
+
     // 2. Fetch today
     const resToday = await request(app.getHttpServer())
-        .get(`/expenses?date=${today}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
+      .get(`/expenses?date=${today}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
     expect(resToday.body.length).toBeGreaterThanOrEqual(1);
 
     // 3. Fetch prev day (should be empty given we made none or if strictly filtered)
     // Note: Use a random past date to ensure empty
     const oldDate = '2000-01-01';
     const resOld = await request(app.getHttpServer())
-        .get(`/expenses?date=${oldDate}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
+      .get(`/expenses?date=${oldDate}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
     expect(resOld.body.length).toBe(0);
   });
 
@@ -142,7 +143,11 @@ describe('ExpensesSystem (e2e)', () => {
     await request(app.getHttpServer())
       .post('/expenses')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ amount: 100, categoryId: createdCategoryId, description: uniqueDesc })
+      .send({
+        amount: 100,
+        categoryId: createdCategoryId,
+        description: uniqueDesc,
+      })
       .expect(201);
 
     // 2. Search
@@ -161,12 +166,12 @@ describe('ExpensesSystem (e2e)', () => {
       .post('/expenses')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        amount: 200, 
-        categoryId: createdCategoryId, 
-        recipientName: recipientName // Should auto-create
+        amount: 200,
+        categoryId: createdCategoryId,
+        recipientName: recipientName, // Should auto-create
       })
       .expect(201);
-    
+
     expect(response.body.recipientId).toBeDefined();
     // Verify recipient created
     const recId = response.body.recipientId;
@@ -187,23 +192,23 @@ describe('ExpensesSystem (e2e)', () => {
     // Update with new recipient name
     const newRecName = `UpdatedRec_${Date.now()}`;
     const updateRes = await request(app.getHttpServer())
-        .patch(`/expenses/${expId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ recipientName: newRecName })
-        .expect(200);
-    
+      .patch(`/expenses/${expId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ recipientName: newRecName })
+      .expect(200);
+
     expect(updateRes.body.recipient).toBeDefined();
     expect(updateRes.body.recipient.name).toBe(newRecName);
   });
 
   it('/expenses/:id (GET) - Find One', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/expenses/${createdExpenseId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-      
-      expect(response.body.id).toBe(createdExpenseId);
-      expect(response.body.category).toBeDefined();
+    const response = await request(app.getHttpServer())
+      .get(`/expenses/${createdExpenseId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(createdExpenseId);
+    expect(response.body.category).toBeDefined();
   });
 
   it('/expenses/:id (DELETE) - Delete Expense', async () => {
@@ -216,8 +221,8 @@ describe('ExpensesSystem (e2e)', () => {
       .get('/expenses')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
-    
-    const expense = response.body.find(e => e.id === createdExpenseId);
+
+    const expense = response.body.find((e) => e.id === createdExpenseId);
     expect(expense).toBeUndefined();
   });
 });
