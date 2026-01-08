@@ -137,7 +137,11 @@ export default function ProductionPage() {
                   {/* Mobile View */}
                   <div className="block md:hidden divide-y divide-gray-100">
                       {items.map((item) => (
-                          <div key={item.id} className="p-4 space-y-3">
+                          <div 
+                              key={item.id} 
+                              className="p-4 space-y-3 active:bg-gray-50 transition-colors"
+                              onClick={() => navigate(`/orders/${item.orderId}`)}
+                          >
                               <div className="flex justify-between items-start">
                                   <div className="space-y-1">
                                       <div className="font-bold text-gray-900 text-lg">{item.productName}</div>
