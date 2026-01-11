@@ -2,6 +2,31 @@
 
 All notable changes to the Zenkar Platform will be documented in this file.
 
+## [v1.11.0] - 2026-01-11 (Smart Edit & Strict Sync)
+### 📞 Smart Edit & Contacts
+- **Smart Upgrade**: Editing a local customer and adding a phone number automatically upgrades them to a Google Linked Contact.
+- **Unified Edit Flow**: The "Edit" button in Quick Sale and Order Form intelligently routes to `ContactForm` (for linked) or `CustomerForm` (for local).
+- **Conflict Handling**: Implemented graceful fallback for Google Sync failures (424 Priority), allowing users to skip sync and save locally on retry.
+
+### 📱 Strict Phone Validation (E.164)
+- **Global Standard**: Enforced E.164 formatting (e.g., `+911234567890`) across the entire platform.
+- **Multiple Numbers**: Backend support for multiple phone numbers per contact (Mobile, Work, Home, WhatsApp).
+- **Data Migration**: Migrated all legacy `phone` columns to the new `contact_phones` relational table.
+
+### ⚡ UI/UX Enhancements
+- **Infinite Scroll**: Replaced pagination with high-performance Infinite Scroll in Customer List.
+- **Filters**: Added **"Filter by Owner"** dropdown to toggle between "My Contacts" and "All Global Contacts".
+- **Phone Types**: Added UI support for selecting phone labels (Mobile, Home, WhatsApp) during contact creation.
+
+### 🚀 Deployment & Infrastructure
+- **Docker Hub**: Migrated deployment pipeline to use Docker Hub (`vishwahegdek/zenkar-*`).
+    - **Immutable Builds**: Staging and Production now use the exact same Docker Image SHA.
+    - **Simplified Scripts**: `deploy_remote.sh` now pulls images instead of building from source.
+
+### 🐛 Fixes
+- **Sync Reliability**: Added "Self-Healing" logic for Google Sync. If a linked Google Contact returns 404 (Deleted on Google), the system automatically re-creates it to restore the link.
+- **Duplicate Prevention**: Strengthened `ContactsService` to prevent creating duplicates during upgrade/sync operations.
+
 ## [v1.10.0] - 2026-01-07 (Production Module & Status Refactor)
 ### 🏭 Production Module
 - **New Page**: Launched `/production` for managing manufacturing workflow.
