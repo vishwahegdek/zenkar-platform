@@ -553,13 +553,20 @@ export class OrdersService implements OnModuleInit {
       }
 
       // 1. Update Order details
+      const newStatus = status
+        ? OrderStatus[status.toUpperCase() as keyof typeof OrderStatus]
+        : undefined;
+      
+      const isDelivering = newStatus === OrderStatus.DELIVERED || newStatus === OrderStatus.CLOSED;
+      if (isDelivering) {
+         orderData.deliveryStatus = DeliveryStatus.FULLY_DELIVERED;
+      }
+
       await tx.order.update({
         where: { id },
         data: {
           ...orderData,
-          status: status
-            ? OrderStatus[status.toUpperCase() as keyof typeof OrderStatus]
-            : undefined,
+          status: newStatus,
           ...discountUpdate,
           customer: finalCustomerId
             ? { connect: { id: finalCustomerId } }
@@ -567,6 +574,13 @@ export class OrdersService implements OnModuleInit {
           updatedBy: userId ? { connect: { id: userId } } : undefined,
         },
       });
+
+      if (isDelivering) {
+          await tx.orderItem.updateMany({
+              where: { orderId: id },
+              data: { status: ItemStatus.DELIVERED }
+          });
+      }
 
       // 2. If items provided, replace them
       if (items) {
@@ -871,11 +885,31 @@ export class OrdersService implements OnModuleInit {
       );
 
       const statusUpdate: any = { deliveryStatus: newDeliveryStatus };
+      const currentStatus = item.order.status;
 
-      // Check for Closing Condition: Fully Delivered AND Fully Paid
-      const isFullyPaid = item.order.paymentStatus === PaymentStatus.FULLY_PAID;
-      if (newDeliveryStatus === DeliveryStatus.FULLY_DELIVERED && isFullyPaid) {
-        statusUpdate.status = OrderStatus.CLOSED;
+      // Logic: Rollback or Auto-Deliver
+      // If order was DELIVERED or CLOSED, but items are no longer fully delivered -> Rollback to CONFIRMED
+      if (
+        (currentStatus === OrderStatus.DELIVERED ||
+          currentStatus === OrderStatus.CLOSED) &&
+        newDeliveryStatus !== DeliveryStatus.FULLY_DELIVERED
+      ) {
+        statusUpdate.status = OrderStatus.CONFIRMED;
+        
+        // If it was CLOSED, we might need to be careful about the discount that was applied (written off balance).
+        // Since we are reverting to CONFIRMED, the discount remains, effectively "paid" via discount?
+        // Or should we reverse the discount?
+        // The prompt says "roll back to confirmed". Reversing discount is complex without tracking.
+        // For now, we just change status.
+      } 
+      // Auto-Deliver if all items delivered and not already "finished"
+      else if (
+        newDeliveryStatus === DeliveryStatus.FULLY_DELIVERED &&
+        currentStatus !== OrderStatus.CLOSED &&
+        currentStatus !== OrderStatus.CANCELLED &&
+        currentStatus !== OrderStatus.DELIVERED
+      ) {
+        statusUpdate.status = OrderStatus.DELIVERED;
       }
 
       await this.prisma.order.update({

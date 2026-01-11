@@ -28,7 +28,7 @@ export default function OrderForm() {
 
   // Product Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [activeProductRowIndex, setActiveProductRowIndex] = useState(null);
+  const activeProductRowIndexRef = useRef(null);
   const [tempProductName, setTempProductName] = useState('');
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false); // New: Contact Edit
@@ -125,7 +125,7 @@ export default function OrderForm() {
     const payload = {
       ...data,
       customerId: Number(data.customerId) || 0,
-      contactId: data.contactId, // Include in payload
+      contactId: data.contactId ? Number(data.contactId) : undefined,
       customerPhone: data.customerPhone || '',
       customerAddress: data.customerAddress || '',
       orderDate: data.orderDate ? new Date(data.orderDate).toISOString() : new Date().toISOString(),
@@ -135,9 +135,10 @@ export default function OrderForm() {
       advanceAmount: Number(data.advanceAmount) || 0,
       
       items: data.items
-        .filter(i => i.productName || i.quantity > 0)
+        .filter(i => i.productName) // Only include items with product selected or name entered
         .map(i => ({
           ...i,
+          productId: i.productId ? Number(i.productId) : undefined,
           quantity: Number(i.quantity) || 0,
           unitPrice: Number(i.unitPrice) || 0,
           lineTotal: Number(i.lineTotal) || 0,
@@ -395,7 +396,7 @@ export default function OrderForm() {
                           onChange={(val) => handleItemChange(idx, 'productName', val)}
                           onCreate={(name) => {
                               setTempProductName(name);
-                              setActiveProductRowIndex(idx);
+                              activeProductRowIndexRef.current = idx;
                               window.location.hash = 'new-product';
                           }}
                           onSelect={(p) => {
@@ -572,8 +573,8 @@ export default function OrderForm() {
               isModal={true}
               initialData={{ name: tempProductName }}
               onSuccess={(newProduct) => {
-                  if (activeProductRowIndex !== null) {
-                      handleProductSelect(activeProductRowIndex, newProduct);
+                  if (activeProductRowIndexRef.current !== null) {
+                      handleProductSelect(activeProductRowIndexRef.current, newProduct);
                   }
                   window.location.hash = '';
               }}

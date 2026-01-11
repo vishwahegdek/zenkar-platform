@@ -87,7 +87,7 @@ export default function OrdersList() {
     if (filter === 'Confirmed') return s === 'CONFIRMED';
     if (filter === 'Production') return d === 'IN_PRODUCTION';
     if (filter === 'Ready') return d === 'READY';
-    if (filter === 'Delivered') return d === 'FULLY_DELIVERED' || d === 'PARTIALLY_DELIVERED';
+    if (filter === 'Delivered') return d === 'FULLY_DELIVERED' || d === 'PARTIALLY_DELIVERED' || s === 'DELIVERED';
     
     if (filter === 'Closed') return s === 'CLOSED';
     if (filter === 'Cancelled') return s === 'CANCELLED';
@@ -289,6 +289,7 @@ const StatusSelect = ({ order, onChange }) => {
     CONFIRMED: 'bg-blue-50 text-blue-700 ring-blue-600/20',
     CLOSED: 'bg-gray-800 text-white ring-gray-700/20',
     CANCELLED: 'bg-red-50 text-red-700 ring-red-600/20',
+    DELIVERED: 'bg-green-50 text-green-700 ring-green-600/20',
   };
 
   const style = styles[order.status] || 'bg-gray-100 text-gray-600';
@@ -307,6 +308,7 @@ const StatusSelect = ({ order, onChange }) => {
       >
         <option value="ENQUIRED">Enquired</option>
         <option value="CONFIRMED">Confirmed</option>
+        <option value="DELIVERED">Delivered</option>
         <option value="CLOSED">Closed</option>
         <option value="CANCELLED">Cancelled</option>
       </select>

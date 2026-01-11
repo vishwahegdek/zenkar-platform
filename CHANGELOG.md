@@ -2,6 +2,18 @@
 
 All notable changes to the Zenkar Platform will be documented in this file.
 
+## [v1.12.0] - 2026-01-11 (Delivered Status)
+### 🚚 Order Status: Delivered
+- **New Status**: Introduced `DELIVERED` status for Orders to track completed deliveries before closing/archiving.
+- **Auto-Delivery Logic**:
+    - **Cascade**: Marking an Order as `DELIVERED` automatically marks all its items as `DELIVERED`.
+    - **Smart Update**: If all items in an order are marked `DELIVERED`, the Order status automatically updates to `DELIVERED`.
+    - **Rollback**: If an item in a `DELIVERED` order is moved back to `READY` or `IN_PRODUCTION`, the order automatically reverts to `CONFIRMED`.
+- **UI**: Added `Delivered` option to Order List filters and status dropdowns.
+
+### 🐛 Fixes
+- **Order Creation**: Fixed a validation error (`400 Bad Request`) where empty item rows causing failures during order creation.
+- **Mobile**: Improved product selection reliability on mobile devices.
 ## [v1.11.0] - 2026-01-11 (Smart Edit & Strict Sync)
 ### 📞 Smart Edit & Contacts
 - **Smart Upgrade**: Editing a local customer and adding a phone number automatically upgrades them to a Google Linked Contact.

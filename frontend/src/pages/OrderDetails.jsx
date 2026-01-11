@@ -708,6 +708,7 @@ function StatusBadge({ type, status }) {
             CONFIRMED: { label: 'Confirmed', color: 'bg-blue-50 text-blue-700 border-blue-100' },
             CLOSED: { label: 'Closed', color: 'bg-gray-100 text-gray-700 border-gray-200' },
             CANCELLED: { label: 'Cancelled', color: 'bg-red-50 text-red-700 border-red-100' },
+            DELIVERED: { label: 'Delivered', color: 'bg-green-50 text-green-700 border-green-100' },
         },
         DELIVERY: {
             CONFIRMED: { label: 'Queue', color: 'bg-gray-50 text-gray-600 border-gray-200' },

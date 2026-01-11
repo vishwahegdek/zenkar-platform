@@ -110,6 +110,7 @@ enum OrderStatus {
   CONFIRMED
   CLOSED
   CANCELLED
+  DELIVERED
 }
 
 enum DeliveryStatus {
