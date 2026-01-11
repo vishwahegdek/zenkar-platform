@@ -14,8 +14,6 @@ COPY backend/ .
 
 RUN npx prisma generate
 RUN npm run build
-# Compile migration script to dist/scripts
-RUN npx tsc scripts/migrate_phones.ts --outDir dist/scripts --esModuleInterop --skipLibCheck --module commonjs --target es2020
 
 # Dependencies Stage (Pruned)
 FROM node:22-slim AS deps
