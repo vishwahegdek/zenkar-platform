@@ -28,4 +28,12 @@ export class DashboardController {
   getActivities() {
     return this.dashboardService.getRecentActivities();
   }
+
+  @Get('cashflow')
+  @ApiOperation({ summary: 'Get cashflow timeline and summary' })
+  @ApiQuery({ name: 'from', required: true })
+  @ApiQuery({ name: 'to', required: true })
+  getCashflow(@Query('from') from: string, @Query('to') to: string) {
+    return this.dashboardService.getCashflow(from, to);
+  }
 }

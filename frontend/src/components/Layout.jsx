@@ -8,7 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { Sidebar } from './Sidebar';
 
 const PAGE_TITLES = {
-  '/dashboard': 'Overview',
+  '/dashboard': 'Cashflow Dashboard',
+  '/income-sheet': 'Income Sheet',
   '/quick-sale': 'Quick Sale',
   '/orders': 'Orders',
   '/customers': 'Customer Directory',

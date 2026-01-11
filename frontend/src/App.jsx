@@ -21,7 +21,8 @@ import LabourManage from './pages/Labour/LabourManage';
 import LabourReport from './pages/Labour/LabourReport';
 import QuickSale from './pages/QuickSale';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import CashflowDashboard from './pages/CashflowDashboard';
+import IncomeSheet from './pages/IncomeSheet';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -54,7 +55,8 @@ function App() {
               </RequireAuth>
             }>
               <Route index element={<OrdersList />} />
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="dashboard" element={<CashflowDashboard />} />
+              <Route path="income-sheet" element={<IncomeSheet />} />
               <Route path="orders" element={<OrdersList />} />
               <Route path="quick-sale" element={<QuickSale />} />
               <Route path="orders/new" element={<OrderForm />} />

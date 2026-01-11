@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format, addDays, subDays } from 'date-fns';
 
-export default function Dashboard() {
+export default function IncomeSheet() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd'); // API expects YYYY-MM-DD
@@ -36,13 +36,13 @@ export default function Dashboard() {
   const handlePrevDay = () => setSelectedDate(prev => subDays(prev, 1));
   const handleNextDay = () => setSelectedDate(prev => addDays(prev, 1));
 
-  if (statsLoading || paymentsLoading) return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>;
+  if (statsLoading || paymentsLoading) return <div className="p-8 text-center text-gray-500">Loading Income Sheet...</div>;
 
   return (
     <div className="container mx-auto px-0 py-0 space-y-0 max-w-full overflow-x-hidden font-sans">
       {/* Date Navigation & Header - Flush with top */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-0 bg-white border-b border-gray-200 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-800 hidden md:block p-4">Dashboard</h1>
+        <h1 className="text-xl font-bold text-gray-800 hidden md:block p-4">Income Sheet</h1>
         
         {/* Minimalist Date Nav - Full Width, No Borders on container, just bottom border of header */}
         <div className="flex items-center justify-between w-full md:w-auto h-12">

@@ -47,20 +47,34 @@ test.describe('Dashboard UI', () => {
         });
     });
 
-    // Mock Dashboard Activities
-    await page.route('**/dashboard/activities', async route => {
+    // Mock Cashflow Data
+    await page.route('**/dashboard/cashflow*', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify([
-                 { 
-                    id: 1, 
-                    action: 'CREATE', 
-                    resource: 'Order #1', 
-                    user: { username: 'admin' }, 
-                    createdAt: new Date().toISOString() 
-                 }
-            ])
+            body: JSON.stringify({
+                summary: { totalIn: 5000, totalOut: 2000, net: 3000 },
+                entries: [
+                    { 
+                        id: 'pay-1', 
+                        type: 'IN', 
+                        category: 'Income', 
+                        amount: 5000, 
+                        description: 'Order #ORD-001 - Test Customer', 
+                        time: new Date().toISOString(),
+                        source: 'Payment'
+                    },
+                    { 
+                        id: 'exp-1', 
+                        type: 'OUT', 
+                        category: 'Stationery', 
+                        amount: 2000, 
+                        description: 'Paper and Pens', 
+                        time: new Date().toISOString(),
+                        source: 'Expense'
+                    }
+                ]
+            })
         });
     });
 
@@ -71,51 +85,54 @@ test.describe('Dashboard UI', () => {
     
     // Should navigate to dashboard or orders
     await expect(page).toHaveURL(/\/$|\/orders/);
+  });
+
+  test('Cashflow Dashboard renders correctly', async ({ page }) => {
     await page.goto('/dashboard');
-    // Wait for loading to finish
-    await expect(page.getByText('Loading Dashboard...')).not.toBeVisible();
-  });
-
-  test('Stats Cards are visible', async ({ page }) => {
-    // Check for Headers
-    await expect(page.getByText('Income')).toBeVisible();
+    await expect(page.getByText('Checking accounts...')).not.toBeVisible();
+    // Use regex to be flexible with icons/whitespace
+    await expect(page.getByRole('heading', { name: /Cashflow/i })).toBeVisible();
     
-    // Check for Values (Should be numeric currency matching our mock)
-    // It's now in a header badge, so we just check visibility of value associated with 'Income'
-    await expect(page.getByText('Income')).toBeVisible();
+    // Check Summary Cards
+    await expect(page.getByText('Money In')).toBeVisible();
     await expect(page.getByText('₹5,000')).toBeVisible();
+    await expect(page.getByText('Money Out')).toBeVisible();
+    await expect(page.getByText('₹2,000')).toBeVisible();
+    await expect(page.getByText('Net Cashflow')).toBeVisible();
+
+    // Check Transactions
+    await expect(page.getByText('Stationery')).toBeVisible();
+    await expect(page.getByText('Paper and Pens')).toBeVisible();
   });
 
-
-  test('Recent Activity and Payments Sections', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Recent Activity' })).toBeVisible(); 
-    await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
+  test('Income Sheet renders correctly', async ({ page }) => {
+    // Only verify heading on desktop
+    const isMobile = page.viewportSize()?.width && page.viewportSize().width < 768;
     
-    // Check Table Headers for Payments (Desktop) or content
-    if (await page.getByRole('table').isVisible()) {
-        await expect(page.getByText('Customer', { exact: true })).toBeVisible();
-        await expect(page.getByText('Amount', { exact: true })).toBeVisible();
-        // Check content in table
-        await expect(page.getByRole('cell', { name: 'Test Customer' }).first()).toBeVisible();
-    } else {
-        // Check content in list
-        // Use .first() to avoid ambiguity if multiple exist but we only care if one is visible
-        await expect(page.getByText('Test Customer').first()).toBeVisible();
+    await page.goto('/income-sheet');
+    await expect(page.getByText('Loading Income Sheet...')).not.toBeVisible();
+    
+    if (!isMobile) {
+        await expect(page.getByRole('heading', { name: /Income Sheet/i })).toBeVisible();
     }
+    
+    // Check Stats and Payments
+    await expect(page.getByText('Income', { exact: true })).toBeVisible();
+    await expect(page.getByText('₹5,000')).toBeVisible();
+    
+    // Payments list should be visible on both
+    await expect(page.getByText('Test Customer').first()).toBeVisible();
   });
   
-  test('Mobile Responsiveness Check', async ({ page }) => {
-    // Set viewport to mobile
+  test('Mobile Responsiveness and Filters', async ({ page }) => {
+    await page.goto('/dashboard');
     await page.setViewportSize({ width: 375, height: 667 });
     
-    // Reload to ensure mobile view renders (if dependent on resize listener or initial load)
-    // Note: Playwright resize usually triggers reactivity, but let's be safe.
+    // Range selector should be visible
+    await expect(page.getByText('Today')).toBeVisible();
     
-    // Check that 'Payments' title is visible
-    await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
-    
-    // Check List View item
-    // .md:hidden should be visible now
-    await expect(page.getByText('Test Customer').first()).toBeVisible();
+    // Select custom range
+    await page.getByRole('button', { name: 'Custom' }).click();
+    await expect(page.locator('input[type="date"]')).toHaveCount(2);
   });
 });

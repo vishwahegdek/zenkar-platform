@@ -117,4 +117,119 @@ export class DashboardService {
       include: { user: { select: { username: true } } },
     });
   }
+
+  async getCashflow(fromStr: string, toStr: string) {
+    const from = new Date(fromStr + 'T00:00:00.000Z');
+    const to = new Date(toStr + 'T23:59:59.999Z');
+
+    // 1. Fetch Income (Payments from orders)
+    const payments = await this.prisma.payment.findMany({
+      where: { date: { gte: from, lte: to } },
+      include: { order: { include: { customer: true } } },
+    });
+
+    // 2. Fetch Expenses
+    const expenses = await this.prisma.expense.findMany({
+      where: { date: { gte: from, lte: to } },
+      include: { category: true, recipient: true, labourer: true },
+    });
+
+    // 3. Fetch Finance Transactions
+    const financeTxs = await this.prisma.financeTransaction.findMany({
+      where: { date: { gte: from, lte: to } },
+      include: { party: { include: { contact: true } } },
+    });
+
+    const entries: any[] = [];
+
+    // Process Payments (Inflow)
+    payments.forEach((p) => {
+      entries.push({
+        id: `pay-${p.id}`,
+        date: p.date,
+        time: p.createdAt,
+        amount: Number(p.amount),
+        type: 'IN',
+        category: 'Income',
+        description: `Order #${p.order?.orderNo || p.orderId} - ${p.order?.customer?.name || 'Customer'}`,
+        source: 'Payment',
+      });
+    });
+
+    // Process Expenses (Outflow)
+    expenses.forEach((e) => {
+      entries.push({
+        id: `exp-${e.id}`,
+        date: e.date,
+        time: e.createdAt,
+        amount: Number(e.amount),
+        type: 'OUT',
+        category: e.category?.name || 'Expense',
+        description: e.description || `Expense to ${e.recipient?.name || e.labourer?.name || 'Unknown'}`,
+        source: 'Expense',
+      });
+    });
+
+    // Process Finance Transactions
+    financeTxs.forEach((tx) => {
+      const partyName = tx.party?.contact?.name || tx.party?.name || 'Finance Party';
+      let type: 'IN' | 'OUT';
+      let category: string;
+
+      switch (tx.type) {
+        case 'BORROWED':
+          type = 'IN';
+          category = 'Lending (In)';
+          break;
+        case 'COLLECTED': // They paid us back
+          type = 'IN';
+          category = 'Lending (In)';
+          break;
+        case 'LENT':
+          type = 'OUT';
+          category = 'Lending (Out)';
+          break;
+        case 'REPAID': // We paid them back
+          type = 'OUT';
+          category = 'Lending (Out)';
+          break;
+        default:
+          type = 'IN';
+          category = 'Finance';
+      }
+
+      entries.push({
+        id: `fin-${tx.id}`,
+        date: tx.date,
+        time: tx.createdAt,
+        amount: Number(tx.amount),
+        type,
+        category,
+        description: `${tx.type}: ${partyName}${tx.note ? ` (${tx.note})` : ''}`,
+        source: 'Finance',
+      });
+    });
+
+    // Sort by time (latest first for display, but maybe earliest first for timeline?)
+    // User asked "what came in/out why". Usually latest at top is good for dash.
+    entries.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    const summary = entries.reduce(
+      (acc, entry) => {
+        if (entry.type === 'IN') acc.totalIn += entry.amount;
+        else acc.totalOut += entry.amount;
+        return acc;
+      },
+      { totalIn: 0, totalOut: 0 },
+    );
+
+    return {
+      entries,
+      summary: {
+        ...summary,
+        net: summary.totalIn - summary.totalOut,
+      },
+      range: { from: fromStr, to: toStr },
+    };
+  }
 }
