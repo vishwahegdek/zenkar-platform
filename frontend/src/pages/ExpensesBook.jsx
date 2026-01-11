@@ -59,8 +59,8 @@ const ExpensesBook = () => {
 
     return (
         <div className="p-4 max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Expense Book</h1>
+            <div className="flex justify-end items-center mb-6">
+                {/* Header Removed */}
                 <div className="flex gap-2">
                     <Link 
                         to="/expenses/manage" 

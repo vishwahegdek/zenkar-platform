@@ -59,14 +59,8 @@ export default function FinancePage() {
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-4 md:px-0">
-        <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Wallet className="w-8 h-8 text-primary" />
-                Finance Book
-            </h1>
-            <p className="text-gray-500">Manage Payables and Receivables</p>
-        </div>
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4 px-4 md:px-0">
+        {/* Header Removed */}
         
         {/* Total Card */}
         <div className={`px-6 py-3 rounded-xl border ${activeTab === 'CREDITOR' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-green-50 border-green-100 text-green-700'}`}>

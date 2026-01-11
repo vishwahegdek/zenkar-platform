@@ -222,7 +222,7 @@ export default function QuickSale() {
   return (
     <div className="max-w-4xl mx-auto pb-24 md:pb-6">
       <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
-         <h1 className="text-2xl font-bold text-gray-800">Quick Sale</h1>
+         <div></div> {/* Empty placeholder for flex justify-between if button is on right */}
          <button 
            onClick={() => handleSave()}
            disabled={isSaving}

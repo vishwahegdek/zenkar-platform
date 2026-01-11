@@ -100,7 +100,7 @@ export default function OrdersList() {
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+          {/* Header Removed as it is in Global Layout */}
           <div className="flex gap-4 mt-1 text-sm">
              <button 
                 onClick={() => setView('active')} 

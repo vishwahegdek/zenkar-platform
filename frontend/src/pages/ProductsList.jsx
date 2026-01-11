@@ -68,8 +68,8 @@ export default function ProductsList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+      <div className="flex flex-col md:flex-row gap-4 justify-end items-start md:items-center">
+        {/* Header Removed */}
         
         <div className="flex gap-2 w-full md:w-auto">
             <button 

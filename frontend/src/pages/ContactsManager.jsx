@@ -158,7 +158,7 @@ export default function ContactsManager() {
     <div className="max-w-6xl mx-auto p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div>
-            <h1 className="text-2xl font-bold text-gray-800">My Contacts</h1>
+            {/* Header Removed */}
             <p className="text-sm text-gray-500 mt-1">
                 {syncStatus.isConnected 
                     ? <span className="text-green-600 font-medium">✅ Google Sync Active</span> 

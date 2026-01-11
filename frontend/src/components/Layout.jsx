@@ -1,113 +1,133 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
+import { Menu, X, LogOut, ChevronRight } from 'lucide-react';
 
 import { useMobileAutoScroll } from '../hooks/useMobileAutoScroll';
 import { useAuth } from '../context/AuthContext';
+import { Sidebar } from './Sidebar';
+
+const PAGE_TITLES = {
+  '/dashboard': 'Overview',
+  '/quick-sale': 'Quick Sale',
+  '/orders': 'Orders',
+  '/customers': 'Customer Directory',
+  '/production': 'Production Floor',
+  '/products': 'Inventory & Products',
+  '/expenses': 'Expense Book',
+  '/finance': 'Finance Ledger',
+  '/labour': 'Labour Management',
+  '/contacts': 'Global Contacts',
+  '/': 'Orders',
+};
 
 export default function Layout() {
   const { logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   
   // Activate global mobile auto-scroll for all inputs
   useMobileAutoScroll();
-  const location = useLocation();
 
   // Close menu when route changes
   useEffect(() => {
-    setIsMenuOpen(false);
+    setIsMobileMenuOpen(false);
   }, [location]);
 
+  // Determine Page Title
+  // Sort by length desc to match most specific path first (e.g. /orders before /)
+  const currentPath = Object.keys(PAGE_TITLES)
+    .sort((a, b) => b.length - a.length)
+    .find(path => location.pathname.startsWith(path));
+    
+  const pageTitle = PAGE_TITLES[currentPath] || 'Zenkar Platform';
+
   return (
-    <div className="min-h-screen pb-10 bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Toaster position="top-center" />
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link to="/" className="text-xl font-bold text-blue-600 tracking-tight">Order Book</Link>
-            
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex gap-1">
-              <NavLink to="/dashboard">Dashboard</NavLink>
-              <NavLink to="/orders">Orders</NavLink>
-              <NavLink to="/expenses">Expenses</NavLink>
-              <NavLink to="/finance">Finance Book</NavLink>
-              <NavLink to="/production">Production</NavLink>
-              <NavLink to="/contacts">Contacts</NavLink>
-              <NavLink to="/labour">Labour</NavLink>
-              <NavLink to="/customers">Customers</NavLink>
-              <NavLink to="/products">Products</NavLink>
-              <button onClick={logout} className="px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700">Logout</button>
-            </nav>
+      
+      {/* Desktop Sidebar */}
+      <Sidebar className="hidden md:flex w-64 flex-shrink-0" />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-gray-900 truncate">
+              {pageTitle}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Link to="/quick-sale" className="bg-purple-100 text-purple-700 px-3 py-2 rounded-full text-sm font-medium hover:bg-purple-200 transition-colors shadow-sm flex items-center gap-1" aria-label="Quick Sale">
-               <span className="text-lg">⚡</span> <span className="hidden md:inline">Quick</span>
-            </Link>
-            <Link to="/orders/new" className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2" aria-label="New Order">
-              <span className="md:hidden">New</span> <span className="hidden md:inline">New Order</span>
-            </Link>
-            
-            {/* Mobile Menu Button */}
+          <div className="flex items-center gap-3">
+             {(location.pathname === '/' || location.pathname === '/orders') && (
+               <>
+                 <Link to="/quick-sale" className="bg-purple-100 text-purple-700 px-2 sm:px-3 py-1.5 rounded-md sm:rounded-full text-xs sm:text-sm font-medium hover:bg-purple-200 transition-colors shadow-sm flex items-center gap-1">
+                   <span className="text-base">⚡</span> <span>Quick</span>
+                 </Link>
+                 <Link to="/orders/new" className="bg-blue-600 text-white px-2 sm:px-3 py-1.5 rounded-md sm:rounded-full text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+                  <span className="text-base">+</span> <span>New</span>
+                 </Link>
+               </>
+             )}
+            {/* Mobile Menu Trigger (Moved to Right) */}
             <button 
               className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-md"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open menu"
             >
-              <span className="text-xl">☰</span>
+              <Menu className="w-6 h-6" />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Mobile Nav Dropdown */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white">
-            <div className="px-4 py-2 flex flex-col gap-1">
-              <NavLink to="/dashboard" mobile>Dashboard</NavLink>
-              <NavLink to="/orders" mobile>Orders</NavLink>
-              <NavLink to="/expenses" mobile>Expenses</NavLink>
-              <NavLink to="/finance" mobile>Finance Book</NavLink>
-              <NavLink to="/production" mobile>Production</NavLink>
-              <NavLink to="/contacts" mobile>Contacts</NavLink>
-              <NavLink to="/labour" mobile>Labour</NavLink>
-              <NavLink to="/customers" mobile>Customers</NavLink>
-              <NavLink to="/finance" mobile>Finance Book</NavLink>
-              <NavLink to="/products" mobile>Products</NavLink>
-              <div className="border-t border-gray-100 my-1"></div>
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+             <Outlet />
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity" 
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+
+          {/* Drawer */}
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white transition-transform transform translate-x-0">
+            <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button 
-                onClick={logout} 
-                className="text-left w-full block px-3 py-2 text-base font-medium rounded-md transition-colors text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
-                Logout
+                <X className="h-6 w-6 text-white" />
               </button>
             </div>
+            
+            <Sidebar className="h-full border-none" />
+            
+             <div className="p-4 border-t border-gray-200 bg-gray-50">
+               <button 
+                 onClick={logout}
+                 className="flex items-center gap-2 text-red-600 font-medium w-full px-3 py-2 rounded-md hover:bg-red-50"
+               >
+                 <LogOut className="w-5 h-5" />
+                 Sign Out
+               </button>
+             </div>
           </div>
-        )}
-      </header>
-      
-      <main className="max-w-6xl mx-auto px-0 md:px-4 py-4 md:py-8">
-        <Outlet />
-      </main>
+          
+          <div className="flex-shrink-0 w-14">
+            {/* Force sidebar to shrink to fit close icon */}
+          </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function NavLink({ to, children, mobile }) {
-  const location = useLocation();
-  const isActive = location.pathname.startsWith(to);
-  
-  const baseClasses = mobile 
-    ? "block px-3 py-2 text-base font-medium rounded-md transition-colors"
-    : "px-3 py-2 text-sm font-medium rounded-md transition-colors";
-    
-  const activeClasses = isActive 
-    ? "text-blue-700 bg-blue-50" 
-    : "text-gray-600 hover:text-blue-600 hover:bg-gray-50";
-
-  return (
-    <Link to={to} className={`${baseClasses} ${activeClasses}`}>
-      {children}
-    </Link>
   );
 }

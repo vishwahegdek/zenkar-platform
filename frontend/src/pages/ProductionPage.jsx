@@ -75,15 +75,7 @@ export default function ProductionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-4 md:px-0">
-         <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Package className="w-8 h-8 text-primary" />
-                Production Queue
-            </h1>
-            <p className="text-gray-500">Manage production workflow and delivery status</p>
-         </div>
-      </div>
+      {/* Header Removed - Global Title Used */}
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-end md:items-center">

@@ -94,8 +94,8 @@ export default function CustomersList() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-4 md:px-0">
-        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4 px-4 md:px-0">
+        {/* Header Removed */}
         <div className="w-full md:w-auto flex gap-2">
             <input 
               type="text" 

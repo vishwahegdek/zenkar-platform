@@ -18,8 +18,8 @@ export default function LabourLayout() {
 
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: 'Arial, sans-serif', color: 'white' }}>
-      <nav className="flex justify-between items-center p-4 bg-opacity-90 sticky top-0 z-50" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <h1 className="text-xl font-bold">Labour Manager</h1>
+      <nav className="flex justify-end items-center p-4 bg-opacity-90 sticky top-0 z-50" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        {/* Header Removed */}
         <div className="flex gap-4">
           <NavLink 
             to="/labour/daily" 
