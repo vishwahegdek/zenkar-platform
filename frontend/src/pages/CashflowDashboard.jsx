@@ -27,8 +27,8 @@ import {
 
 const RANGE_OPTIONS = [
   { label: 'Today', value: 'today' },
-  { label: 'This Week', value: 'week' },
-  { label: 'This Month', value: 'month' },
+  { label: 'Last 7 Days', value: 'week' },
+  { label: 'Last 30 Days', value: 'month' },
   { label: 'Custom', value: 'custom' },
 ];
 
@@ -47,13 +47,13 @@ export default function CashflowDashboard() {
         return { from: day, to: day };
       case 'week':
         return { 
-          from: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'), 
-          to: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd') 
+          from: format(subDays(now, 7), 'yyyy-MM-dd'), 
+          to: format(now, 'yyyy-MM-dd') 
         };
       case 'month':
         return { 
-          from: format(startOfMonth(now), 'yyyy-MM-dd'), 
-          to: format(endOfMonth(now), 'yyyy-MM-dd') 
+          from: format(subDays(now, 30), 'yyyy-MM-dd'), 
+          to: format(now, 'yyyy-MM-dd') 
         };
       case 'custom':
         return customRange;
