@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
-import { Plus, Search, ArrowUpRight, ArrowDownLeft, Wallet, User as UserIcon } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { Plus, Search, ArrowUpRight, ArrowDownLeft, Wallet, User as UserIcon, History } from 'lucide-react';
 import FinancePartyModal from './FinancePartyModal';
 import TransactionModal from './TransactionModal';
+import FinanceHistoryModal from './FinanceHistoryModal';
 
 export default function FinancePage() {
   const [activeTab, setActiveTab] = useState('CREDITOR'); // CREDITOR (Payables) | DEBTOR (Receivables)
   const [searchTerm, setSearchTerm] = useState('');
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedParty, setSelectedParty] = useState(null); // For Transaction or Edit
 
   const { data: parties = [], isLoading, refetch } = useQuery({
@@ -33,6 +34,11 @@ export default function FinancePage() {
   const handleAddTransaction = (party) => {
       setSelectedParty(party);
       setIsTxModalOpen(true);
+  };
+
+  const handleViewHistory = (party) => {
+      setSelectedParty(party);
+      setIsHistoryModalOpen(true);
   };
 
   const handleCreateParty = () => {
@@ -144,12 +150,21 @@ export default function FinancePage() {
                         </p>
                     </div>
                     
-                    <button 
-                        onClick={() => handleAddTransaction(party)}
-                        className="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 transition-colors"
-                    >
-                        Transaction
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => handleViewHistory(party)}
+                            className="bg-white hover:bg-gray-50 text-gray-600 p-2 rounded-lg border border-gray-200 transition-colors"
+                            title="View History"
+                        >
+                            <History className="w-5 h-5" />
+                        </button>
+                        <button 
+                            onClick={() => handleAddTransaction(party)}
+                            className="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 transition-colors"
+                        >
+                            Transaction
+                        </button>
+                    </div>
                 </div>
             </div>
           ))}
@@ -179,6 +194,14 @@ export default function FinancePage() {
             onClose={() => setIsTxModalOpen(false)}
             onSuccess={handleTxSuccess}
             party={selectedParty}
+          />
+      )}
+
+      {isHistoryModalOpen && selectedParty && (
+          <FinanceHistoryModal 
+              isOpen={isHistoryModalOpen}
+              onClose={() => setIsHistoryModalOpen(false)}
+              party={selectedParty}
           />
       )}
     </div>
