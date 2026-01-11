@@ -3,6 +3,7 @@ import { CustomersController } from './customers.controller';
 import { CustomersService } from './customers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
+import { ContactsService } from '../contacts/contacts.service';
 
 describe('CustomersController', () => {
   let controller: CustomersController;
@@ -13,6 +14,7 @@ describe('CustomersController', () => {
       providers: [
         CustomersService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: ContactsService, useValue: {} },
       ],
     }).compile();
 

@@ -10,7 +10,7 @@ export class CreateCustomerDto {
   })
   @IsOptional()
   @IsString()
-  @MinLength(6)
+  @MinLength(4)
   name?: string;
 
   @ApiPropertyOptional({ example: '9876543210', description: 'Phone number' })

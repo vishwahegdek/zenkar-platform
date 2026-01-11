@@ -56,11 +56,22 @@ export default function CustomerForm({ onSuccess, initialData, id: propId, isMod
       }
     },
     onError: (err, variables) => {
-        // Handle Google Sync Failure (424)
+        // Handle Google Sync Failure (424) or Auth Required (424)
         if (err.response?.status === 424) {
-            // Use setTimeout to avoid Modal focus fighting or state updates blocking alert
+             // Using confirm for simplicity as per requirements (or custom modal if prefered)
+            // setTimeout ensures it allows react state updates to flush if needed
             setTimeout(() => {
-                if (window.confirm("Google Contact Sync failed.\n\nDo you want to save locally without syncing?")) {
+                const isSyncError = err.response?.data?.message?.includes('Google Sync Failed');
+                const isPhoneError = err.response?.data?.message?.includes('Google Sync requires a phone number');
+
+                let message = "You are not synced with Google. This customer will be saved locally without a contact link.\n\nProceed?";
+                if (isSyncError) {
+                    message = "Google Contact Sync failed. Do you want to save locally without syncing?";
+                } else if (isPhoneError) {
+                    message = "Phone number is missing. Customer will be saved locally without Google Contact sync.\n\nProceed?";
+                }
+                
+                if (window.confirm(message)) {
                     // Retry with skipGoogleSync = true
                     const retryData = { ...variables, skipGoogleSync: true };
                     mutation.mutate(retryData);

@@ -2,23 +2,77 @@ export const mockPrismaService = {
   order: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    count: jest.fn(),
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
   },
   customer: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    count: jest.fn(),
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
   },
   product: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    count: jest.fn(),
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
   },
-  $transaction: jest.fn((callback) => callback(mockPrismaService)),
+  contact: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  payment: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  orderItem: {
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+    findMany: jest.fn(),
+  },
+  auditLog: {
+    create: jest.fn(),
+  },
+  gstInvoice: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  productCategory: {
+     findFirst: jest.fn(),
+     create: jest.fn(),
+  },
+  $transaction: jest.fn((arg) => {
+    if (Array.isArray(arg)) {
+      return Promise.all(arg);
+    }
+    return arg(mockPrismaService);
+  }),
 };

@@ -2,15 +2,32 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
+import { ProductsService } from '../products/products.service';
+import { CustomersService } from '../customers/customers.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
+
+  const mockProductsService = {
+    create: jest.fn(),
+    findFirst: jest.fn(),
+  };
+  const mockCustomersService = {
+    create: jest.fn(),
+  };
+  const mockAuditService = {
+    log: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: ProductsService, useValue: mockProductsService },
+        { provide: CustomersService, useValue: mockCustomersService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
@@ -30,9 +47,10 @@ describe('OrdersService', () => {
         },
       ];
       mockPrismaService.order.findMany.mockResolvedValue(result);
+      mockPrismaService.order.count.mockResolvedValue(1); // Fix count
 
-      const expected = result.map((o) => ({ ...o, remainingBalance: 100 }));
-      expect(await service.findAll({})).toEqual(expected);
+      const expected = result.map((o) => ({ ...o, remainingBalance: 100, paidAmount: 0, advanceAmount: 0 }));
+      expect(await service.findAll('')).toEqual(expect.objectContaining({ data: expected }));
       expect(mockPrismaService.order.findMany).toHaveBeenCalled();
     });
   });
@@ -46,11 +64,12 @@ describe('OrdersService', () => {
       };
       const createdOrder = { id: 1, ...dto };
 
-      // Mock transaction to return the callback result immediately
       mockPrismaService.$transaction.mockImplementation(async (cb) =>
         cb(mockPrismaService),
       );
       mockPrismaService.order.create.mockResolvedValue(createdOrder);
+      // Fix: Mock findUnique for the re-fetch at end of create
+      mockPrismaService.order.findUnique.mockResolvedValue(createdOrder);
 
       expect(await service.create(dto as any)).toEqual(createdOrder);
     });
@@ -58,7 +77,7 @@ describe('OrdersService', () => {
     it('should create a new customer if customerId is 0', async () => {
       const dto = {
         customerId: 0,
-        customerName: 'New User',
+        contactId: 101, // Fix: Provide contactId to pass validation
         items: [],
       };
       const newCustomer = { id: 99, name: 'New User' };
@@ -67,12 +86,19 @@ describe('OrdersService', () => {
       mockPrismaService.$transaction.mockImplementation(async (cb) =>
         cb(mockPrismaService),
       );
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb(mockPrismaService),
+      );
+      // Fix: Mock contact return value (do not overwrite object)
+      mockPrismaService.contact.findUnique.mockResolvedValue({ id: 101, name: 'Contact Name', phone: '1234567890' });
+
       mockPrismaService.customer.create.mockResolvedValue(newCustomer);
       mockPrismaService.order.create.mockResolvedValue(createdOrder);
+      mockPrismaService.order.findUnique.mockResolvedValue(createdOrder); // Fix: Mock findUnique to return this test's order
 
       expect(await service.create(dto as any)).toEqual(createdOrder);
       expect(mockPrismaService.customer.create).toHaveBeenCalledWith({
-        data: { name: 'New User', phone: undefined, address: undefined },
+        data: { name: 'Contact Name', phone: '1234567890', contactId: 101, userId: undefined },
       });
     });
 
@@ -94,9 +120,14 @@ describe('OrdersService', () => {
       mockPrismaService.$transaction.mockImplementation(async (cb) =>
         cb(mockPrismaService),
       );
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb(mockPrismaService),
+      );
+      // Ensure product mock exists
       mockPrismaService.product.findFirst.mockResolvedValue(null); // Not found
       mockPrismaService.product.create.mockResolvedValue(newProduct);
       mockPrismaService.order.create.mockResolvedValue(createdOrder);
+      mockPrismaService.order.findUnique.mockResolvedValue(createdOrder); // For re-fetch
 
       await service.create(dto as any);
 
@@ -120,7 +151,7 @@ describe('OrdersService', () => {
       };
       mockPrismaService.order.findUnique.mockResolvedValue(order);
 
-      const expected = { ...order, remainingBalance: 100 };
+      const expected = { ...order, remainingBalance: 100, paidAmount: 0, advanceAmount: 0 };
       expect(await service.findOne(1)).toEqual(expected);
     });
 

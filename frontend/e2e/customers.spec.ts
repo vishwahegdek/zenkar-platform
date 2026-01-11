@@ -12,13 +12,20 @@ test.describe('Customer Management Flow', () => {
   });
 
   const customerName = 'Test Customer ' + Date.now();
-  const customerPhone = '9876543210';
+  // Generate random 10 digit phone starting with 9
+  const customerPhone = '9' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
   const customerAddress = '123 Test St, Test City';
 
   test('Create, Search, and Edit Customer', async ({ page }) => {
     // 1. Navigate to Customers Page
     await page.goto('/customers');
     await expect(page).toHaveURL(/.*\/customers/);
+
+    // Handle Sync Warning Dialog (Accept to proceed with local save)
+    page.on('dialog', async dialog => {
+        console.log(`Dialog message: ${dialog.message()}`);
+        await dialog.accept();
+    });
 
     // 2. Click New Customer
     // Handling mobile/desktop view - "New Customer" text might be hidden on mobile but the link is there.
@@ -36,9 +43,16 @@ test.describe('Customer Management Flow', () => {
     // 4. Submit
     await page.click('button:has-text("Save Customer")');
     
+    // Enable console logging from browser
+    page.on('console', msg => console.log(`Browser Console: ${msg.text()}`));
+
     // 5. Verify Redirection and List
     await expect(page).toHaveURL(/\/customers$/);
     
+    // Verify customer appears in the list (before search)
+    // Retry a few times or wait for it
+    await expect(page.locator('body')).toContainText(customerName);
+
     // Search for the new customer
     await page.fill('input[placeholder="Search customers..."]', customerName);
     

@@ -7,6 +7,19 @@ const getHeaders = (options = {}) => {
   return headers;
 };
 
+const handleResponseError = async (res) => {
+    const errorText = await res.text();
+    let message = errorText || 'API Request Failed';
+    try {
+        const errorJson = JSON.parse(errorText);
+        message = errorJson.message || message;
+    } catch (e) {}
+    const error = new Error(message);
+    error.status = res.status;
+    error.response = { status: res.status, data: errorText }; 
+    throw error;
+};
+
 export const api = {
   get: async (url, options = {}) => {
     let fullUrl = `/api${url}`;
@@ -21,15 +34,7 @@ export const api = {
       ...options,
       headers: getHeaders(options),
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || errorText || 'API Request Failed');
-      } catch (e) {
-        throw new Error(errorText || 'API Request Failed');
-      }
-    }
+    if (!res.ok) await handleResponseError(res);
     return res.json();
   },
   post: async (url, data, options = {}) => {
@@ -41,15 +46,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || errorText || 'API Request Failed');
-      } catch (e) {
-        throw new Error(errorText || 'API Request Failed');
-      }
-    }
+    if (!res.ok) await handleResponseError(res);
     return res.json();
   },
   put: async (url, data, options = {}) => {
@@ -61,15 +58,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || errorText || 'API Request Failed');
-      } catch (e) {
-        throw new Error(errorText || 'API Request Failed');
-      }
-    }
+    if (!res.ok) await handleResponseError(res);
     return res.json();
   },
   delete: async (url, options = {}) => {
@@ -77,15 +66,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(options)
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || errorText || 'API Request Failed');
-      } catch (e) {
-        throw new Error(errorText || 'API Request Failed');
-      }
-    }
+    if (!res.ok) await handleResponseError(res);
     return res.json();
   },
   patch: async (url, data, options = {}) => {
@@ -97,15 +78,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.message || errorText || 'API Request Failed');
-      } catch (e) {
-        throw new Error(errorText || 'API Request Failed');
-      }
-    }
+    if (!res.ok) await handleResponseError(res);
     return res.json();
   }
 };

@@ -17,6 +17,11 @@ describe('ProductsController', () => {
       ],
     }).compile();
 
+    // Mock category defaults
+    mockPrismaService.productCategory.findFirst.mockResolvedValue({ id: 1, name: 'General' });
+    mockPrismaService.productCategory.create.mockResolvedValue({ id: 1, name: 'General' });
+    mockPrismaService.product.create.mockResolvedValue({ id: 1, name: 'Prod' });
+
     controller = module.get<ProductsController>(ProductsController);
   });
 
@@ -37,7 +42,7 @@ describe('ProductsController', () => {
 
       await controller.findAll(query);
 
-      expect(findAllSpy).toHaveBeenCalledWith(query);
+      expect(findAllSpy).toHaveBeenCalledWith(query, 1, 20, undefined);
     });
 
     it('should call service.findAll without query param', async () => {
@@ -48,13 +53,13 @@ describe('ProductsController', () => {
 
       await controller.findAll(undefined as unknown as string);
 
-      expect(findAllSpy).toHaveBeenCalledWith(undefined);
+      expect(findAllSpy).toHaveBeenCalledWith(undefined, 1, 20, undefined);
     });
   });
 
   describe('create', () => {
     it('should call service.create', async () => {
-      const dto = { name: 'New Prod', defaultUnitPrice: 10 };
+      const dto = { name: 'New Prod', defaultUnitPrice: 10, categoryId: 1 };
       const createSpy = jest.spyOn(
         module.get<ProductsService>(ProductsService),
         'create',

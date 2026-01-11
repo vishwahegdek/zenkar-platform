@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import Autocomplete from '../components/Autocomplete';
 import SmartSelector from '../components/SmartSelector';
 import CustomerForm from './CustomerForm';
+import ContactForm from '../components/ContactForm';
 import ProductForm from './ProductForm';
 import { toast } from 'react-hot-toast';
 
@@ -30,6 +31,7 @@ export default function OrderForm() {
   const [activeProductRowIndex, setActiveProductRowIndex] = useState(null);
   const [tempProductName, setTempProductName] = useState('');
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false); // New: Contact Edit
 
   // Handle Hash Change for Modals
   useEffect(() => {
@@ -259,7 +261,13 @@ export default function OrderForm() {
                     <div className="flex gap-2">
                         <button 
                             type="button"
-                            onClick={() => setIsEditCustomerModalOpen(true)}
+                            onClick={() => {
+                                if (formData.contactId) {
+                                  setIsContactModalOpen(true);
+                                } else {
+                                  setIsEditCustomerModalOpen(true);
+                                }
+                            }}
                             className="text-sm text-green-600 hover:text-green-800 font-medium px-3 py-1 hover:bg-green-100 rounded-lg transition-colors border border-transparent hover:border-green-200"
                         >
                             Edit
@@ -528,6 +536,31 @@ export default function OrderForm() {
              }}
           />
        </Modal>
+
+        {/* Edit Linked Contact Modal */}
+        <Modal
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+          title="Edit Linked Contact"
+        >
+           <ContactForm 
+              isModal={true}
+              initialData={{ 
+                 id: formData.contactId, 
+                 name: formData.customerName, 
+                 phone: formData.customerPhone 
+              }}
+              onSuccess={(updatedContact) => {
+                  setFormData({
+                     ...formData,
+                     customerName: updatedContact.name,
+                     customerPhone: updatedContact.phones?.[0]?.value || updatedContact.phone || formData.customerPhone
+                  });
+                  setIsContactModalOpen(false);
+              }}
+              onCancel={() => setIsContactModalOpen(false)}
+           />
+        </Modal>
 
        {/* New Product Modal */}
        <Modal

@@ -14,6 +14,10 @@ describe('ProductsService', () => {
       ],
     }).compile();
 
+    // Mock category
+    mockPrismaService.productCategory.findFirst.mockResolvedValue({ id: 1, name: 'General' });
+    mockPrismaService.productCategory.create.mockResolvedValue({ id: 1, name: 'General' });
+
     service = module.get<ProductsService>(ProductsService);
   });
 
@@ -25,12 +29,15 @@ describe('ProductsService', () => {
     it('should return all active products when no query provided', async () => {
       const result = [{ id: 1, name: 'P1', isDeleted: false }];
       mockPrismaService.product.findMany.mockResolvedValue(result);
+      mockPrismaService.product.count.mockResolvedValue(1);
 
-      expect(await service.findAll()).toBe(result);
+      expect(await service.findAll()).toEqual(expect.objectContaining({ data: result }));
       expect(mockPrismaService.product.findMany).toHaveBeenCalledWith({
         where: { isDeleted: false },
         take: 20,
+        skip: 0,
         orderBy: { name: 'asc' },
+        include: { category: true },
       });
     });
 
@@ -71,13 +78,14 @@ describe('ProductsService', () => {
 
   describe('create', () => {
     it('should create product', async () => {
-      const dto = { name: 'P1', defaultUnitPrice: 10 };
+      const dto = { name: 'P1', defaultUnitPrice: 10, categoryId: 1 };
       await service.create(dto);
       expect(mockPrismaService.product.create).toHaveBeenCalledWith({
         data: {
           name: dto.name,
           defaultUnitPrice: dto.defaultUnitPrice,
           notes: undefined,
+          categoryId: 1,
         },
       });
     });

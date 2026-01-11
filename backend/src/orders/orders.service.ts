@@ -166,14 +166,16 @@ export class OrdersService implements OnModuleInit {
           // Create Customer from Contact
           const contact = await tx.contact.findUnique({
             where: { id: contactId },
+            include: { phones: true },
           });
           if (!contact) {
             throw new BadRequestException('Invalid Contact ID provided.');
           }
+          const primaryPhone = contact.phones && contact.phones.length > 0 ? contact.phones[0].phone : contact.phone;
           const newCustomer = await tx.customer.create({
             data: {
               name: contact.name,
-              phone: contact.phone,
+              phone: primaryPhone,
               userId: userId,
               contactId: contactId,
             },
@@ -524,12 +526,14 @@ export class OrdersService implements OnModuleInit {
           // Create from Contact
           const contact = await tx.contact.findUnique({
             where: { id: contactId },
+            include: { phones: true },
           });
           if (contact) {
+            const primaryPhone = contact.phones && contact.phones.length > 0 ? contact.phones[0].phone : contact.phone;
             const newCustomer = await tx.customer.create({
               data: {
                 name: contact.name,
-                phone: contact.phone,
+                phone: primaryPhone,
                 userId,
                 contactId,
               },

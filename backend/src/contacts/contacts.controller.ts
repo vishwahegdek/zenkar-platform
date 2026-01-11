@@ -37,11 +37,13 @@ export class ContactsController {
     @Request() req,
     @Query('userId') userId?: string,
     @Query('query') query?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     // Universal Access: If userId param provided, filter by it. If not, return ALL.
     // We do NOT default to req.user.userId anymore.
     const targetUserId = userId ? Number(userId) : undefined;
-    return this.contactsService.findAll(targetUserId, { query });
+    return this.contactsService.findAll(targetUserId, { search: query, page, limit });
   }
 
   @Patch(':id')
