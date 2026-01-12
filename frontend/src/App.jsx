@@ -6,6 +6,8 @@ import OrderDetails from './pages/OrderDetails';
 import OrderForm from './pages/OrderForm';
 import ProductsList from './pages/ProductsList';
 import ProductForm from './pages/ProductForm';
+import PurchasesList from './pages/PurchasesList';
+import PurchaseForm from './pages/PurchaseForm';
 import CustomersList from './pages/CustomersList';
 import CustomerForm from './pages/CustomerForm';
 import ExpensesBook from './pages/ExpensesBook';
@@ -68,6 +70,9 @@ function App() {
               <Route path="products" element={<ProductsList />} />
               <Route path="products/new" element={<ProductForm />} />
               <Route path="products/:id/edit" element={<ProductForm />} />
+
+              <Route path="purchases" element={<PurchasesList />} />
+              <Route path="purchases/new" element={<PurchaseForm />} />
 
 
               <Route path="customers" element={<CustomersList />} />

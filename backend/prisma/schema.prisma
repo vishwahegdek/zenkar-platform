@@ -35,6 +35,8 @@ model User {
   updatedExpenses Expense[] @relation("ExpenseUpdatedBy")
   createdProducts Product[] @relation("ProductCreatedBy")
   updatedProducts Product[] @relation("ProductUpdatedBy")
+  createdPurchases Purchase[] @relation("PurchaseCreatedBy")
+  updatedPurchases Purchase[] @relation("PurchaseUpdatedBy")
 
   @@map("users")
 }
@@ -101,6 +103,12 @@ model Product {
   isDeleted   Boolean     @default(false) @map("is_deleted")
   deletedAt   DateTime?   @map("deleted_at")
   orderItems  OrderItem[]
+  
+  // Inventory
+  isPurchasable      Boolean @default(false) @map("is_inventory_tracked")
+  stockQuantity      Int     @default(0) @map("stock_quantity")
+  purchaseItems      PurchaseItem[]
+  inventoryTransactions InventoryTransaction[]
 
   @@map("products")
 }
@@ -262,7 +270,9 @@ model Contact {
   user           User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
   customers      Customer[]
   recipients     Recipient[]
+
   financeParties FinanceParty[]
+  purchases      Purchase[]
   phones         ContactPhone[]
 
   @@map("contacts")
@@ -403,4 +413,60 @@ model FinanceTransaction {
   party FinanceParty @relation(fields: [financePartyId], references: [id], onDelete: Cascade)
 
   @@map("finance_transactions")
+}
+
+model Purchase {
+  id           Int       @id @default(autoincrement())
+  supplierId   Int?      @map("supplier_id")
+  purchaseDate DateTime  @default(now()) @map("purchase_date") @db.Date
+  totalAmount  Decimal   @default(0) @map("total_amount") @db.Decimal(12, 2)
+  notes        String?
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  supplier     Contact?       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items        PurchaseItem[]
+  
+  createdById Int?  @map("created_by_id")
+  updatedById Int?  @map("updated_by_id")
+  createdBy   User? @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User? @relation("PurchaseUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int      @map("purchase_id")
+  productId  Int      @map("product_id")
+  quantity   Int
+  unitCost   Decimal  @default(0) @map("unit_cost") @db.Decimal(10, 2)
+  lineTotal  Decimal  @default(0) @map("line_total") @db.Decimal(12, 2)
+
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("purchase_items")
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  PRODUCTION
+}
+
+model InventoryTransaction {
+  id          Int      @id @default(autoincrement())
+  productId   Int      @map("product_id")
+  quantity    Int      // Positive for added, negative for removed
+  type        InventoryTransactionType
+  referenceId Int?     @map("reference_id") // OrderId, PurchaseId, etc.
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_transactions")
 }

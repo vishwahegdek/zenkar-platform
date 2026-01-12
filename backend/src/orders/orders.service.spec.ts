@@ -5,6 +5,7 @@ import { mockPrismaService } from '../prisma/prisma.service.mock';
 import { ProductsService } from '../products/products.service';
 import { CustomersService } from '../customers/customers.service';
 import { AuditService } from '../audit/audit.service';
+import { InventoryService } from '../inventory/inventory.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -19,6 +20,9 @@ describe('OrdersService', () => {
   const mockAuditService = {
     log: jest.fn(),
   };
+  const mockInventoryService = {
+    adjustStock: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,6 +32,7 @@ describe('OrdersService', () => {
         { provide: ProductsService, useValue: mockProductsService },
         { provide: CustomersService, useValue: mockCustomersService },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: InventoryService, useValue: mockInventoryService },
       ],
     }).compile();
 
@@ -158,6 +163,58 @@ describe('OrdersService', () => {
     it('should return null if order not found', async () => {
       mockPrismaService.order.findUnique.mockResolvedValue(null);
       expect(await service.findOne(999)).toBeNull();
+    });
+  });
+
+  describe('update', () => {
+    it('should update order status', async () => {
+      const id = 1;
+      const dto = { status: 'confirmed' };
+      const updatedOrder = { id, status: 'CONFIRMED' };
+
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb(mockPrismaService),
+      );
+      mockPrismaService.order.update.mockResolvedValue(updatedOrder);
+      // Re-fetch logic in update
+      mockPrismaService.order.findUnique.mockResolvedValue(updatedOrder);
+
+      expect(await service.update(id, dto as any)).toEqual(expect.objectContaining({ status: 'CONFIRMED' }));
+      expect(mockPrismaService.order.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id },
+        data: expect.objectContaining({ status: 'CONFIRMED' }),
+      }));
+    });
+  });
+
+  describe('addPayment', () => {
+    it('should add a payment to an order', async () => {
+      const orderId = 1;
+      const paymentData = {
+        amount: 50,
+        method: 'CASH',
+        date: new Date(),
+        note: 'Partial',
+      };
+      const createdPayment = { id: 101, orderId, ...paymentData };
+
+      mockPrismaService.payment.create.mockResolvedValue(createdPayment);
+
+      const result = await service.addPayment(
+        orderId,
+        paymentData.amount,
+        paymentData.method,
+        paymentData.date,
+        paymentData.note,
+      );
+
+      expect(result).toEqual(createdPayment);
+      expect(mockPrismaService.payment.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId,
+          amount: 50,
+        }),
+      });
     });
   });
 });

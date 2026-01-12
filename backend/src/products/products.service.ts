@@ -32,6 +32,7 @@ export class ProductsService {
         defaultUnitPrice: createProductDto.defaultUnitPrice,
         notes: createProductDto.notes,
         categoryId: categoryId,
+        isPurchasable: createProductDto.isPurchasable || false,
       },
     });
   }

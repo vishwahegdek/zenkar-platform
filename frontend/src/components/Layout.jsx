@@ -15,6 +15,7 @@ const PAGE_TITLES = {
   '/customers': 'Customer Directory',
   '/production': 'Production Floor',
   '/products': 'Inventory & Products',
+  '/purchases': 'Purchase History',
   '/expenses': 'Expense Book',
   '/finance': 'Finance Ledger',
   '/labour': 'Labour Management',

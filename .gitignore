@@ -43,3 +43,6 @@ frontend/playwright-report/
 frontend/test-results/
 backend/test-results/
 .latest_build_sha
+
+# Temp Processing
+temp_ledger_processing/

@@ -19,6 +19,8 @@ import { RecipientsModule } from './recipients/recipients.module';
 import { NoCacheInterceptor } from './common/interceptors/no-cache.interceptor';
 import { FinanceModule } from './finance/finance.module';
 import { ProductCategoriesModule } from './product-categories.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { PurchasesModule } from './purchases/purchases.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { ProductCategoriesModule } from './product-categories.module';
     LabourModule,
     FinanceModule,
     ProductCategoriesModule,
+    InventoryModule,
+    PurchasesModule,
   ],
   controllers: [AppController],
   providers: [

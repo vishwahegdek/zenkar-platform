@@ -22,6 +22,8 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
     defaultUnitPrice: 0,
     categoryId: '',
     notes: '',
+    isPurchasable: false,
+    stockQuantity: 0,
   });
 
   // Fetch Product Data if Edit
@@ -39,6 +41,8 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
         defaultUnitPrice: Number(product.defaultUnitPrice) || 0,
         categoryId: product.categoryId || '',
         notes: product.notes || '',
+        isPurchasable: product.isPurchasable || false,
+        stockQuantity: product.stockQuantity || 0,
       });
     } else if (categories && !isEdit) {
        // Default to "General"
@@ -131,6 +135,35 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
               value={formData.defaultUnitPrice} 
               onChange={e => setFormData({...formData, defaultUnitPrice: e.target.value})}
            />
+        </div>
+        
+        {/* Inventory Section */}
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+             <div className="flex justify-between items-center">
+                 <div className="flex items-center gap-2">
+                     <input
+                         id="trackInventory"
+                         type="checkbox"
+                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                         checked={formData.isPurchasable}
+                         onChange={(e) => setFormData(prev => ({ ...prev, isPurchasable: e.target.checked }))}
+                     />
+                     <label htmlFor="trackInventory" className="text-sm font-medium text-gray-900 select-none cursor-pointer">
+                         Is Purchasable? (Track Stock)
+                     </label>
+                 </div>
+                 {formData.isPurchasable && isEdit && (
+                     <div className="bg-white px-3 py-1.5 rounded-md border border-gray-200 text-xs shadow-sm">
+                         Current Stock: <span className="font-bold text-lg text-gray-900 ml-1">{formData.stockQuantity}</span>
+                     </div>
+                 )}
+             </div>
+             {formData.isPurchasable && (
+                 <p className="text-xs text-gray-500 ml-6">
+                     Stock increases when you create a <strong>Purchase</strong>. Stock decreases when you <strong>Deliver</strong> an order.
+                     Production Flow does <strong>NOT</strong> affect stock.
+                 </p>
+             )}
         </div>
 
         <div>

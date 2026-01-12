@@ -86,6 +86,7 @@ describe('ProductsService', () => {
           defaultUnitPrice: dto.defaultUnitPrice,
           notes: undefined,
           categoryId: 1,
+          isPurchasable: false,
         },
       });
     });

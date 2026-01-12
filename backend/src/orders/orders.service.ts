@@ -16,7 +16,9 @@ import {
   DeliveryStatus,
   PaymentStatus,
   ItemStatus,
+  InventoryTransactionType,
 } from '@prisma/client';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrdersService implements OnModuleInit {
@@ -27,6 +29,7 @@ export class OrdersService implements OnModuleInit {
     private productsService: ProductsService,
     private customersService: CustomersService,
     private auditService: AuditService,
+    private inventoryService: InventoryService,
   ) {}
 
   async onModuleInit() {
@@ -576,6 +579,24 @@ export class OrdersService implements OnModuleInit {
       });
 
       if (isDelivering) {
+          // Inventory: Find items NOT already delivered and deduct stock
+          const undeliveredItems = await tx.orderItem.findMany({
+            where: { orderId: id, status: { not: ItemStatus.DELIVERED } },
+          });
+
+          for (const item of undeliveredItems) {
+             if (item.productId) {
+                 await this.inventoryService.adjustStock(
+                   item.productId,
+                   -Number(item.quantity),
+                   InventoryTransactionType.SALE,
+                   id,
+                   `Order #${id} Delivered`,
+                   tx
+                 );
+             }
+          }
+
           await tx.orderItem.updateMany({
               where: { orderId: id },
               data: { status: ItemStatus.DELIVERED }
@@ -871,6 +892,23 @@ export class OrdersService implements OnModuleInit {
 
     if (!enumStatus)
       throw new BadRequestException(`Invalid Item Status: ${status}`);
+
+    // Inventory Hook: Check previous status
+    const currentItem = await this.prisma.orderItem.findUnique({
+        where: { id: itemId }
+    });
+
+    if (currentItem && enumStatus === ItemStatus.DELIVERED && currentItem.status !== ItemStatus.DELIVERED) {
+         if (currentItem.productId) {
+             await this.inventoryService.adjustStock(
+                 currentItem.productId,
+                 -Number(currentItem.quantity),
+                 InventoryTransactionType.SALE,
+                 currentItem.orderId || 0,
+                 `Item #${itemId} Delivered`
+             );
+         }
+    }
 
     const item = await this.prisma.orderItem.update({
       where: { id: itemId },

@@ -40,15 +40,20 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
             setIsSearching(true);
             try {
                 // 1. Search Primary Entity (Recipient or Customer)
-                const endpoint = type === 'recipient' ? '/recipients' : '/customers';
-                const resPrimary = await api.get(`${endpoint}?query=${query}`);
+                // If type is 'contact' or 'supplier', we skip straight to contact search (or handle differently)
                 
-                // Safe extraction: handle array or { data: [] } structure
-                const primaryData = Array.isArray(resPrimary) 
-                    ? resPrimary 
-                    : (resPrimary?.data && Array.isArray(resPrimary.data) ? resPrimary.data : []);
-                
-                setResults(primaryData);
+                let primaryData = [];
+                if (type !== 'supplier' && type !== 'contact') {
+                    const endpoint = type === 'recipient' ? '/recipients' : '/customers';
+                    const resPrimary = await api.get(`${endpoint}?query=${query}`);
+                    primaryData = Array.isArray(resPrimary) 
+                        ? resPrimary 
+                        : (resPrimary?.data && Array.isArray(resPrimary.data) ? resPrimary.data : []);
+                    
+                    setResults(primaryData);
+                } else {
+                    setResults([]); // No primary entity for generic contact/supplier
+                }
 
                 if (primaryData.length === 0) {
                      const resContacts = await api.get(`/contacts?query=${query}`); 

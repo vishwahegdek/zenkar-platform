@@ -9,7 +9,8 @@ import {
   BookOpen, 
   Briefcase, 
   LogOut,
-  Menu
+  Menu,
+  TrendingUp // Use TrendingUp or similar for Purchases if available, or just ShoppingCart
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -34,6 +35,7 @@ export function Sidebar({ className }) {
       items: [
         { name: "Production", path: "/production", icon: Factory },
         { name: "Products", path: "/products", icon: Package },
+        { name: "Purchases", path: "/purchases", icon: ShoppingCart },
       ]
     },
     {

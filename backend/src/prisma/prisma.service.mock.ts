@@ -69,6 +69,38 @@ export const mockPrismaService = {
      findFirst: jest.fn(),
      create: jest.fn(),
   },
+  labourer: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  attendance: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  expense: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  expenseCategory: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  labourSettlement: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
   $transaction: jest.fn((arg) => {
     if (Array.isArray(arg)) {
       return Promise.all(arg);

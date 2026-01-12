@@ -353,97 +353,102 @@ export default function OrderForm() {
       </div>
 
        {/* Items Card */}
-       <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0">
-         <div className="mb-4">
-           <h2 className="font-semibold text-gray-900">Order Items</h2>
-         </div>
+       <div className="bg-white md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Order Items</h2>
+          </div>
 
          <div className="space-y-4">
-           <div className="hidden md:grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase px-2">
-             <div className="col-span-4">Product</div>
-             <div className="col-span-4">Description</div>
-             <div className="col-span-1 text-center">Qty</div>
-             <div className="col-span-2 text-right">Price</div>
-             <div className="col-span-1 text-right">Total</div>
-           </div>
 
-            {formData.items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-gray-50 md:bg-transparent p-3 md:p-0 rounded-lg group text-sm border border-gray-100 md:border-none relative">
-                 {/* Mobile Delete Button (Top Right) */}
-                 <button onClick={() => removeItem(idx)} type="button" className="md:hidden absolute top-2 right-2 text-gray-400 hover:text-red-500 p-2">✕</button>
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+               <div className="col-span-5 md:col-span-5">Product</div>
+               <div className="col-span-2 md:col-span-1 text-center">Qty</div>
+               <div className="col-span-3 md:col-span-2 text-right">Price</div>
+               <div className="col-span-2 md:col-span-4 text-right">Total</div>
+            </div>
 
-                 <div className="md:col-span-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Product</label>
-                    
-                    {item.productId ? (
-                       <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                           <span className="font-medium text-gray-800 truncate pr-2">{item.productName}</span>
+             {formData.items.map((item, idx) => (
+               <div key={idx} className={`grid grid-cols-12 gap-2 items-start px-3 py-3 transition-colors ${
+                    idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+               }`}>
+                  {/* Product Column */}
+                  <div className="col-span-5 md:col-span-5 space-y-1">
+                     {item.productId ? (
+                        <div className="group relative">
+                           <div className="font-medium text-sm text-gray-900 truncate">{item.productName}</div>
                            <button 
                                type="button"
                                onClick={() => handleChangeProduct(idx)}
-                               className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide"
+                               className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
                            >
                                Change
                            </button>
                        </div>
-                    ) : (
-                       <Autocomplete 
-                          value={item.productName}
-                          placeholder="Product Name"
-                          endpoint="/products"
-                          displayKey="name"
-                          subDisplayKey="defaultUnitPrice"
-                          onChange={(val) => handleItemChange(idx, 'productName', val)}
-                          onCreate={(name) => {
-                              setTempProductName(name);
-                              activeProductRowIndexRef.current = idx;
-                              window.location.hash = 'new-product';
-                          }}
-                          onSelect={(p) => {
-                              handleProductSelect(idx, p);
-                          }}
-                       />
-                    )}
-                    {/* Validation Error Highlight Logic if needed, currently toast blocks save */}
-                 </div>
-                 <div className="md:col-span-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Description</label>
-                    <input type="text" placeholder="Description/Size" className="input-field"
-                       value={item.description || ''}
-                       onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                    />
-                 </div>
-                 
-                 <div className="grid grid-cols-3 gap-2 md:contents">
-                   <div className="md:col-span-1">
-                      <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Qty</label>
-                      <input type="number" placeholder="Qty" className="input-field text-center"
-                         value={item.quantity}
-                         onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                      />
-                   </div>
-                   <div className="md:col-span-2">
-                      <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Price</label>
-                      <input type="number" placeholder="Price" className="input-field text-right"
-                         value={item.unitPrice}
-                         onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                      />
-                   </div>
-                   <div className="md:col-span-1 flex flex-col md:flex-row items-end md:items-center justify-center md:justify-end gap-2 h-full md:h-10">
-                      <label className="text-xs font-semibold text-gray-500 mb-1 block md:hidden">Total</label>
-                      <span className="font-bold text-gray-900 md:font-medium">₹{item.lineTotal.toLocaleString()}</span>
-                      <button onClick={() => removeItem(idx)} type="button" className="hidden md:block text-gray-400 hover:text-red-500 transition-colors" title="Remove Item">×</button>
-                   </div>
-                 </div>
-              </div>
-            ))}
-         </div>
+                     ) : (
+                        <Autocomplete 
+                           value={item.productName}
+                           placeholder="Product Name"
+                           endpoint="/products"
+                           displayKey="name"
+                           subDisplayKey="defaultUnitPrice"
+                           onChange={(val) => handleItemChange(idx, 'productName', val)}
+                           onCreate={(name) => {
+                               setTempProductName(name);
+                               activeProductRowIndexRef.current = idx;
+                               window.location.hash = 'new-product';
+                           }}
+                           onSelect={(p) => {
+                               handleProductSelect(idx, p);
+                           }}
+                           className="text-sm"
+                        />
+                     )}
+                     <input type="text" placeholder="Description/Size" className="w-full text-xs text-gray-500 placeholder-gray-300 border-none p-0 focus:ring-0 bg-transparent"
+                        value={item.description || ''}
+                        onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                     />
+                  </div>
 
-         <div className="mt-6">
+                  {/* Quantity Column */}
+                  <div className="col-span-2 md:col-span-1">
+                     <input type="number" 
+                        className="w-full text-center text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                     />
+                  </div>
+
+                  {/* Price Column */}
+                  <div className="col-span-3 md:col-span-2">
+                     <input type="number" 
+                        className="w-full text-right text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        value={item.unitPrice}
+                        onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                     />
+                  </div>
+
+                  {/* Total Column + Remove */}
+                  <div className="col-span-2 md:col-span-4 flex flex-col md:flex-row items-end md:items-center justify-between gap-1">
+                     <div className="font-medium text-sm text-gray-900 text-right w-full md:w-auto">
+                        ₹{item.lineTotal.toLocaleString()}
+                     </div>
+                     <button 
+                        onClick={() => removeItem(idx)} 
+                        type="button" 
+                        className="text-gray-400 hover:text-red-500 p-1 -mr-2"
+                     >
+                        <span className="text-lg font-bold">×</span>
+                     </button>
+                  </div>
+               </div>
+             ))}
+          </div>
+
+          <div className="p-4 md:p-6">
             <button onClick={addItem} type="button" className="w-full md:w-auto text-sm text-primary font-medium hover:underline border border-dashed border-primary/30 p-2 rounded-lg bg-blue-50/50">+ Add Another Item</button>
-         </div>
+          </div>
 
-         <div className="mt-8 border-t border-gray-100 pt-8 flex justify-end">
+          <div className="border-t border-gray-100 p-4 md:p-6 flex justify-end">
            <div className="w-full md:w-64 space-y-3">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
