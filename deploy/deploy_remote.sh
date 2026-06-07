@@ -15,7 +15,7 @@ DATE_TAG=$(date +%Y%m%d-%H%M%S)
 
 # Configuration Variables
 if [ "$ENV" == "production" ]; then
-    PROJECT_DIR="/home/vishwa/zenkar-platform-production"
+    PROJECT_DIR="/home/vishwa/zenkar_platform_production"
     COMPOSE_FILE="deploy/production/docker-compose.yml"
     DB_CONTAINER="zenkar-db-prod"
     BACKEND_CONTAINER="zenkar-backend-prod"
