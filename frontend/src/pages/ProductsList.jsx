@@ -8,15 +8,19 @@ import ManageCategoriesModal from './ManageCategoriesModal';
 export default function ProductsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParam = searchParams.get('search') || '';
+  const categoryParam = searchParams.get('category') || '';
+
   const [searchTerm, setSearchTerm] = useState(searchParam);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(categoryParam);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   
   // Sync URL to Local on Mount/Back
   useEffect(() => {
     setSearchTerm(searchParam);
-  }, [searchParam]);
+    setSelectedCategoryId(categoryParam);
+  }, [searchParam, categoryParam]);
 
-  // Debounce URL update
+  // Debounce URL update for search
   useEffect(() => {
     const timer = setTimeout(() => {
         if (searchTerm !== searchParam) {
@@ -29,6 +33,21 @@ export default function ProductsList() {
     return () => clearTimeout(timer);
   }, [searchTerm, searchParam, setSearchParams]);
 
+  // Update URL for category (immediate)
+  const handleCategoryChange = (val) => {
+    setSelectedCategoryId(val);
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('category', val);
+    else next.delete('category');
+    setSearchParams(next, { replace: true });
+  };
+
+  // Fetch Categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['productCategories'],
+    queryFn: () => api.get('/product-categories'),
+  });
+
   const {
     data,
     fetchNextPage,
@@ -37,9 +56,15 @@ export default function ProductsList() {
     isLoading,
     isError
   } = useInfiniteQuery({
-    queryKey: ['products', searchParam],
+    queryKey: ['products', searchParam, selectedCategoryId],
     queryFn: async ({ pageParam = 1 }) => {
-        const res = await api.get('/products', { params: { query: searchParam, page: pageParam, limit: 20 } });
+        const params = { 
+            query: searchParam, 
+            page: pageParam, 
+            limit: 20,
+            categoryId: selectedCategoryId || undefined 
+        };
+        const res = await api.get('/products', { params });
         return res; // Assuming interceptor returns data
     },
     getNextPageParam: (lastPage) => {
@@ -88,7 +113,7 @@ export default function ProductsList() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+       <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row gap-3">
            <input 
               type="text" 
               placeholder="Search products..." 
@@ -96,6 +121,16 @@ export default function ProductsList() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
            />
+           <select 
+             value={selectedCategoryId} 
+             onChange={(e) => handleCategoryChange(e.target.value)}
+             className="w-full md:w-48 px-4 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+           >
+             <option value="">All Categories</option>
+             {categories.map(cat => (
+               <option key={cat.id} value={cat.id}>{cat.name}</option>
+             ))}
+           </select>
         </div>
 
         {/* Content Area */}

@@ -21,6 +21,8 @@ import { FinanceModule } from './finance/finance.module';
 import { ProductCategoriesModule } from './product-categories.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PurchasesModule } from './purchases/purchases.module';
+import { LedgerModule } from './ledger/ledger.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { PurchasesModule } from './purchases/purchases.module';
     ProductCategoriesModule,
     InventoryModule,
     PurchasesModule,
+    LedgerModule,
+    SuppliersModule,
   ],
   controllers: [AppController],
   providers: [

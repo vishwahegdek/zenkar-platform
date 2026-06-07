@@ -43,6 +43,9 @@ export function Sidebar({ className }) {
       items: [
         { name: "Expenses", path: "/expenses", icon: Receipt },
         { name: "Finance Book", path: "/finance", icon: BookOpen },
+        { name: "Ledger", path: "/ledger", icon: BookOpen },
+        { name: "Chart of Accounts", path: "/ledger-accounts", icon: BookOpen },
+        { name: "Balance Sheet", path: "/balance-sheet", icon: BookOpen },
       ]
     },
     {

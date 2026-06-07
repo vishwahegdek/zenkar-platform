@@ -22,6 +22,23 @@ export class CreatePurchaseItemDto {
   unitCost: number;
 }
 
+export class CreatePurchasePaymentDto {
+  @IsNumber()
+  amount: number;
+
+  @IsOptional()
+  @IsString()
+  method?: string;
+
+  @IsOptional()
+  @IsDateString()
+  date?: string;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
 export class CreatePurchaseDto {
   @IsOptional()
   @IsNumber()
@@ -31,12 +48,28 @@ export class CreatePurchaseDto {
   @IsDateString()
   purchaseDate?: string;
 
+  @IsOptional()
+  @IsString()
+  status?: string;
 
+  @IsOptional()
+  @IsNumber()
+  discount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  shippingCost?: number;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePurchaseItemDto)
   items: CreatePurchaseItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePurchasePaymentDto)
+  payments?: CreatePurchasePaymentDto[];
 
   @IsOptional()
   @IsString()

@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Req,
@@ -35,5 +37,21 @@ export class PurchasesController {
   @ApiOperation({ summary: 'Retrieve a specific purchase by ID' })
   findOne(@Param('id') id: string) {
     return this.purchasesService.findOne(+id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a purchase' })
+  update(
+    @Param('id') id: string,
+    @Body() updatePurchaseDto: any,
+    @Req() req,
+  ) {
+    return this.purchasesService.update(+id, updatePurchaseDto, req.user?.userId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a purchase' })
+  remove(@Param('id') id: string) {
+    return this.purchasesService.remove(+id);
   }
 }

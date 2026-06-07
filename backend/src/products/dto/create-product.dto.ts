@@ -16,7 +16,7 @@ export class CreateProductDto {
   notes?: string;
 
   @ApiProperty({ example: 1, description: 'Category ID' })
-  @IsNotEmpty()
+  @IsOptional()
   categoryId: number;
 
   @ApiPropertyOptional({ example: true, description: 'Track inventory for this product' })

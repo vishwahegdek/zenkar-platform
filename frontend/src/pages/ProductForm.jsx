@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { toast } from 'react-hot-toast';
 
-export default function ProductForm({ onSuccess, initialData, isModal = false }) {
+export default function ProductForm({ onSuccess, onCancel, initialData, isModal = false }) {
   const { id: paramId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -183,7 +183,9 @@ export default function ProductForm({ onSuccess, initialData, isModal = false })
            <button 
              type="button"
              onClick={() => {
-                 if (onSuccess) {
+                 if (onCancel) {
+                    onCancel();
+                 } else if (onSuccess) {
                     window.location.hash = ''; // Close modal by clearing hash
                  } else {
                     navigate('/products');

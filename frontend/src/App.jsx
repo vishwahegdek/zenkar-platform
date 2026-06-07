@@ -22,10 +22,14 @@ import LabourEntry from './pages/Labour/LabourEntry';
 import LabourManage from './pages/Labour/LabourManage';
 import LabourReport from './pages/Labour/LabourReport';
 import QuickSale from './pages/QuickSale';
+import BalanceInitializer from './pages/BalanceInitializer';
 import Login from './pages/Login';
 import CashflowDashboard from './pages/CashflowDashboard';
 import IncomeSheet from './pages/IncomeSheet';
 import AdminDashboard from './pages/AdminDashboard';
+import LedgerDashboard from './pages/LedgerDashboard';
+import LedgerAccounts from './pages/LedgerAccounts';
+import BalanceSheet from './pages/BalanceSheet';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -73,8 +77,7 @@ function App() {
 
               <Route path="purchases" element={<PurchasesList />} />
               <Route path="purchases/new" element={<PurchaseForm />} />
-
-
+              <Route path="purchases/:id/edit" element={<PurchaseForm />} />
               <Route path="customers" element={<CustomersList />} />
               <Route path="customers/new" element={<CustomerForm />} />
               <Route path="customers/:id/edit" element={<CustomerForm />} />
@@ -92,6 +95,10 @@ function App() {
 
               <Route path="contacts" element={<ContactsManager />} />
               <Route path="finance" element={<FinancePage />} />
+              <Route path="ledger" element={<LedgerDashboard />} />
+              <Route path="ledger-accounts" element={<LedgerAccounts />} />
+              <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="admin/initialize-balances" element={<BalanceInitializer />} />
               <Route path="labour" element={<LabourLayout />}>
                 <Route index element={<Navigate to="daily" replace />} />
                 <Route path="daily" element={<LabourEntry />} />

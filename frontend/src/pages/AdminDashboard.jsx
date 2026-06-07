@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -43,8 +44,8 @@ export default function AdminDashboard() {
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
             <h2 className="text-xl font-semibold mb-4">Users List</h2>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -101,6 +102,19 @@ export default function AdminDashboard() {
                     Create User
                 </button>
             </form>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md h-fit">
+            <h2 className="text-xl font-semibold mb-4">Financial Utilities</h2>
+            <p className="text-gray-600 mb-4 text-sm">
+                Initialize or adjust opening balances for ledger accounts (Assets, Liabilities, Equity). 
+                Use this carefully as it generates double-entry transactions against Opening Balance Equity.
+            </p>
+            <Link 
+                to="/admin/initialize-balances" 
+                className="inline-block w-full text-center bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition font-medium"
+            >
+                Initialize Opening Balances
+            </Link>
         </div>
       </div>
     </div>

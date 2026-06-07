@@ -17,6 +17,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
 
   customers      Customer[]
+  suppliers      Supplier[]
   contacts       Contact[] // Relation - user can own contacts
   // labourers Labourer[] // Removed for shared access
   recipients     Recipient[]
@@ -37,6 +38,8 @@ model User {
   updatedProducts Product[] @relation("ProductUpdatedBy")
   createdPurchases Purchase[] @relation("PurchaseCreatedBy")
   updatedPurchases Purchase[] @relation("PurchaseUpdatedBy")
+  createdPurchasePayments PurchasePayment[] @relation("PurchasePaymentCreatedBy")
+  updatedPurchasePayments PurchasePayment[] @relation("PurchasePaymentUpdatedBy")
 
   @@map("users")
 }
@@ -56,7 +59,29 @@ model Customer {
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
+  ledgerAccounts LedgerAccount[]
+
   @@map("customers")
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    Int?     @map("user_id")
+  contactId Int?     @map("contact_id") // Optional link to Contact
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  purchases Purchase[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  ledgerAccounts LedgerAccount[]
+
+  @@map("suppliers")
 }
 
 model Image {
@@ -269,11 +294,13 @@ model Contact {
 
   user           User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
   customers      Customer[]
+  suppliers      Supplier[]
   recipients     Recipient[]
 
   financeParties FinanceParty[]
-  purchases      Purchase[]
   phones         ContactPhone[]
+
+  ledgerAccounts LedgerAccount[]
 
   @@map("contacts")
 }
@@ -300,6 +327,8 @@ model Recipient {
   user     User?     @relation(fields: [userId], references: [id], onDelete: Restrict)
   expenses Expense[]
 
+  ledgerAccounts LedgerAccount[]
+
   @@unique([userId, contactId, name]) // Flexible uniqueness
   @@map("recipients")
 }
@@ -317,6 +346,7 @@ model Labourer {
   expenses   Expense[]
 
   settlements LabourSettlement[]
+  ledgerAccounts LedgerAccount[]
 
   @@map("labourers")
 }
@@ -367,6 +397,7 @@ model Expense {
   amount      Decimal  @db.Decimal(12, 2)
   date        DateTime @db.Date // Changed to date only
   description String?
+  method      String   @default("CASH")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -408,6 +439,7 @@ model FinanceTransaction {
   type           String // BORROWED, REPAID, LENT, COLLECTED
   date           DateTime @db.Date
   note           String?
+  method         String   @default("CASH")
   createdAt      DateTime @default(now()) @map("created_at")
 
   party FinanceParty @relation(fields: [financePartyId], references: [id], onDelete: Cascade)
@@ -415,18 +447,28 @@ model FinanceTransaction {
   @@map("finance_transactions")
 }
 
+enum PurchaseStatus {
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
 model Purchase {
   id           Int       @id @default(autoincrement())
   supplierId   Int?      @map("supplier_id")
   purchaseDate DateTime  @default(now()) @map("purchase_date") @db.Date
+  status       PurchaseStatus @default(RECEIVED)
   totalAmount  Decimal   @default(0) @map("total_amount") @db.Decimal(12, 2)
+  discount     Decimal   @default(0) @db.Decimal(12, 2)
+  shippingCost Decimal   @default(0) @map("shipping_cost") @db.Decimal(12, 2)
   notes        String?
   
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  supplier     Contact?       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  supplier     Supplier?      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   items        PurchaseItem[]
+  payments     PurchasePayment[]
   
   createdById Int?  @map("created_by_id")
   updatedById Int?  @map("updated_by_id")
@@ -450,6 +492,25 @@ model PurchaseItem {
   @@map("purchase_items")
 }
 
+model PurchasePayment {
+  id          Int      @id @default(autoincrement())
+  purchaseId  Int      @map("purchase_id")
+  amount      Decimal  @db.Decimal(12, 2)
+  method      String   @default("CASH")
+  date        DateTime @default(now()) @db.Date
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  createdById Int?     @map("created_by_id")
+  updatedById Int?     @map("updated_by_id")
+  createdBy   User?    @relation("PurchasePaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("PurchasePaymentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@map("purchase_payments")
+}
+
 enum InventoryTransactionType {
   PURCHASE
   SALE
@@ -469,4 +530,58 @@ model InventoryTransaction {
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("inventory_transactions")
+}
+
+model BusinessReport {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @default(now()) @db.Date
+  type      String   @default("DAILY_PULSE")
+  summary   Json
+  insights  Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("business_reports")
+}
+
+model LedgerAccount {
+  id          Int         @id @default(autoincrement())
+  name        String
+  
+  // Standard Accounting Types: 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'
+  type        String      
+  // Zenkar specific subtypes: 'CASH', 'CUSTOMER', 'SUPPLIER', 'LABOURER', 'GENERAL_EXPENSE', 'WAGE_EXPENSE', 'SALES_REVENUE'
+  subType     String?     
+  // Polymorphic links to existing Zenkar Entities (optional)
+  customerId  Int?        @map("customer_id")
+  contactId   Int?        @map("contact_id")
+  supplierId  Int?        @map("supplier_id")
+  labourerId  Int?        @map("labourer_id")
+  recipientId Int?        @map("recipient_id")
+  entries     LedgerEntry[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  // Relations
+  customer    Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  contact     Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  supplier    Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  labourer    Labourer?   @relation(fields: [labourerId], references: [id], onDelete: SetNull)
+  recipient   Recipient?  @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  @@map("ledger_accounts")
+}
+
+model LedgerEntry {
+  id              Int         @id @default(autoincrement())
+  transactionId   String      @map("transaction_id") // A UUID grouping the debit and credit lines of a single event
+  accountId       Int         @map("account_id")
+  date            DateTime    @db.Date
+  
+  debit           Decimal     @default(0) @db.Decimal(12, 2)
+  credit          Decimal     @default(0) @db.Decimal(12, 2)
+  
+  // 'ORDER', 'PAYMENT', 'PURCHASE', 'EXPENSE', 'LABOUR_SETTLEMENT', 'MANUAL'
+  sourceType      String      @map("source_type")
+  sourceId        Int?        @map("source_id") // The ID of the original record (e.g., Order ID)
+  note            String?
+  account         LedgerAccount @relation(fields: [accountId], references: [id])
+  createdAt       DateTime      @default(now()) @map("created_at")
+  @@map("ledger_entries")
 }

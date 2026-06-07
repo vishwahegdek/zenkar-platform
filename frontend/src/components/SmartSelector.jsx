@@ -43,8 +43,12 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                 // If type is 'contact' or 'supplier', we skip straight to contact search (or handle differently)
                 
                 let primaryData = [];
-                if (type !== 'supplier' && type !== 'contact') {
-                    const endpoint = type === 'recipient' ? '/recipients' : '/customers';
+                if (type !== 'contact') {
+                    let endpoint = '/customers';
+                    if (type === 'recipient') endpoint = '/recipients';
+                    if (type === 'supplier') endpoint = '/suppliers';
+                    if (type === 'product') endpoint = '/products';
+                    
                     const resPrimary = await api.get(`${endpoint}?query=${query}`);
                     primaryData = Array.isArray(resPrimary) 
                         ? resPrimary 
@@ -52,10 +56,10 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                     
                     setResults(primaryData);
                 } else {
-                    setResults([]); // No primary entity for generic contact/supplier
+                    setResults([]); // No primary entity for generic contact
                 }
 
-                if (primaryData.length === 0) {
+                if (primaryData.length === 0 && type !== 'product' && type !== 'supplier') {
                      const resContacts = await api.get(`/contacts?query=${query}`); 
                      
                      const allContacts = Array.isArray(resContacts) 
@@ -90,6 +94,7 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
             contactId: source === 'contact' ? item.id : (item.contactId || null),
             phone: item.phone || '',
             address: item.address || '',
+            defaultUnitPrice: item.defaultUnitPrice || 0,
             source
         });
     };
@@ -133,8 +138,8 @@ const SmartSelector = ({ label, type, onSelect, initialValue = '', initialId = n
                             {/* Primary Results */}
                             {results.length > 0 && (
                                 <>
-                                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 bg-gray-50">
-                                        Existing {type === 'recipient' ? 'Recipients' : 'Customers'}
+                                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 bg-gray-50 uppercase tracking-wider">
+                                        Existing {type}s
                                     </div>
                                     {results.map((item) => (
                                         <div

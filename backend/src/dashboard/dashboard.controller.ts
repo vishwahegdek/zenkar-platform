@@ -33,7 +33,27 @@ export class DashboardController {
   @ApiOperation({ summary: 'Get cashflow timeline and summary' })
   @ApiQuery({ name: 'from', required: true })
   @ApiQuery({ name: 'to', required: true })
-  getCashflow(@Query('from') from: string, @Query('to') to: string) {
-    return this.dashboardService.getCashflow(from, to);
+  @ApiQuery({ name: 'q', required: false, description: 'Search query' })
+  getCashflow(
+    @Query('from') from: string, 
+    @Query('to') to: string,
+    @Query('q') q?: string
+  ) {
+    return this.dashboardService.getCashflow(from, to, q);
   }
+
+  @Get('chart')
+  @ApiOperation({ summary: 'Get aggregated chart data' })
+  @ApiQuery({ name: 'from', required: true })
+  @ApiQuery({ name: 'to', required: true })
+  @ApiQuery({ name: 'timeframe', required: true, enum: ['day', 'week', 'month'] })
+  getChartData(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('timeframe') timeframe: 'day' | 'week' | 'month'
+  ) {
+    console.log('Fetching chart data', { from, to, timeframe });
+    return this.dashboardService.getChartData(from, to, timeframe);
+  }
+
 }

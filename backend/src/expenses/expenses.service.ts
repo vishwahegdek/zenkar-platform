@@ -1,10 +1,14 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { LedgerService } from '../ledger/ledger.service';
 
 @Injectable()
 export class ExpensesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ledgerService: LedgerService,
+  ) {}
 
   async createCategory(name: string) {
     try {
@@ -35,6 +39,7 @@ export class ExpensesService {
       recipientName?: string;
       contactId?: number;
       recipientId?: number;
+      paymentMethod?: string;
       date?: Date | string;
     },
   ) {
@@ -62,21 +67,60 @@ export class ExpensesService {
       recipientId = recipient.id;
     }
 
-    return this.prisma.expense.create({
+    const expense = await this.prisma.expense.create({
       data: {
         amount: data.amount,
         categoryId: data.categoryId,
         description: data.description,
         recipientId: recipientId,
+        method: data.paymentMethod || 'CASH',
         date: data.date ? new Date(data.date) : new Date(),
         createdById: userId,
       },
       include: {
         category: true,
-        recipient: true,
+        recipient: {
+          include: { contact: true },
+        },
         labourer: true,
       },
     });
+
+    // Ledger Entry for Expense
+    try {
+      const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+      let debitAccountId: number | null = null;
+
+      // General category expense account
+      let expenseAccount = await this.prisma.ledgerAccount.findFirst({
+        where: { name: `Expense Category: ${expense.category.name}` },
+      });
+        if (!expenseAccount) {
+          expenseAccount = await this.prisma.ledgerAccount.create({
+            data: {
+              name: `Expense Category: ${expense.category.name}`,
+              type: 'EXPENSE',
+              subType: 'GENERAL_EXPENSE',
+            },
+          });
+        }
+        debitAccountId = expenseAccount.id;
+
+      await this.ledgerService.recordDoubleEntry({
+        transactionId: `EXPENSE-${expense.id}`,
+        sourceType: 'EXPENSE',
+        sourceId: expense.id,
+        date: expense.date,
+        debitAccountId,
+        creditAccountId: cashAccount.id,
+        amount: Number(expense.amount),
+        note: expense.description || `Expense of ${expense.amount} under ${expense.category.name}`,
+      });
+    } catch (err) {
+      console.error(`Failed to record ledger entries for Expense #${expense.id}: ${err.message}`);
+    }
+
+    return expense;
   }
 
   async findAllExpenses(params?: {
@@ -140,6 +184,7 @@ export class ExpensesService {
         ? { connect: { id: data.categoryId } }
         : undefined,
       description: data.description,
+      method: data.paymentMethod,
       date: data.date ? new Date(data.date) : undefined,
       recipient: recipientId ? { connect: { id: recipientId } } : undefined,
       updatedBy: userId ? { connect: { id: userId } } : undefined,
@@ -150,15 +195,53 @@ export class ExpensesService {
       (key) => updateData[key] === undefined && delete updateData[key],
     );
 
-    return this.prisma.expense.update({
+    const updated = await this.prisma.expense.update({
       where: { id },
       data: updateData,
       include: {
         category: true,
-        recipient: true,
+        recipient: {
+          include: { contact: true },
+        },
         labourer: true,
       },
     });
+
+    // Ledger update (Delete old and write new)
+    try {
+      await this.ledgerService.deleteEntriesForSource('EXPENSE', id);
+      const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+      let debitAccountId: number | null = null;
+
+      let expenseAccount = await this.prisma.ledgerAccount.findFirst({
+        where: { name: `Expense Category: ${updated.category.name}` },
+      });
+        if (!expenseAccount) {
+          expenseAccount = await this.prisma.ledgerAccount.create({
+            data: {
+              name: `Expense Category: ${updated.category.name}`,
+              type: 'EXPENSE',
+              subType: 'GENERAL_EXPENSE',
+            },
+          });
+        }
+        debitAccountId = expenseAccount.id;
+
+      await this.ledgerService.recordDoubleEntry({
+        transactionId: `EXPENSE-${updated.id}`,
+        sourceType: 'EXPENSE',
+        sourceId: updated.id,
+        date: updated.date,
+        debitAccountId,
+        creditAccountId: cashAccount.id,
+        amount: Number(updated.amount),
+        note: updated.description || `Expense of ${updated.amount} under ${updated.category.name}`,
+      });
+    } catch (err) {
+      console.error(`Failed to update ledger entries for Expense #${id}: ${err.message}`);
+    }
+
+    return updated;
   }
 
   async removeExpense(id: number, userId?: number) {
@@ -172,8 +255,16 @@ export class ExpensesService {
     // If deleted, record is gone.
     // I'll just keep standard delete and maybe log it if AuditService was used here (it's not injected yet).
     // Since AuditService isn't injected, I'll just ignore userId for remove unless I switch to soft delete.
-    return this.prisma.expense.delete({
+    const deleted = await this.prisma.expense.delete({
       where: { id },
     });
+
+    try {
+      await this.ledgerService.deleteEntriesForSource('EXPENSE', id);
+    } catch (err) {
+      console.error(`Failed to delete ledger entries for Expense #${id}: ${err.message}`);
+    }
+
+    return deleted;
   }
 }

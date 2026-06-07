@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LedgerService } from '../ledger/ledger.service';
 
 @Injectable()
 export class LabourService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ledgerService: LedgerService,
+  ) {}
 
   async getDailyView(date: Date) {
     // 1. Get all labourers (Active only)
@@ -393,7 +397,7 @@ export class LabourService {
     if (!stat) throw new Error('Labourer stats not found');
 
     // 2. Create Settlement Snapshot
-    return this.prisma.labourSettlement.create({
+    const settlement = await this.prisma.labourSettlement.create({
       data: {
         labourerId,
         settlementDate,
@@ -406,6 +410,56 @@ export class LabourService {
         isCarryForward,
       },
     });
+
+    // Record ledger entries for settlement
+    try {
+      const labourer = await this.prisma.labourer.findUnique({
+        where: { id: labourerId },
+      });
+      if (labourer) {
+        const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+          'LABOURER',
+          labourerId,
+          labourer.name,
+        );
+        const wageExpenseAccount = await this.ledgerService.getSystemAccount('WAGE_EXPENSE');
+        const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+
+        const transactionId = `SETTLEMENT-${settlement.id}`;
+
+        // Step 1: Recognize what they earned (totalPayable)
+        if (Number(settlement.totalPayable) > 0) {
+          await this.ledgerService.recordDoubleEntry({
+            transactionId,
+            sourceType: 'LABOUR_SETTLEMENT',
+            sourceId: settlement.id,
+            date: settlement.settlementDate,
+            debitAccountId: wageExpenseAccount.id,
+            creditAccountId: labourerAccount.id,
+            amount: Number(settlement.totalPayable),
+            note: `Wage Expense accrued for labourer ${labourer.name} up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
+          });
+        }
+
+        // Step 2: Recognize what we paid them (totalPaid)
+        if (Number(settlement.totalPaid) > 0) {
+          await this.ledgerService.recordDoubleEntry({
+            transactionId: `${transactionId}-PAYMENT`,
+            sourceType: 'LABOUR_SETTLEMENT',
+            sourceId: settlement.id,
+            date: settlement.settlementDate,
+            debitAccountId: labourerAccount.id,
+            creditAccountId: cashAccount.id,
+            amount: Number(settlement.totalPaid),
+            note: `Payment made during settlement up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to record ledger entries for Labour Settlement #${settlement.id}: ${err.message}`);
+    }
+
+    return settlement;
   }
 
   async getSettlements(labourerId: number) {

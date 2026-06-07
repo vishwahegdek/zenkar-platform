@@ -118,7 +118,7 @@ export class DashboardService {
     });
   }
 
-  async getCashflow(fromStr: string, toStr: string) {
+  async getCashflow(fromStr: string, toStr: string, q?: string) {
     const from = new Date(fromStr + 'T00:00:00.000Z');
     const to = new Date(toStr + 'T23:59:59.999Z');
 
@@ -140,7 +140,7 @@ export class DashboardService {
       include: { party: { include: { contact: true } } },
     });
 
-    const entries: any[] = [];
+    let entries: any[] = [];
 
     // Process Payments (Inflow)
     payments.forEach((p) => {
@@ -151,7 +151,8 @@ export class DashboardService {
         amount: Number(p.amount),
         type: 'IN',
         category: 'Income',
-        description: `Order #${p.order?.orderNo || p.orderId} - ${p.order?.customer?.name || 'Customer'}`,
+        description: `Order #${p.order?.orderNo || p.orderId}`,
+        party: p.order?.customer?.name || 'Customer',
         source: 'Payment',
       });
     });
@@ -165,7 +166,8 @@ export class DashboardService {
         amount: Number(e.amount),
         type: 'OUT',
         category: e.category?.name || 'Expense',
-        description: e.description || `Expense to ${e.recipient?.name || e.labourer?.name || 'Unknown'}`,
+        description: e.description || 'Expense',
+        party: e.recipient?.name || e.labourer?.name || 'Unknown',
         source: 'Expense',
       });
     });
@@ -205,13 +207,25 @@ export class DashboardService {
         amount: Number(tx.amount),
         type,
         category,
-        description: `${tx.type}: ${partyName}${tx.note ? ` (${tx.note})` : ''}`,
+        description: `${tx.type}${tx.note ? ` (${tx.note})` : ''}`,
+        party: partyName,
         source: 'Finance',
       });
     });
 
+    // Filter if query is present
+    if (q) {
+      const lowerQ = q.toLowerCase();
+      entries = entries.filter((e) => 
+        e.category.toLowerCase().includes(lowerQ) ||
+        e.description.toLowerCase().includes(lowerQ) ||
+        e.party.toLowerCase().includes(lowerQ) ||
+        e.source.toLowerCase().includes(lowerQ) ||
+        e.amount.toString().includes(lowerQ)
+      );
+    }
+
     // Sort by time (latest first for display, but maybe earliest first for timeline?)
-    // User asked "what came in/out why". Usually latest at top is good for dash.
     entries.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
     const summary = entries.reduce(
@@ -231,5 +245,73 @@ export class DashboardService {
       },
       range: { from: fromStr, to: toStr },
     };
+  }
+
+  async getChartData(fromStr: string, toStr: string, timeframe: 'day' | 'week' | 'month') {
+    try {
+      const from = new Date(fromStr + 'T00:00:00.000Z');
+      const to = new Date(toStr + 'T23:59:59.999Z');
+
+      console.log('Fetching chart data internal', { from, to, timeframe });
+
+      const [payments, expenses, financeTxs] = await Promise.all([
+        this.prisma.payment.findMany({
+          where: { date: { gte: from, lte: to } },
+        }),
+        this.prisma.expense.findMany({
+          where: { date: { gte: from, lte: to } },
+        }),
+        this.prisma.financeTransaction.findMany({
+          where: { date: { gte: from, lte: to } },
+        }),
+      ]);
+
+      const buckets = new Map<string, { income: number; expense: number }>();
+
+      const getBucketKey = (date: Date) => {
+        const d = new Date(date);
+        if (timeframe === 'month') return d.toISOString().slice(0, 7); // YYYY-MM
+        if (timeframe === 'week') {
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+          const monday = new Date(d);
+          monday.setDate(diff);
+          return monday.toISOString().slice(0, 10); // YYYY-MM-DD (Monday)
+        }
+        return d.toISOString().slice(0, 10); // YYYY-MM-DD
+      };
+
+      const addToBucket = (date: Date, amount: number, type: 'income' | 'expense') => {
+        const key = getBucketKey(date);
+        if (!buckets.has(key)) buckets.set(key, { income: 0, expense: 0 });
+        const bucket = buckets.get(key);
+        if (type === 'income') bucket!.income += amount;
+        else bucket!.expense += amount;
+      };
+
+      payments.forEach(p => addToBucket(p.date, Number(p.amount), 'income'));
+      expenses.forEach(e => addToBucket(e.date, Number(e.amount), 'expense'));
+      
+      financeTxs.forEach(tx => {
+        const amount = Number(tx.amount);
+        if (['BORROWED', 'COLLECTED'].includes(tx.type)) addToBucket(tx.date, amount, 'income');
+        else if (['LENT', 'REPAID'].includes(tx.type)) addToBucket(tx.date, amount, 'expense');
+      });
+
+      const result = Array.from(buckets.entries())
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      
+      return result;
+    } catch (e) {
+      console.error('Chart Error:', e);
+      const fs = require('fs');
+      try {
+        fs.appendFileSync('debug_error.log', `Error in getChartData: ${e.stack}\n`);
+      } catch (logErr) {
+        console.error('Failed to write to debug_error.log', logErr);
+      }
+      throw e;
+    }
   }
 }

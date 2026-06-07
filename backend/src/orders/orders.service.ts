@@ -19,6 +19,7 @@ import {
   InventoryTransactionType,
 } from '@prisma/client';
 import { InventoryService } from '../inventory/inventory.service';
+import { LedgerService } from '../ledger/ledger.service';
 
 @Injectable()
 export class OrdersService implements OnModuleInit {
@@ -30,6 +31,7 @@ export class OrdersService implements OnModuleInit {
     private customersService: CustomersService,
     private auditService: AuditService,
     private inventoryService: InventoryService,
+    private ledgerService: LedgerService,
   ) {}
 
   async onModuleInit() {
@@ -268,6 +270,49 @@ export class OrdersService implements OnModuleInit {
         totalAmount: result.totalAmount,
       });
     }
+
+    // Ledger entries
+    try {
+      const customerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+        'CUSTOMER',
+        result.customerId!,
+        result.customer?.name || 'Walk-In',
+      );
+      const salesRevenueAccount = await this.ledgerService.getSystemAccount('SALES_REVENUE');
+      const isConfirmedOrHigher = result.status === OrderStatus.CONFIRMED || result.status === OrderStatus.DELIVERED || result.status === OrderStatus.CLOSED;
+      if (isConfirmedOrHigher) {
+        await this.ledgerService.recordDoubleEntry({
+          transactionId: `ORDER-${result.id}`,
+          sourceType: 'ORDER',
+          sourceId: result.id,
+          date: result.orderDate,
+          debitAccountId: customerAccount.id,
+          creditAccountId: salesRevenueAccount.id,
+          amount: Number(result.totalAmount) - Number(result.discount || 0),
+          note: `Order #${result.id} created for customer ${result.customer?.name || 'Walk-In'}`,
+        });
+      }
+
+      // Record any payments created during order creation
+      if (result.payments && result.payments.length > 0) {
+        const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+        for (const p of result.payments) {
+          await this.ledgerService.recordDoubleEntry({
+            transactionId: `PAYMENT-${p.id}`,
+            sourceType: 'PAYMENT',
+            sourceId: p.id,
+            date: p.date,
+            debitAccountId: cashAccount.id,
+            creditAccountId: customerAccount.id,
+            amount: Number(p.amount),
+            note: p.note || `Payment of ${p.amount} received for Order #${result.id}`,
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Failed to record ledger entries for Order #${result.id}: ${err.message}`);
+    }
+
     return result;
   }
 
@@ -641,6 +686,33 @@ export class OrdersService implements OnModuleInit {
         status: dto.status,
       });
     }
+
+    // Ledger update (Delete old and write new)
+    try {
+      await this.ledgerService.deleteEntriesForSource('ORDER', id);
+      const customerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+        'CUSTOMER',
+        result.customerId!,
+        result.customer?.name || 'Walk-In',
+      );
+      const salesRevenueAccount = await this.ledgerService.getSystemAccount('SALES_REVENUE');
+      const isConfirmedOrHigher = result.status === OrderStatus.CONFIRMED || result.status === OrderStatus.DELIVERED || result.status === OrderStatus.CLOSED;
+      if (isConfirmedOrHigher) {
+        await this.ledgerService.recordDoubleEntry({
+          transactionId: `ORDER-${result.id}`,
+          sourceType: 'ORDER',
+          sourceId: result.id,
+          date: result.orderDate,
+          debitAccountId: customerAccount.id,
+          creditAccountId: salesRevenueAccount.id,
+          amount: Number(result.totalAmount) - Number(result.discount || 0),
+          note: `Order #${result.id} updated/confirmed for customer ${result.customer?.name || 'Walk-In'}`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to update ledger entries for Order #${id}: ${err.message}`);
+    }
+
     return result;
   }
 
@@ -668,6 +740,35 @@ export class OrdersService implements OnModuleInit {
         amount,
       });
     }
+
+    // Ledger payment entry
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { customer: true },
+      });
+      if (order) {
+        const customerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+          'CUSTOMER',
+          order.customerId!,
+          order.customer?.name || 'Walk-In',
+        );
+        const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+        await this.ledgerService.recordDoubleEntry({
+          transactionId: `PAYMENT-${payment.id}`,
+          sourceType: 'PAYMENT',
+          sourceId: payment.id,
+          date: payment.date,
+          debitAccountId: cashAccount.id,
+          creditAccountId: customerAccount.id,
+          amount: Number(payment.amount),
+          note: payment.note || `Payment of ${payment.amount} received for Order #${orderId}`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to record payment ledger entry for Payment #${payment.id}: ${err.message}`);
+    }
+
     return payment;
   }
 
@@ -682,6 +783,13 @@ export class OrdersService implements OnModuleInit {
     }[],
     userId?: number,
   ) {
+    // Get existing payments to delete their ledger entries later
+    const existingPayments = await this.prisma.payment.findMany({
+      where: { orderId },
+      select: { id: true },
+    });
+    const existingPaymentIds = existingPayments.map((p) => p.id);
+
     const result = await this.prisma.$transaction(async (tx) => {
       // 1. Get existing payment IDs
       const existing = await tx.payment.findMany({
@@ -732,6 +840,49 @@ export class OrdersService implements OnModuleInit {
         action: 'SYNC_PAYMENTS',
       });
     }
+
+    // Ledger update for all synced payments
+    try {
+      // Clear old entries
+      for (const pid of existingPaymentIds) {
+        await this.ledgerService.deleteEntriesForSource('PAYMENT', pid);
+      }
+
+      // Re-record entries for current payments
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { customer: true },
+      });
+      if (order) {
+        const customerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+          'CUSTOMER',
+          order.customerId!,
+          order.customer?.name || 'Walk-In',
+        );
+        const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+
+        const allPayments = await this.prisma.payment.findMany({
+          where: { orderId },
+        });
+
+        for (const p of allPayments) {
+          await this.ledgerService.recordDoubleEntry({
+            transactionId: `PAYMENT-${p.id}`,
+            sourceType: 'PAYMENT',
+            sourceId: p.id,
+            date: p.date,
+            debitAccountId: cashAccount.id,
+            creditAccountId: customerAccount.id,
+            amount: Number(p.amount),
+            note: p.note || `Payment of ${p.amount} received for Order #${orderId}`,
+          });
+        }
+      }
+    } catch (err) {
+      this.ledgerService.deleteEntriesForSource('PAYMENT', 0).catch(() => {}); // Dummy to make catch safe
+      this.logger.error(`Failed to sync payment ledger entries for Order #${orderId}: ${err.message}`);
+    }
+
     return result;
   }
 
@@ -743,6 +894,21 @@ export class OrdersService implements OnModuleInit {
     if (userId) {
       await this.auditService.log(userId, 'DELETE', 'Order', id);
     }
+
+    // Ledger deletion
+    try {
+      await this.ledgerService.deleteEntriesForSource('ORDER', id);
+
+      const payments = await this.prisma.payment.findMany({
+        where: { orderId: id },
+      });
+      for (const p of payments) {
+        await this.ledgerService.deleteEntriesForSource('PAYMENT', p.id);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to remove ledger entries for Order #${id}: ${err.message}`);
+    }
+
     return result;
   }
 
