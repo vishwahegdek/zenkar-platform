@@ -30,6 +30,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import LedgerDashboard from './pages/LedgerDashboard';
 import LedgerAccounts from './pages/LedgerAccounts';
 import BalanceSheet from './pages/BalanceSheet';
+import IncomeStatement from './pages/IncomeStatement';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -98,6 +99,7 @@ function App() {
               <Route path="ledger" element={<LedgerDashboard />} />
               <Route path="ledger-accounts" element={<LedgerAccounts />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
+              <Route path="income-statement" element={<IncomeStatement />} />
               <Route path="admin/initialize-balances" element={<BalanceInitializer />} />
               <Route path="labour" element={<LabourLayout />}>
                 <Route index element={<Navigate to="daily" replace />} />

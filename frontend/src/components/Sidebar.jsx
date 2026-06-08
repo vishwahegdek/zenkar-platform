@@ -46,6 +46,7 @@ export function Sidebar({ className }) {
         { name: "Ledger", path: "/ledger", icon: BookOpen },
         { name: "Chart of Accounts", path: "/ledger-accounts", icon: BookOpen },
         { name: "Balance Sheet", path: "/balance-sheet", icon: BookOpen },
+        { name: "Income Statement", path: "/income-statement", icon: BookOpen },
       ]
     },
     {

@@ -10,7 +10,7 @@ function CreateAccountModal({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'ASSET',
-    subType: 'CUSTOM'
+    subType: 'OTHER_ASSET'
   });
 
   const mutation = useMutation({
@@ -20,7 +20,7 @@ function CreateAccountModal({ isOpen, onClose }) {
       queryClient.invalidateQueries(['ledgerAccounts']);
       toast.success('Account created successfully');
       onClose();
-      setFormData({ name: '', type: 'ASSET', subType: 'CUSTOM' });
+      setFormData({ name: '', type: 'ASSET', subType: 'OTHER_ASSET' });
     },
     onError: (err) => {
       toast.error('Failed to create account: ' + (err.response?.data?.message || err.message));
@@ -60,7 +60,15 @@ function CreateAccountModal({ isOpen, onClose }) {
             <select 
               className="w-full border-gray-300 rounded-lg p-2 focus:ring-blue-500"
               value={formData.type}
-              onChange={e => setFormData({...formData, type: e.target.value})}
+              onChange={e => {
+                const newType = e.target.value;
+                let defaultSub = 'OTHER_ASSET';
+                if (newType === 'LIABILITY') defaultSub = 'OTHER_LIABILITY';
+                else if (newType === 'EQUITY') defaultSub = 'OTHER_EQUITY';
+                else if (newType === 'REVENUE') defaultSub = 'OTHER_REVENUE';
+                else if (newType === 'EXPENSE') defaultSub = 'OTHER_EXPENSE';
+                setFormData({...formData, type: newType, subType: defaultSub});
+              }}
             >
               <option value="ASSET">Asset (Bank, Cash, Property)</option>
               <option value="LIABILITY">Liability (Loans, Debts)</option>
@@ -70,14 +78,55 @@ function CreateAccountModal({ isOpen, onClose }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Type (Optional)</label>
-            <input 
-              type="text" 
-              placeholder="e.g. BANK_ACCOUNT, CREDIT_CARD"
-              className="w-full border-gray-300 rounded-lg p-2 focus:ring-blue-500 uppercase"
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Type</label>
+            <select 
+              required
+              className="w-full border-gray-300 rounded-lg p-2 focus:ring-blue-500"
               value={formData.subType}
-              onChange={e => setFormData({...formData, subType: e.target.value.toUpperCase()})}
-            />
+              onChange={e => setFormData({...formData, subType: e.target.value})}
+            >
+              {formData.type === 'ASSET' && (
+                <>
+                  <option value="CASH">Cash</option>
+                  <option value="BANK">Bank Account</option>
+                  <option value="ACCOUNTS_RECEIVABLE">Accounts Receivable</option>
+                  <option value="INVENTORY">Inventory</option>
+                  <option value="FIXED_ASSET">Fixed Asset</option>
+                  <option value="OTHER_ASSET">Other Asset</option>
+                </>
+              )}
+              {formData.type === 'LIABILITY' && (
+                <>
+                  <option value="CREDIT_CARD">Credit Card</option>
+                  <option value="ACCOUNTS_PAYABLE">Accounts Payable</option>
+                  <option value="SHORT_TERM_LOAN">Short Term Loan</option>
+                  <option value="LONG_TERM_LOAN">Long Term Loan</option>
+                  <option value="OTHER_LIABILITY">Other Liability</option>
+                </>
+              )}
+              {formData.type === 'EQUITY' && (
+                <>
+                  <option value="CAPITAL">Capital / Owner's Equity</option>
+                  <option value="RETAINED_EARNINGS">Retained Earnings</option>
+                  <option value="OTHER_EQUITY">Other Equity</option>
+                </>
+              )}
+              {formData.type === 'REVENUE' && (
+                <>
+                  <option value="SALES_REVENUE">Sales Revenue</option>
+                  <option value="SERVICE_REVENUE">Service Revenue</option>
+                  <option value="OTHER_REVENUE">Other Revenue</option>
+                </>
+              )}
+              {formData.type === 'EXPENSE' && (
+                <>
+                  <option value="GENERAL_EXPENSE">General Expense</option>
+                  <option value="WAGE_EXPENSE">Wage Expense</option>
+                  <option value="COGS">Cost of Goods Sold (COGS)</option>
+                  <option value="OTHER_EXPENSE">Other Expense</option>
+                </>
+              )}
+            </select>
           </div>
           <div className="flex gap-3 pt-4 border-t">
             <button type="button" onClick={onClose} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">

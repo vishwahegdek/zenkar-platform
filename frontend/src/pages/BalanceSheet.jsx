@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format } from 'date-fns';
-import { Scale, Calendar, AlertTriangle } from 'lucide-react';
+import { Scale, Calendar, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function BalanceSheet() {
@@ -22,7 +22,7 @@ export default function BalanceSheet() {
   };
 
   const AccountRow = ({ item }) => (
-    <div className="flex justify-between items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors group">
+    <div className="flex justify-between items-center py-2 px-3 hover:bg-gray-50 transition-colors group">
       <Link to={`/ledger?accountId=${item.id}`} className="text-sm text-gray-700 font-medium group-hover:text-blue-600 transition-colors">
         {item.name}
       </Link>
@@ -31,6 +31,61 @@ export default function BalanceSheet() {
       </span>
     </div>
   );
+
+  const CollapsibleGroup = ({ subType, groupTotal, groupItems }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+      <div className="border border-gray-100 rounded-lg overflow-hidden bg-white">
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full bg-gray-50 hover:bg-gray-100 transition-colors px-3 py-2 flex justify-between items-center text-xs font-bold text-gray-600 uppercase tracking-wider focus:outline-none"
+        >
+          <div className="flex items-center gap-2">
+            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            <span>{subType.replace(/_/g, ' ')}</span>
+            <span className="bg-gray-200 text-gray-500 rounded-full px-2 py-0.5 text-[10px]">
+              {groupItems.length}
+            </span>
+          </div>
+          <span>{formatCurrency(groupTotal)}</span>
+        </button>
+        
+        {isExpanded && (
+          <div className="divide-y divide-gray-50 animate-in slide-in-from-top-2 duration-200">
+            {groupItems.map(item => (
+              <AccountRow key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const AccountGroup = ({ items }) => {
+    const grouped = items.reduce((acc, item) => {
+      const group = item.subType || 'UNCATEGORIZED';
+      if (!acc[group]) acc[group] = [];
+      acc[group].push(item);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([subType, groupItems]) => {
+          const groupTotal = groupItems.reduce((sum, item) => sum + item.balance, 0);
+          return (
+            <CollapsibleGroup 
+              key={subType} 
+              subType={subType} 
+              groupTotal={groupTotal} 
+              groupItems={groupItems} 
+            />
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
@@ -94,9 +149,7 @@ export default function BalanceSheet() {
                     {report.assets.items.length === 0 ? (
                       <p className="text-sm text-gray-400 italic px-3 py-2">No assets recorded</p>
                     ) : (
-                      report.assets.items.map(item => (
-                        <AccountRow key={item.id} item={item} />
-                      ))
+                      <AccountGroup items={report.assets.items} />
                     )}
                   </div>
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
@@ -119,9 +172,7 @@ export default function BalanceSheet() {
                     {report.liabilities.items.length === 0 ? (
                       <p className="text-sm text-gray-400 italic px-3 py-2">No liabilities recorded</p>
                     ) : (
-                      report.liabilities.items.map(item => (
-                        <AccountRow key={item.id} item={item} />
-                      ))
+                      <AccountGroup items={report.liabilities.items} />
                     )}
                   </div>
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
@@ -138,9 +189,7 @@ export default function BalanceSheet() {
                     <h2 className="text-lg font-black text-gray-900 tracking-tight">Equity</h2>
                   </div>
                   <div className="p-4 space-y-1">
-                    {report.equity.items.map(item => (
-                      <AccountRow key={item.id} item={item} />
-                    ))}
+                    <AccountGroup items={report.equity.items} />
                     <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-green-50/50">
                       <span className="text-sm text-green-800 font-bold">Retained Earnings (Net Income)</span>
                       <span className="text-sm font-black text-green-700">

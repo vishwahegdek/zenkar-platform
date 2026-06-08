@@ -64,4 +64,27 @@ export class LedgerController {
     
     return { success: true, transactionId };
   }
+
+  @Get('settings')
+  @ApiOperation({ summary: 'Get system accounting settings' })
+  getSettings() {
+    return this.ledgerService.getSystemSettings();
+  }
+
+  @Post('settings/close-books')
+  @ApiOperation({ summary: 'Lock the accounting period up to a specific date' })
+  updateBooksClosedDate(@Body() data: { date: string | null }) {
+    return this.ledgerService.updateBooksClosedDate(data.date);
+  }
+
+  @Get('income-statement')
+  @ApiOperation({ summary: 'Get income statement (P&L) for a specific period' })
+  @ApiQuery({ name: 'startDate', required: true })
+  @ApiQuery({ name: 'endDate', required: true })
+  getIncomeStatement(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.ledgerService.getIncomeStatement(startDate, endDate);
+  }
 }

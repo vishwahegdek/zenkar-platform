@@ -12,6 +12,30 @@ export default function AdminDashboard() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [lockDate, setLockDate] = useState('');
+  const [lockMessage, setLockMessage] = useState('');
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get('/ledger/settings'),
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (date) => api.post('/ledger/settings/close-books', { date }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['settings']);
+      setLockMessage('Accounting period locked successfully!');
+      setTimeout(() => setLockMessage(''), 3000);
+    },
+    onError: () => {
+      setLockMessage('Error updating lock date.');
+    }
+  });
+
+  const handleLockDate = (e) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate(lockDate || null);
+  };
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -115,6 +139,45 @@ export default function AdminDashboard() {
             >
                 Initialize Opening Balances
             </Link>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-md h-fit">
+            <h2 className="text-xl font-semibold mb-4">Lock Accounting Period</h2>
+            <p className="text-gray-600 mb-4 text-sm">
+                Prevent creation or modification of any transactions on or before this date. 
+                Current Lock Date: <span className="font-bold text-red-600">{settings?.booksClosedDate ? format(new Date(settings.booksClosedDate), 'dd MMM yyyy') : 'Not Set'}</span>
+            </p>
+            {lockMessage && (
+                <div className={`mb-4 p-3 rounded ${lockMessage.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {lockMessage}
+                </div>
+            )}
+            <form onSubmit={handleLockDate} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Lock Date</label>
+                    <input 
+                        type="date" 
+                        value={lockDate}
+                        onChange={(e) => setLockDate(e.target.value)}
+                        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-red-500 outline-none"
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        type="submit" 
+                        className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition"
+                    >
+                        Lock Books
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => updateSettingsMutation.mutate(null)}
+                        className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300 transition"
+                    >
+                        Unlock All
+                    </button>
+                </div>
+            </form>
         </div>
       </div>
     </div>

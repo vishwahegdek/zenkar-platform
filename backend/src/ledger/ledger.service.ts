@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -43,6 +43,13 @@ export class LedgerService implements OnModuleInit {
     }
     return account;
   }
+  async validateDateIsOpen(transactionDate: Date) {
+    const settings = await this.prisma.systemSettings.findUnique({ where: { id: 1 } });
+    if (settings?.booksClosedDate && transactionDate <= settings.booksClosedDate) {
+      throw new ForbiddenException("This transaction falls in a closed accounting period and cannot be modified.");
+    }
+  }
+
 
   async getOrCreateAccountForEntity(
     entityType: 'CUSTOMER' | 'SUPPLIER' | 'LABOURER' | 'RECIPIENT',
@@ -119,6 +126,7 @@ export class LedgerService implements OnModuleInit {
     if (isNaN(amount) || amount <= 0) return null;
 
     const dateVal = new Date(params.date);
+    await this.validateDateIsOpen(dateVal);
 
     // Create the Debit entry
     const debitEntry = await this.prisma.ledgerEntry.create({
@@ -152,6 +160,15 @@ export class LedgerService implements OnModuleInit {
   }
 
   async deleteEntriesForSource(sourceType: string, sourceId: number) {
+    const entries = await this.prisma.ledgerEntry.findMany({
+      where: { sourceType, sourceId },
+      select: { date: true },
+    });
+
+    for (const entry of entries) {
+      await this.validateDateIsOpen(entry.date);
+    }
+
     return this.prisma.ledgerEntry.deleteMany({
       where: {
         sourceType,
@@ -333,6 +350,99 @@ export class LedgerService implements OnModuleInit {
         total: totalExpenses
       },
       isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01
+    };
+  }
+  async getSystemSettings() {
+    let settings = await this.prisma.systemSettings.findUnique({ where: { id: 1 } });
+    if (!settings) {
+      settings = await this.prisma.systemSettings.create({ data: { id: 1 } });
+    }
+    return settings;
+  }
+
+  async updateBooksClosedDate(dateStr: string | null) {
+    const closedDate = dateStr ? new Date(dateStr + 'T23:59:59.999Z') : null;
+    return this.prisma.systemSettings.upsert({
+      where: { id: 1 },
+      update: { booksClosedDate: closedDate },
+      create: { id: 1, booksClosedDate: closedDate },
+    });
+  }
+
+  async getIncomeStatement(startDateStr: string, endDateStr: string) {
+    const startDate = new Date(startDateStr + 'T00:00:00.000Z');
+    const endDate = new Date(endDateStr + 'T23:59:59.999Z');
+
+    const accounts = await this.prisma.ledgerAccount.findMany({
+      where: {
+        type: { in: ['REVENUE', 'EXPENSE'] }
+      },
+      include: {
+        entries: {
+          where: {
+            date: { gte: startDate, lte: endDate }
+          }
+        }
+      }
+    });
+
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+    const revenue: any[] = [];
+    const expenses: any[] = [];
+
+    accounts.forEach(acc => {
+      let debitSum = 0;
+      let creditSum = 0;
+
+      acc.entries.forEach(e => {
+        debitSum += Number(e.debit);
+        creditSum += Number(e.credit);
+      });
+
+      if (debitSum === 0 && creditSum === 0) return;
+
+      let balance = 0;
+      if (acc.type === 'EXPENSE') {
+        balance = debitSum - creditSum;
+      } else {
+        balance = creditSum - debitSum;
+      }
+
+      if (balance === 0) return;
+
+      const item = {
+        id: acc.id,
+        name: acc.name,
+        subType: acc.subType,
+        balance
+      };
+
+      if (acc.type === 'REVENUE') {
+        revenue.push(item);
+        totalRevenue += balance;
+      } else if (acc.type === 'EXPENSE') {
+        expenses.push(item);
+        totalExpenses += balance;
+      }
+    });
+
+    const netIncome = totalRevenue - totalExpenses;
+
+    return {
+      period: {
+        startDate: startDateStr,
+        endDate: endDateStr
+      },
+      revenue: {
+        items: revenue.sort((a, b) => b.balance - a.balance),
+        total: totalRevenue
+      },
+      expenses: {
+        items: expenses.sort((a, b) => b.balance - a.balance),
+        total: totalExpenses
+      },
+      netIncome
     };
   }
 }

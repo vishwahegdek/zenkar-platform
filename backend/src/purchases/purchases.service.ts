@@ -22,13 +22,16 @@ export class PurchasesService {
     const itemsTotal = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
     const totalAmount = itemsTotal + Number(shippingCost || 0) - Number(discount || 0);
     const finalStatus = (status as PurchaseStatus) || 'RECEIVED';
+    const purchaseDateVal = purchaseDate ? new Date(purchaseDate) : new Date();
+
+    await this.ledgerService.validateDateIsOpen(purchaseDateVal);
 
     const result = await this.prisma.$transaction(async (tx) => {
       // 1. Create Purchase
       const purchase = await tx.purchase.create({
         data: {
           supplierId,
-          purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+          purchaseDate: purchaseDateVal,
           status: finalStatus,
           totalAmount,
           discount: discount || 0,
@@ -84,6 +87,12 @@ export class PurchasesService {
       include: { items: true, payments: true },
     });
     if (!oldPurchase) throw new Error('Purchase not found');
+
+    // Prevent update if either the old or new date falls in a closed period
+    await this.ledgerService.validateDateIsOpen(oldPurchase.purchaseDate);
+    if (dto.purchaseDate) {
+      await this.ledgerService.validateDateIsOpen(new Date(dto.purchaseDate));
+    }
 
     const result = await this.prisma.$transaction(async (tx) => {
       // 1. Reverse old inventory if it was RECEIVED
@@ -177,6 +186,8 @@ export class PurchasesService {
       include: { items: true, payments: true },
     });
     if (!oldPurchase) throw new Error('Purchase not found');
+
+    await this.ledgerService.validateDateIsOpen(oldPurchase.purchaseDate);
 
     await this.prisma.$transaction(async (tx) => {
       if (oldPurchase.status === 'RECEIVED') {
