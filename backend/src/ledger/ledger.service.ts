@@ -122,8 +122,17 @@ export class LedgerService implements OnModuleInit {
     amount: number;
     note?: string;
   }) {
-    const amount = Number(params.amount);
-    if (isNaN(amount) || amount <= 0) return null;
+    let amount = Number(params.amount);
+    if (isNaN(amount) || amount === 0) return null;
+
+    let debitAccountId = params.debitAccountId;
+    let creditAccountId = params.creditAccountId;
+
+    if (amount < 0) {
+      amount = Math.abs(amount);
+      debitAccountId = params.creditAccountId;
+      creditAccountId = params.debitAccountId;
+    }
 
     const dateVal = new Date(params.date);
     await this.validateDateIsOpen(dateVal);
@@ -132,7 +141,7 @@ export class LedgerService implements OnModuleInit {
     const debitEntry = await this.prisma.ledgerEntry.create({
       data: {
         transactionId: params.transactionId,
-        accountId: params.debitAccountId,
+        accountId: debitAccountId,
         date: dateVal,
         debit: amount,
         credit: 0,
@@ -146,7 +155,7 @@ export class LedgerService implements OnModuleInit {
     const creditEntry = await this.prisma.ledgerEntry.create({
       data: {
         transactionId: params.transactionId,
-        accountId: params.creditAccountId,
+        accountId: creditAccountId,
         date: dateVal,
         debit: 0,
         credit: amount,

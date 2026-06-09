@@ -48,7 +48,8 @@ export class LabourService {
     // 5. Merge data
     return labourers.map((labourer) => {
       const att = attendances.find((a) => a.labourerId === labourer.id);
-      const exp = expenses.find((e) => e.labourerId === labourer.id);
+      const labourerExpenses = expenses.filter((e) => e.labourerId === labourer.id);
+      const amount = labourerExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
       const settlement = settlements.find((s) => s.labourerId === labourer.id);
 
       return {
@@ -56,7 +57,7 @@ export class LabourService {
         name: labourer.name,
         defaultDailyWage: labourer.defaultDailyWage,
         attendance: att ? att.value : 0,
-        amount: exp ? exp.amount : 0,
+        amount: amount,
         lastSettlementDate: settlement ? settlement.settlementDate : null, // Send back to frontend
       };
     });
@@ -118,7 +119,7 @@ export class LabourService {
       }
 
       // B. Expense (Payment)
-      if (update.amount > 0) {
+      if (update.amount !== 0) {
         let labourCategory = await this.prisma.expenseCategory.findUnique({
           where: { name: 'Labour' },
         });
@@ -129,28 +130,44 @@ export class LabourService {
         }
         const categoryId = labourCategory.id;
 
-        const existingExp = await this.prisma.expense.findFirst({
+        const existingExps = await this.prisma.expense.findMany({
           where: { labourerId, date: { equals: date } },
         });
 
-        if (existingExp) {
-          if (Number(existingExp.amount) !== update.amount) {
+        const currentTotal = existingExps.reduce((sum, e) => sum + Number(e.amount), 0);
+
+        if (currentTotal !== update.amount) {
+          if (existingExps.length === 1) {
             await this.prisma.expense.update({
-              where: { id: existingExp.id },
+              where: { id: existingExps[0].id },
               data: { amount: update.amount, updatedById: userId } as any,
             });
+          } else if (existingExps.length === 0) {
+            await this.prisma.expense.create({
+              data: {
+                labourerId,
+                categoryId,
+                amount: update.amount,
+                date: date,
+                description: 'Daily Labour Wage',
+              } as any,
+            });
+          } else {
+            // Multiple exist, user is overriding total. Consolidate them.
+            await this.prisma.expense.deleteMany({
+              where: { labourerId, date: date },
+            });
+            await this.prisma.expense.create({
+              data: {
+                labourerId,
+                categoryId,
+                amount: update.amount,
+                date: date,
+                description: 'Daily Labour Wage (Consolidated)',
+                createdById: userId,
+              } as any,
+            });
           }
-        } else {
-          await this.prisma.expense.create({
-            data: {
-              labourerId,
-              categoryId,
-              amount: update.amount,
-              date: date,
-              description: 'Daily Labour Wage',
-              // createdById: userId // Optional: could still track who created it if passed in updates
-            } as any,
-          });
         }
       } else {
         await this.prisma.expense.deleteMany({
@@ -467,5 +484,35 @@ export class LabourService {
       where: { labourerId },
       orderBy: { settlementDate: 'desc' },
     });
+  }
+
+  async recordPayment(
+    labourerId: number,
+    amount: number,
+    date: Date,
+    note?: string,
+    userId?: number,
+  ) {
+    let labourCategory = await this.prisma.expenseCategory.findUnique({
+      where: { name: 'Labour' },
+    });
+    if (!labourCategory) {
+      labourCategory = await this.prisma.expenseCategory.create({
+        data: { name: 'Labour' },
+      });
+    }
+
+    const expense = await this.prisma.expense.create({
+      data: {
+        labourerId,
+        categoryId: labourCategory.id,
+        amount,
+        date,
+        description: note || 'Labour Payment',
+        createdById: userId,
+      },
+    });
+
+    return expense;
   }
 }

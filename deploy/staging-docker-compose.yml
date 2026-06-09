@@ -1,0 +1,45 @@
+services:
+  backend:
+    image: vishwahegdek/zenkar-backend:staging
+    container_name: zenkar-backend-demo
+    restart: always
+    ports:
+      - "3002:3000"
+    depends_on:
+      - db
+    env_file: .env
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/order_book?schema=public"
+    networks:
+      - zenkar-demo-network
+
+  frontend:
+    image: vishwahegdek/zenkar-frontend:staging
+    container_name: zenkar-frontend-demo
+    restart: always
+    ports:
+      - "5175:5173"
+    depends_on:
+      - backend
+    networks:
+      - zenkar-demo-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: zenkar-db-demo
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=order_book
+    volumes:
+      - zenkar_db_data_demo_v3:/var/lib/postgresql/data
+    networks:
+      - zenkar-demo-network
+
+volumes:
+  zenkar_db_data_demo_v3:
+
+networks:
+  zenkar-demo-network:
+    driver: bridge

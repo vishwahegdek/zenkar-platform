@@ -75,6 +75,30 @@ export default function LabourReport() {
      setConfirmModal({ open: true, type, date: settlementDate });
   };
 
+  const [paymentModal, setPaymentModal] = useState({ open: false, amount: '', note: '' });
+
+  const { mutate: recordPayment } = useMutation({
+    mutationFn: (data) => api.post(`/labour/${employeeData.id}/payment`, data),
+    onSuccess: () => {
+        toast.success('Payment recorded successfully.');
+        setPaymentModal({ open: false, amount: '', note: '' });
+        refetch();
+    },
+    onError: (err) => toast.error('Failed to record payment: ' + err.message)
+  });
+
+  const handleRecordPayment = (e) => {
+    e.preventDefault();
+    if (!paymentModal.amount || isNaN(paymentModal.amount)) return toast.error('Valid amount required');
+    if (!settlementDate) return toast.error('Date required');
+    
+    recordPayment({
+      amount: Number(paymentModal.amount),
+      date: settlementDate,
+      note: paymentModal.note
+    });
+  };
+
   const executeSettle = () => {
       const isCF = confirmModal.type === 'CARRY_FORWARD';
       settle({ id: employeeData.id, date: confirmModal.date, isCarryForward: isCF });
@@ -162,8 +186,15 @@ export default function LabourReport() {
                        
                        <div className="flex">
                            <button 
+                               onClick={() => setPaymentModal({ ...paymentModal, open: true })}
+                               className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded-l text-[10px] font-bold uppercase border-r border-green-800"
+                               title="Record a Payment"
+                           >
+                               Record Payment
+                           </button>
+                           <button 
                                onClick={() => initiateSettle('CLEAR')}
-                               className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-l text-[10px] font-bold uppercase border-r border-red-800"
+                               className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-[10px] font-bold uppercase border-r border-red-800"
                                title="Settle and Clear Balance to Zero"
                            >
                                Settle (Clear)
@@ -217,8 +248,10 @@ export default function LabourReport() {
                                         ) : '-'}
                                     </td>
                                     <td className="p-2 text-right">
-                                        {rec.amount > 0 ? (
-                                            <span className="text-yellow-300 font-mono">₹{rec.amount}</span>
+                                        {rec.amount !== 0 ? (
+                                            <span className={`font-mono ${rec.amount < 0 ? 'text-blue-300' : 'text-yellow-300'}`}>
+                                                {rec.amount < 0 ? `-₹${Math.abs(rec.amount)}` : `₹${rec.amount}`}
+                                            </span>
                                         ) : '-'}
                                     </td>
                                 </tr>
@@ -296,6 +329,67 @@ export default function LabourReport() {
                          Confirm {confirmModal.type === 'CARRY_FORWARD' ? 'Carry Forward' : 'Clear'}
                      </button>
                  </div>
+             </div>
+         </div>
+     )}
+
+     {/* 4. Payment Modal */}
+     {paymentModal.open && (
+         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+             <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-sm w-full p-4 transform scale-100 transition-all">
+                 <h3 className="text-lg font-bold text-white mb-4">Record Payment</h3>
+                 
+                 <form onSubmit={handleRecordPayment} className="space-y-4">
+                     <div>
+                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Amount (₹)</label>
+                         <input 
+                             type="number" 
+                             required
+                             step="1"
+                             value={paymentModal.amount}
+                             onChange={(e) => setPaymentModal({ ...paymentModal, amount: e.target.value })}
+                             className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
+                             placeholder="e.g. 500"
+                             autoFocus
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Date</label>
+                         <input 
+                             type="date" 
+                             required
+                             value={settlementDate}
+                             onChange={(e) => setSettlementDate(e.target.value)}
+                             className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Note (Optional)</label>
+                         <input 
+                             type="text" 
+                             value={paymentModal.note}
+                             onChange={(e) => setPaymentModal({ ...paymentModal, note: e.target.value })}
+                             className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
+                             placeholder="e.g. Weekly advance"
+                         />
+                     </div>
+                     
+                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+                         <button 
+                             type="button"
+                             onClick={() => setPaymentModal({ ...paymentModal, open: false })}
+                             className="px-4 py-2 text-gray-400 hover:text-white font-bold"
+                         >
+                             Cancel
+                         </button>
+                         <button 
+                             type="submit"
+                             className="px-4 py-2 rounded font-bold text-white shadow-lg bg-green-600 hover:bg-green-500"
+                         >
+                             Save Payment
+                         </button>
+                     </div>
+                 </form>
              </div>
          </div>
      )}

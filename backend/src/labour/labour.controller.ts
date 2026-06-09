@@ -102,4 +102,20 @@ export class LabourController {
   getSettlements(@Param('id') id: string) {
     return this.labourService.getSettlements(Number(id));
   }
+
+  @Post(':id/payment')
+  @ApiOperation({ summary: 'Record a payment to a labourer' })
+  recordPayment(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { amount: number; date: string; note?: string },
+  ) {
+    return this.labourService.recordPayment(
+      Number(id),
+      body.amount,
+      new Date(body.date),
+      body.note,
+      req.user.userId,
+    );
+  }
 }

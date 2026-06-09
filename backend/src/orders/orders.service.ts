@@ -381,7 +381,7 @@ export class OrdersService implements OnModuleInit {
           },
           payments: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
         take: limit,
         skip: skip,
       }),
