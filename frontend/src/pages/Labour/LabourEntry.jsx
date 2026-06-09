@@ -174,13 +174,19 @@ export default function LabourEntry() {
                 </td>
                 <td className="responsive-padding" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="text"
                     disabled={isSettled} 
                     className="responsive-input font-bold"
                     name={`amount_${labourer.id}`}
                     defaultValue={labourer.amount || ''}
                     placeholder="0"
                     style={{ backgroundColor: theme.inputBg, color: 'black', width: '80px', padding: '8px' }}
+                    onChange={(e) => {
+                      if (!/^-?\d*\.?\d*$/.test(e.target.value)) {
+                         e.target.value = e.target.value.replace(/[^0-9.-]/g, '');
+                      }
+                    }}
                   />
                 </td>
 

@@ -343,13 +343,17 @@ export default function LabourReport() {
                      <div>
                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Amount (₹)</label>
                          <input 
-                             type="number" 
+                             type="text" 
+                             inputMode="text"
                              required
-                             step="1"
                              value={paymentModal.amount}
-                             onChange={(e) => setPaymentModal({ ...paymentModal, amount: e.target.value })}
+                             onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^-?\d*\.?\d*$/.test(val) || val === '-') {
+                                    setPaymentModal({ ...paymentModal, amount: val });
+                                }
+                             }}
                              className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
-                             placeholder="e.g. 500"
                              autoFocus
                          />
                      </div>
@@ -370,7 +374,6 @@ export default function LabourReport() {
                              value={paymentModal.note}
                              onChange={(e) => setPaymentModal({ ...paymentModal, note: e.target.value })}
                              className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
-                             placeholder="e.g. Weekly advance"
                          />
                      </div>
                      
