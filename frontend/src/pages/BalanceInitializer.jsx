@@ -25,10 +25,22 @@ export default function BalanceInitializer() {
 
   // We want to list all Asset and Liability accounts
   const accountsToInit = [];
-  if (balanceSheet) {
+  if (balanceSheet && allAccounts.length > 0) {
     const data = balanceSheet.data ? balanceSheet.data : balanceSheet;
-    accountsToInit.push(...(data.assets?.items || []));
-    accountsToInit.push(...(data.liabilities?.items || []));
+    
+    // Create a lookup for balances
+    const balanceMap = {};
+    (data.assets?.items || []).forEach(i => balanceMap[i.id] = i.balance);
+    (data.liabilities?.items || []).forEach(i => balanceMap[i.id] = i.balance);
+
+    allAccounts.filter(a => a.type === 'ASSET' || a.type === 'LIABILITY').forEach(acc => {
+      accountsToInit.push({
+        id: acc.id,
+        name: acc.name,
+        type: acc.type,
+        balance: balanceMap[acc.id] || 0
+      });
+    });
   }
 
   // Handle Input Change
