@@ -200,8 +200,31 @@ export class LedgerService implements OnModuleInit {
       date: { gte: from, lte: to },
     };
 
+    let openingBalance = 0;
+    let accountType = '';
+
     if (accountId) {
       where.accountId = accountId;
+      const account = await this.prisma.ledgerAccount.findUnique({ where: { id: accountId } });
+      if (account) {
+        accountType = account.type;
+        const pastEntries = await this.prisma.ledgerEntry.findMany({
+          where: { accountId, date: { lt: from } }
+        });
+        
+        let debitSum = 0;
+        let creditSum = 0;
+        pastEntries.forEach(pe => {
+          debitSum += Number(pe.debit);
+          creditSum += Number(pe.credit);
+        });
+        
+        if (accountType === 'ASSET' || accountType === 'EXPENSE') {
+          openingBalance = debitSum - creditSum;
+        } else {
+          openingBalance = creditSum - debitSum;
+        }
+      }
     }
 
     const entries = await this.prisma.ledgerEntry.findMany({
@@ -210,8 +233,8 @@ export class LedgerService implements OnModuleInit {
         account: true,
       },
       orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' },
+        { date: 'asc' }, // Sort ASC for running balance calculation
+        { createdAt: 'asc' },
       ],
     });
 
@@ -234,10 +257,24 @@ export class LedgerService implements OnModuleInit {
       balancingMap.get(entry.transactionId)!.push(entry);
     });
 
-    return entries.map(e => {
+    let currentBalance = openingBalance;
+
+    const mappedEntries = entries.map(e => {
       const related = balancingMap.get(e.transactionId) || [];
       const opposite = related.find(r => r.accountId !== e.accountId) || e; // Fallback to self if not found
       
+      let runningBalance: number | null = null;
+      if (accountId) {
+        const debit = Number(e.debit);
+        const credit = Number(e.credit);
+        if (accountType === 'ASSET' || accountType === 'EXPENSE') {
+          currentBalance += (debit - credit);
+        } else {
+          currentBalance += (credit - debit);
+        }
+        runningBalance = currentBalance;
+      }
+
       return {
         id: e.id,
         date: e.date,
@@ -251,9 +288,13 @@ export class LedgerService implements OnModuleInit {
         sourceType: e.sourceType,
         sourceId: e.sourceId,
         note: e.note,
-        transactionId: e.transactionId
+        transactionId: e.transactionId,
+        runningBalance
       };
     });
+
+    // Reverse mappedEntries to descending order for frontend
+    return mappedEntries.reverse();
   }
 
   async getBalanceSheet(asOfDateStr?: string) {

@@ -187,6 +187,7 @@ export default function LedgerDashboard() {
                     <th className="px-4 py-3 font-medium">Note</th>
                     <th className="px-4 py-3 font-medium text-right text-red-600">Debit (DR)</th>
                     <th className="px-4 py-3 font-medium text-right text-green-600">Credit (CR)</th>
+                    {selectedAccount && <th className="px-4 py-3 font-medium text-right text-blue-600">Balance</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -210,6 +211,11 @@ export default function LedgerDashboard() {
                       <td className="px-4 py-3 text-right font-medium text-green-600">
                         {entry.credit > 0 ? formatCurrency(entry.credit) : '-'}
                       </td>
+                      {selectedAccount && (
+                        <td className="px-4 py-3 text-right font-bold text-blue-600 bg-blue-50/30">
+                          {entry.runningBalance !== null ? formatCurrency(entry.runningBalance) : '-'}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
