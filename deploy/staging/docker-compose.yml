@@ -39,7 +39,7 @@ services:
     networks:
       - zenkar-network-demo
     ports:
-      - "5432:5432" # Exposed on 5432
+      - "127.0.0.1:5432:5432" # Exposed on 5432 securely
 
 networks:
   zenkar-network-demo:

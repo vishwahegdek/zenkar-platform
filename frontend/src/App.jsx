@@ -21,6 +21,7 @@ import LabourLayout from './pages/Labour/LabourLayout';
 import LabourEntry from './pages/Labour/LabourEntry';
 import LabourManage from './pages/Labour/LabourManage';
 import LabourReport from './pages/Labour/LabourReport';
+import LabourSettlements from './pages/Labour/LabourSettlements';
 import QuickSale from './pages/QuickSale';
 import BalanceInitializer from './pages/BalanceInitializer';
 import Login from './pages/Login';
@@ -106,6 +107,7 @@ function App() {
                 <Route path="daily" element={<LabourEntry />} />
                 <Route path="manage" element={<LabourManage />} />
                 <Route path="report" element={<LabourReport />} />
+                <Route path="settlements" element={<LabourSettlements />} />
               </Route>
               
               <Route path="admin" element={<AdminDashboard />} />
