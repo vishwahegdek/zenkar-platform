@@ -149,6 +149,11 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
+  paymentAccountId?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsNumber()
   discount?: number;
 
   @ApiPropertyOptional({
