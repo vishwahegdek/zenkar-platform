@@ -92,10 +92,19 @@ export class ExpensesService {
       const creditAccountId = data.paymentAccountId || (await this.ledgerService.getSystemAccount('CASH')).id;
       let debitAccountId: number | null = null;
 
-      // General category expense account
-      let expenseAccount = await this.prisma.ledgerAccount.findFirst({
-        where: { name: `Expense Category: ${expense.category.name}` },
-      });
+      // If expense is attached to a labourer, debit LABOURER (liability decrease) instead of general expense
+      if (expense.labourerId && expense.labourer) {
+        const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+          'LABOURER',
+          expense.labourerId,
+          expense.labourer.name,
+        );
+        debitAccountId = labourerAccount.id;
+      } else {
+        // General category expense account
+        let expenseAccount = await this.prisma.ledgerAccount.findFirst({
+          where: { name: `Expense Category: ${expense.category.name}` },
+        });
         if (!expenseAccount) {
           expenseAccount = await this.prisma.ledgerAccount.create({
             data: {
@@ -106,6 +115,7 @@ export class ExpensesService {
           });
         }
         debitAccountId = expenseAccount.id;
+      }
 
       await this.ledgerService.recordDoubleEntry({
         transactionId: `EXPENSE-${expense.id}`,
@@ -214,9 +224,17 @@ export class ExpensesService {
       const creditAccountId = data.paymentAccountId || (await this.ledgerService.getSystemAccount('CASH')).id;
       let debitAccountId: number | null = null;
 
-      let expenseAccount = await this.prisma.ledgerAccount.findFirst({
-        where: { name: `Expense Category: ${updated.category.name}` },
-      });
+      if (updated.labourerId && updated.labourer) {
+        const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+          'LABOURER',
+          updated.labourerId,
+          updated.labourer.name,
+        );
+        debitAccountId = labourerAccount.id;
+      } else {
+        let expenseAccount = await this.prisma.ledgerAccount.findFirst({
+          where: { name: `Expense Category: ${updated.category.name}` },
+        });
         if (!expenseAccount) {
           expenseAccount = await this.prisma.ledgerAccount.create({
             data: {
@@ -227,6 +245,7 @@ export class ExpensesService {
           });
         }
         debitAccountId = expenseAccount.id;
+      }
 
       await this.ledgerService.recordDoubleEntry({
         transactionId: `EXPENSE-${updated.id}`,

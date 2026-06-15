@@ -458,19 +458,9 @@ export class LabourService {
           });
         }
 
-        // Step 2: Recognize what we paid them (totalPaid)
-        if (Number(settlement.totalPaid) > 0) {
-          await this.ledgerService.recordDoubleEntry({
-            transactionId: `${transactionId}-PAYMENT`,
-            sourceType: 'LABOUR_SETTLEMENT',
-            sourceId: settlement.id,
-            date: settlement.settlementDate,
-            debitAccountId: labourerAccount.id,
-            creditAccountId: cashAccount.id,
-            amount: Number(settlement.totalPaid),
-            note: `Payment made during settlement up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
-          });
-        }
+        // Step 2: Recognized what we paid them (totalPaid) is now skipped here
+        // The cash deductions are handled individually and in real-time by the Expense service
+        // when the user clicks 'Record Payment'. Re-booking it here causes double-counting.
 
         // Step 3: Write off the difference if Settle Clear (!isCarryForward)
         if (!isCarryForward) {

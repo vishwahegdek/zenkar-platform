@@ -286,26 +286,34 @@ async function main() {
 
       const transactionId = `EXPENSE-${exp.id}`;
 
-      // Map debit account to category
-      const catName = exp.category.name;
-      if (!categoryAccounts[catName]) {
-        let acc = await prisma.ledgerAccount.findFirst({
-          where: { name: `Expense Category: ${catName}` },
-        });
-        if (!acc) {
-          acc = await prisma.ledgerAccount.create({
-            data: {
-              name: `Expense Category: ${catName}`,
-              type: 'EXPENSE',
-              subType: 'GENERAL_EXPENSE',
-            },
+      let debitAccountId;
+      
+      // If this is a payment to a labourer, debit the LABOURER liability account instead of an Expense category
+      if (exp.labourerId) {
+        const labourerAcc = await getOrCreateLabourerAcc(exp.labourerId, 'Unknown Labourer');
+        debitAccountId = labourerAcc.id;
+      } else {
+        // Map debit account to category
+        const catName = exp.category.name;
+        if (!categoryAccounts[catName]) {
+          let acc = await prisma.ledgerAccount.findFirst({
+            where: { name: `Expense Category: ${catName}` },
           });
+          if (!acc) {
+            acc = await prisma.ledgerAccount.create({
+              data: {
+                name: `Expense Category: ${catName}`,
+                type: 'EXPENSE',
+                subType: 'GENERAL_EXPENSE',
+              },
+            });
+          }
+          categoryAccounts[catName] = acc;
         }
-        categoryAccounts[catName] = acc;
+        debitAccountId = categoryAccounts[catName].id;
       }
-      let debitAccountId = categoryAccounts[catName].id;
 
-      // Debit Expense Account
+      // Debit Account (Either Expense or Liability)
       await prisma.ledgerEntry.create({
         data: {
           transactionId,
@@ -386,37 +394,9 @@ async function main() {
         });
       }
 
-      // Step 2: Recognize payment made during settlement
+      // Step 2: Recognized payments are now handled in the Expense loop above.
+      // We no longer book totalPaid here to prevent double-counting.
       const paid = Number(set.totalPaid);
-      if (paid > 0) {
-        // Debit Labourer (Liability decreases)
-        await prisma.ledgerEntry.create({
-          data: {
-            transactionId: `${transactionId}-PAYMENT`,
-            accountId: labourerAcc.id,
-            date: set.settlementDate,
-            debit: paid,
-            credit: 0,
-            sourceType: 'LABOUR_SETTLEMENT',
-            sourceId: set.id,
-            note: `Payment made during settlement up to ${set.settlementDate.toISOString().split('T')[0]}`,
-          },
-        });
-
-        // Credit Cash (Asset decreases)
-        await prisma.ledgerEntry.create({
-          data: {
-            transactionId: `${transactionId}-PAYMENT`,
-            accountId: systemAccounts['CASH'].id,
-            date: set.settlementDate,
-            debit: 0,
-            credit: paid,
-            sourceType: 'LABOUR_SETTLEMENT',
-            sourceId: set.id,
-            note: `Payment made during settlement up to ${set.settlementDate.toISOString().split('T')[0]}`,
-          },
-        });
-      }
 
       // Step 3: Write-off mismatch for Settle Clear (!isCarryForward)
       if (!set.isCarryForward) {
