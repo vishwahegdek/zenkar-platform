@@ -53,9 +53,23 @@ export default function PaymentMethodSelector({ value, onChange }) {
 
   const dropdownOptions = dropdownAccounts.map(acc => ({
     value: acc.id,
-    label: acc.name,
+    label: prefs?.nicknames?.[acc.id] || acc.name,
     subLabel: acc.type === 'LIABILITY' ? 'Liability/Credit' : acc.subType
   }));
+
+  const renderName = (name) => {
+    if (!name) return '';
+    const words = name.trim().split(/\s+/);
+    if (words.length > 1) {
+      return (
+        <div className="flex flex-col text-left leading-[1.1]">
+          <span className="font-semibold">{words[0]}</span>
+          <span className="text-[10px] font-medium opacity-80">{words.slice(1).join(' ')}</span>
+        </div>
+      );
+    }
+    return <span className="font-semibold">{name}</span>;
+  };
 
   return (
     <div className="w-full">
@@ -80,7 +94,7 @@ export default function PaymentMethodSelector({ value, onChange }) {
               }`}
             >
               {getIcon(acc.subType, isSelected)}
-              {acc.name}
+              {renderName(prefs?.nicknames?.[acc.id] || acc.name)}
             </button>
           );
         })}

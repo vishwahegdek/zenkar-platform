@@ -7,6 +7,7 @@ import { Settings as SettingsIcon, Check, Plus, Trash2 } from 'lucide-react';
 export default function Settings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('payments');
+  const [localNicknames, setLocalNicknames] = useState({});
 
   // Fetch all potential payment accounts (Cash + Bank + Liabilities)
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
@@ -19,6 +20,12 @@ export default function Settings() {
     queryKey: ['userSettings'],
     queryFn: () => api.get('/users/me/settings')
   });
+
+  React.useEffect(() => {
+    if (settings?.paymentMethods?.nicknames) {
+      setLocalNicknames(settings.paymentMethods.nicknames);
+    }
+  }, [settings]);
 
   const mutation = useMutation({
     mutationFn: (newSettings) => api.patch('/users/me/settings', newSettings),
@@ -57,8 +64,30 @@ export default function Settings() {
 
     mutation.mutate({
       ...settings,
-      paymentMethods: { quickAccessIds: newQuick, dropdownIds: newDrop }
+      paymentMethods: { 
+        ...prefs,
+        quickAccessIds: newQuick, 
+        dropdownIds: newDrop 
+      }
     });
+  };
+
+  const handleNicknameBlur = (accountId) => {
+    const currentNicknames = prefs.nicknames || {};
+    const localVal = localNicknames[accountId];
+    
+    if (currentNicknames[accountId] !== localVal) {
+      mutation.mutate({
+        ...settings,
+        paymentMethods: {
+          ...prefs,
+          nicknames: {
+            ...currentNicknames,
+            [accountId]: localVal
+          }
+        }
+      });
+    }
   };
 
   return (
@@ -95,6 +124,7 @@ export default function Settings() {
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="px-4 py-3">Account Name</th>
+                  <th className="px-4 py-3">Nickname</th>
                   <th className="px-4 py-3 text-center">Quick Tab</th>
                   <th className="px-4 py-3 text-center">Dropdown</th>
                   <th className="px-4 py-3 text-center">Hidden</th>
@@ -111,6 +141,16 @@ export default function Settings() {
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{acc.name}</div>
                         <div className="text-[10px] text-gray-500">{acc.type} • {acc.subType}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          value={localNicknames[acc.id] || ''}
+                          onChange={(e) => setLocalNicknames(prev => ({ ...prev, [acc.id]: e.target.value }))}
+                          onBlur={() => handleNicknameBlur(acc.id)}
+                          placeholder="E.g. Dad's SBI"
+                          className="text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full max-w-[150px]"
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
                         <input 
@@ -140,7 +180,7 @@ export default function Settings() {
                             const newDrop = (prefs.dropdownIds || []).filter(id => id !== acc.id);
                             mutation.mutate({
                               ...settings,
-                              paymentMethods: { quickAccessIds: newQuick, dropdownIds: newDrop }
+                              paymentMethods: { ...prefs, quickAccessIds: newQuick, dropdownIds: newDrop }
                             });
                           }}
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500"
