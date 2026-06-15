@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { toast } from 'react-hot-toast';
+import SearchableSelect from './SearchableSelect';
 
 export default function ManualAdjustmentModal({ isOpen, onClose }) {
   const queryClient = useQueryClient();
@@ -40,6 +41,12 @@ export default function ManualAdjustmentModal({ isOpen, onClose }) {
   });
 
   if (!isOpen) return null;
+
+  const accountOptions = accounts.map(acc => ({
+    value: acc.id,
+    label: acc.name,
+    subLabel: acc.type
+  }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -88,33 +95,25 @@ export default function ManualAdjustmentModal({ isOpen, onClose }) {
             <div className="bg-red-50 p-3 rounded-lg border border-red-100 col-span-2 md:col-span-1">
               <label className="block text-sm font-bold text-red-800 mb-1">Money Leaves Here (Credit)</label>
               <p className="text-[10px] text-red-600 mb-2 leading-tight">Select the account that is decreasing or sending money.</p>
-              <select 
-                required
-                className="w-full text-sm border-red-200 rounded p-2"
+              <SearchableSelect 
+                options={accountOptions}
                 value={formData.creditAccountId}
-                onChange={e => setFormData({...formData, creditAccountId: e.target.value})}
-              >
-                <option value="">Select Account...</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
-                ))}
-              </select>
+                onChange={val => setFormData({...formData, creditAccountId: val})}
+                placeholder="Select Account..."
+                className="w-full"
+              />
             </div>
 
             <div className="bg-green-50 p-3 rounded-lg border border-green-100 col-span-2 md:col-span-1">
               <label className="block text-sm font-bold text-green-800 mb-1">Money Enters Here (Debit)</label>
               <p className="text-[10px] text-green-600 mb-2 leading-tight">Select the account that is increasing or receiving money.</p>
-              <select 
-                required
-                className="w-full text-sm border-green-200 rounded p-2"
+              <SearchableSelect 
+                options={accountOptions}
                 value={formData.debitAccountId}
-                onChange={e => setFormData({...formData, debitAccountId: e.target.value})}
-              >
-                <option value="">Select Account...</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
-                ))}
-              </select>
+                onChange={val => setFormData({...formData, debitAccountId: val})}
+                placeholder="Select Account..."
+                className="w-full"
+              />
             </div>
 
             <div className="col-span-2">

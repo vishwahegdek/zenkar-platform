@@ -6,6 +6,7 @@ import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addD
 import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus, ArrowRightLeft } from 'lucide-react';
 import ManualAdjustmentModal from '../components/ManualAdjustmentModal';
 import TransferMoneyModal from '../components/TransferMoneyModal';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function LedgerDashboard() {
   const [searchParams] = useSearchParams();
@@ -84,6 +85,14 @@ export default function LedgerDashboard() {
     queryFn: () => api.get('/ledger/accounts'),
   });
 
+  const accountOptions = useMemo(() => {
+    return accounts.map(acc => ({
+      value: acc.id,
+      label: acc.name,
+      subLabel: acc.type
+    }));
+  }, [accounts]);
+
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['ledgerEntries', from, to, selectedAccount],
     queryFn: () => api.get(`/ledger/entries?from=${from}&to=${to}${selectedAccount ? `&accountId=${selectedAccount}` : ''}`),
@@ -120,16 +129,15 @@ export default function LedgerDashboard() {
             </div>
 
             <div className="flex items-center gap-2">
-              <select
-                value={selectedAccount}
-                onChange={(e) => setSelectedAccount(e.target.value)}
-                className="text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 max-w-[200px]"
-              >
-                <option value="">All Accounts</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
-                ))}
-              </select>
+              <div className="w-[200px]">
+                <SearchableSelect
+                  options={accountOptions}
+                  value={selectedAccount}
+                  onChange={val => setSelectedAccount(val)}
+                  placeholder="All Accounts"
+                  className="w-full text-sm"
+                />
+              </div>
 
               <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
                 <button onClick={handlePrevious} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
