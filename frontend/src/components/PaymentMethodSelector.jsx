@@ -62,9 +62,9 @@ export default function PaymentMethodSelector({ value, onChange }) {
     const words = name.trim().split(/\s+/);
     if (words.length > 1) {
       return (
-        <div className="flex flex-col text-left leading-[1.1]">
+        <div className="flex flex-col text-left leading-tight">
           <span className="font-semibold">{words[0]}</span>
-          <span className="text-[10px] font-medium opacity-80">{words.slice(1).join(' ')}</span>
+          <span className="font-semibold">{words.slice(1).join(' ')}</span>
         </div>
       );
     }
@@ -122,9 +122,13 @@ export default function PaymentMethodSelector({ value, onChange }) {
             options={dropdownOptions}
             value={isDropdownValueSelected ? value : ''}
             onChange={(val) => {
-              if (val) onChange(val);
+              if (val) {
+                onChange(val);
+                setShowDropdown(false);
+              }
             }}
             placeholder="Select payment method..."
+            autoOpen={showDropdown}
           />
         </div>
       )}

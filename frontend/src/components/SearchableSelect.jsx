@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, X } from 'lucide-react';
 
-export default function SearchableSelect({ options, value, onChange, placeholder = "Select...", className = "" }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function SearchableSelect({ options, value, onChange, placeholder = "Select...", className = "", autoOpen = false }) {
+  const [isOpen, setIsOpen] = useState(autoOpen);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
 
@@ -15,6 +15,12 @@ export default function SearchableSelect({ options, value, onChange, placeholder
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setIsOpen(true);
+    }
+  }, [autoOpen]);
 
   const selectedOption = options.find(opt => String(opt.value) === String(value));
 
