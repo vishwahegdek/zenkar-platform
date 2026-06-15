@@ -131,7 +131,13 @@ export class DashboardService {
     // 2. Fetch Expenses
     const expenses = await this.prisma.expense.findMany({
       where: { date: { gte: from, lte: to } },
-      include: { category: true, recipient: true, labourer: true },
+      include: { category: true, recipient: true },
+    });
+
+    // 2.5 Fetch Labour Payments
+    const labourPayments = await this.prisma.labourPayment.findMany({
+      where: { date: { gte: from, lte: to } },
+      include: { labourer: true },
     });
 
     // 3. Fetch Finance Transactions
@@ -167,8 +173,23 @@ export class DashboardService {
         type: 'OUT',
         category: e.category?.name || 'Expense',
         description: e.description || 'Expense',
-        party: e.recipient?.name || e.labourer?.name || 'Unknown',
+        party: e.recipient?.name || 'Unknown',
         source: 'Expense',
+      });
+    });
+
+    // Process Labour Payments (Outflow)
+    labourPayments.forEach((p) => {
+      entries.push({
+        id: `lab-${p.id}`,
+        date: p.date,
+        time: p.createdAt,
+        amount: Number(p.amount),
+        type: 'OUT',
+        category: 'Labour Payment',
+        description: p.note || 'Labour Wage',
+        party: p.labourer?.name || 'Unknown',
+        source: 'Labour',
       });
     });
 
@@ -254,7 +275,7 @@ export class DashboardService {
 
       console.log('Fetching chart data internal', { from, to, timeframe });
 
-      const [payments, expenses, financeTxs] = await Promise.all([
+      const [payments, expenses, financeTxs, labourPayments] = await Promise.all([
         this.prisma.payment.findMany({
           where: { date: { gte: from, lte: to } },
         }),
@@ -262,6 +283,9 @@ export class DashboardService {
           where: { date: { gte: from, lte: to } },
         }),
         this.prisma.financeTransaction.findMany({
+          where: { date: { gte: from, lte: to } },
+        }),
+        this.prisma.labourPayment.findMany({
           where: { date: { gte: from, lte: to } },
         }),
       ]);
@@ -291,6 +315,7 @@ export class DashboardService {
 
       payments.forEach(p => addToBucket(p.date, Number(p.amount), 'income'));
       expenses.forEach(e => addToBucket(e.date, Number(e.amount), 'expense'));
+      labourPayments.forEach(p => addToBucket(p.date, Number(p.amount), 'expense'));
       
       financeTxs.forEach(tx => {
         const amount = Number(tx.amount);

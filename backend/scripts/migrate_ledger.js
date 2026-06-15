@@ -3,6 +3,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('--- Starting Unified Ledger Historical Backfill Migration ---');
+  
+  // Enforce Ledger Cutoff Date
+  const CUTOFF_DATE = new Date('2025-12-01T00:00:00.000Z');
+  console.log(`--- IGNORING ALL DATA BEFORE CUTOFF DATE: ${CUTOFF_DATE.toISOString().split('T')[0]} ---`);
 
   try {
     // 1. Ensure System Accounts exist
@@ -91,6 +95,7 @@ async function main() {
       include: { customer: true },
     });
     for (const order of orders) {
+      if (new Date(order.orderDate) < CUTOFF_DATE) continue;
       const customerAcc = await getOrCreateCustomerAcc(order.customerId, order.customer?.name || 'Unknown');
       if (!customerAcc) {
         console.warn(`  Warning: Customer account not found for Order #${order.id}, skipping order entry.`);
@@ -138,6 +143,7 @@ async function main() {
       include: { order: { include: { customer: true } } },
     });
     for (const p of payments) {
+      if (new Date(p.date) < CUTOFF_DATE) continue;
       const order = p.order;
       if (!order) continue;
       const customerAcc = await getOrCreateCustomerAcc(order.customerId, order.customer?.name || 'Unknown');
@@ -184,6 +190,7 @@ async function main() {
       include: { supplier: true },
     });
     for (const pur of purchases) {
+      if (new Date(pur.purchaseDate) < CUTOFF_DATE) continue;
       if (!pur.supplierId) continue;
       const supplierAcc = await getOrCreateSupplierAcc(pur.supplierId, pur.supplier?.name || 'Unknown');
       if (!supplierAcc) continue;
@@ -229,6 +236,7 @@ async function main() {
       include: { purchase: { include: { supplier: true } } },
     });
     for (const pp of purchasePayments) {
+      if (new Date(pp.date) < CUTOFF_DATE) continue;
       const purchase = pp.purchase;
       if (!purchase || !purchase.supplierId) continue;
       const supplierAcc = await getOrCreateSupplierAcc(purchase.supplierId, purchase.supplier?.name || 'Unknown');
@@ -281,6 +289,7 @@ async function main() {
     const categoryAccounts = {};
 
     for (const exp of expenses) {
+      if (new Date(exp.date) < CUTOFF_DATE) continue;
       const amount = Number(exp.amount);
       if (amount <= 0) continue;
 
@@ -288,30 +297,24 @@ async function main() {
 
       let debitAccountId;
       
-      // If this is a payment to a labourer, debit the LABOURER liability account instead of an Expense category
-      if (exp.labourerId) {
-        const labourerAcc = await getOrCreateLabourerAcc(exp.labourerId, 'Unknown Labourer');
-        debitAccountId = labourerAcc.id;
-      } else {
-        // Map debit account to category
-        const catName = exp.category.name;
-        if (!categoryAccounts[catName]) {
-          let acc = await prisma.ledgerAccount.findFirst({
-            where: { name: `Expense Category: ${catName}` },
+      // Map debit account to category
+      const catName = exp.category.name;
+      if (!categoryAccounts[catName]) {
+        let acc = await prisma.ledgerAccount.findFirst({
+          where: { name: `Expense Category: ${catName}` },
+        });
+        if (!acc) {
+          acc = await prisma.ledgerAccount.create({
+            data: {
+              name: `Expense Category: ${catName}`,
+              type: 'EXPENSE',
+              subType: 'GENERAL_EXPENSE',
+            },
           });
-          if (!acc) {
-            acc = await prisma.ledgerAccount.create({
-              data: {
-                name: `Expense Category: ${catName}`,
-                type: 'EXPENSE',
-                subType: 'GENERAL_EXPENSE',
-              },
-            });
-          }
-          categoryAccounts[catName] = acc;
         }
-        debitAccountId = categoryAccounts[catName].id;
+        categoryAccounts[catName] = acc;
       }
+      debitAccountId = categoryAccounts[catName].id;
 
       // Debit Account (Either Expense or Liability)
       await prisma.ledgerEntry.create({
@@ -343,8 +346,54 @@ async function main() {
     }
     console.log(`  Successfully migrated ${expenses.length} expenses.`);
 
-    // 10. Migrate Settlements
-    console.log('\n8. Migrating Labour Settlements...');
+    // 8. Migrate Labour Payments
+    console.log('\n8. Migrating Labour Payments...');
+    const labourPayments = await prisma.labourPayment.findMany({
+      include: {
+        labourer: true,
+      },
+    });
+
+    for (const payment of labourPayments) {
+      if (new Date(payment.date) < CUTOFF_DATE) continue;
+      const amount = Number(payment.amount);
+      if (amount <= 0) continue;
+
+      const transactionId = `LABOUR-PAYMENT-${payment.id}`;
+      const labourerAcc = await getOrCreateLabourerAcc(payment.labourerId, payment.labourer?.name || 'Unknown Labourer');
+
+      // Debit LABOURER (Liability decreases)
+      await prisma.ledgerEntry.create({
+        data: {
+          transactionId,
+          accountId: labourerAcc.id,
+          date: payment.date,
+          debit: amount,
+          credit: 0,
+          sourceType: 'LABOUR_PAYMENT',
+          sourceId: payment.id,
+          note: payment.note || `Labour Payment`,
+        },
+      });
+
+      // Credit Cash Account
+      await prisma.ledgerEntry.create({
+        data: {
+          transactionId,
+          accountId: systemAccounts['CASH'].id,
+          date: payment.date,
+          debit: 0,
+          credit: amount,
+          sourceType: 'LABOUR_PAYMENT',
+          sourceId: payment.id,
+          note: payment.note || `Labour Payment`,
+        },
+      });
+    }
+    console.log(`  Successfully migrated ${labourPayments.length} labour payments.`);
+
+    // 9. Migrate Settlements
+    console.log('\n9. Migrating Labour Settlements...');
     
     // Auto-fix historical Settle Clear records bug
     console.log('  Fixing historical Settle Clear bugs (netBalance = 0)...');

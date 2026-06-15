@@ -30,8 +30,8 @@ export class LabourService {
       },
     });
 
-    // 3. Get paymnets (Expenses) for this date
-    const expenses = await this.prisma.expense.findMany({
+    // 3. Get paymnets (LabourPayments) for this date
+    const payments = await this.prisma.labourPayment.findMany({
       where: {
         date: { gte: startOfDay, lte: endOfDay },
         labourerId: { in: labourers.map((c) => c.id) },
@@ -48,8 +48,8 @@ export class LabourService {
     // 5. Merge data
     return labourers.map((labourer) => {
       const att = attendances.find((a) => a.labourerId === labourer.id);
-      const labourerExpenses = expenses.filter((e) => e.labourerId === labourer.id);
-      const amount = labourerExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const labourerPayments = payments.filter((p) => p.labourerId === labourer.id);
+      const amount = labourerPayments.reduce((sum, p) => sum + Number(p.amount), 0);
       const settlement = settlements.find((s) => s.labourerId === labourer.id);
 
       return {
@@ -118,59 +118,95 @@ export class LabourService {
         });
       }
 
-      // B. Expense (Payment)
+      // B. LabourPayment
       if (update.amount !== 0) {
-        let labourCategory = await this.prisma.expenseCategory.findUnique({
-          where: { name: 'Labour' },
-        });
-        if (!labourCategory) {
-          labourCategory = await this.prisma.expenseCategory.create({
-            data: { name: 'Labour' },
-          });
-        }
-        const categoryId = labourCategory.id;
-
-        const existingExps = await this.prisma.expense.findMany({
+        const existingPayments = await this.prisma.labourPayment.findMany({
           where: { labourerId, date: { equals: date } },
         });
 
-        const currentTotal = existingExps.reduce((sum, e) => sum + Number(e.amount), 0);
+        const currentTotal = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
         if (currentTotal !== update.amount) {
-          if (existingExps.length === 1) {
-            await this.prisma.expense.update({
-              where: { id: existingExps[0].id },
+          if (existingPayments.length === 1) {
+            await this.prisma.labourPayment.update({
+              where: { id: existingPayments[0].id },
               data: { amount: update.amount, updatedById: userId } as any,
             });
-          } else if (existingExps.length === 0) {
-            await this.prisma.expense.create({
+            // Update Ledger
+            await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', existingPayments[0].id);
+            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
+            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+            await this.ledgerService.recordDoubleEntry({
+              transactionId: `LABOUR-PAYMENT-${existingPayments[0].id}`,
+              sourceType: 'LABOUR_PAYMENT',
+              sourceId: existingPayments[0].id,
+              date: date,
+              debitAccountId: labourerAccount.id,
+              creditAccountId: cashAccount.id,
+              amount: update.amount,
+              note: 'Daily Labour Wage (Updated)',
+            });
+          } else if (existingPayments.length === 0) {
+            const p = await this.prisma.labourPayment.create({
               data: {
                 labourerId,
-                categoryId,
                 amount: update.amount,
                 date: date,
-                description: 'Daily Labour Wage',
+                note: 'Daily Labour Wage',
+                createdById: userId,
               } as any,
+            });
+            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
+            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+            await this.ledgerService.recordDoubleEntry({
+              transactionId: `LABOUR-PAYMENT-${p.id}`,
+              sourceType: 'LABOUR_PAYMENT',
+              sourceId: p.id,
+              date: date,
+              debitAccountId: labourerAccount.id,
+              creditAccountId: cashAccount.id,
+              amount: update.amount,
+              note: 'Daily Labour Wage',
             });
           } else {
             // Multiple exist, user is overriding total. Consolidate them.
-            await this.prisma.expense.deleteMany({
+            for (const ep of existingPayments) {
+              await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
+            }
+            await this.prisma.labourPayment.deleteMany({
               where: { labourerId, date: date },
             });
-            await this.prisma.expense.create({
+            const p = await this.prisma.labourPayment.create({
               data: {
                 labourerId,
-                categoryId,
                 amount: update.amount,
                 date: date,
-                description: 'Daily Labour Wage (Consolidated)',
+                note: 'Daily Labour Wage (Consolidated)',
                 createdById: userId,
               } as any,
+            });
+            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
+            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+            await this.ledgerService.recordDoubleEntry({
+              transactionId: `LABOUR-PAYMENT-${p.id}`,
+              sourceType: 'LABOUR_PAYMENT',
+              sourceId: p.id,
+              date: date,
+              debitAccountId: labourerAccount.id,
+              creditAccountId: cashAccount.id,
+              amount: update.amount,
+              note: 'Daily Labour Wage (Consolidated)',
             });
           }
         }
       } else {
-        await this.prisma.expense.deleteMany({
+        const existingPayments = await this.prisma.labourPayment.findMany({
+          where: { labourerId, date: date },
+        });
+        for (const ep of existingPayments) {
+          await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
+        }
+        await this.prisma.labourPayment.deleteMany({
           where: { labourerId, date: date },
         });
       }
@@ -255,7 +291,7 @@ export class LabourService {
       }
 
       const attWhere: any = { labourerId: labourer.id };
-      const expWhere: any = { labourerId: labourer.id };
+      const payWhere: any = { labourerId: labourer.id };
 
       const dateFilter: any = {};
 
@@ -288,7 +324,7 @@ export class LabourService {
 
       if (Object.keys(dateFilter).length > 0) {
         attWhere.date = dateFilter;
-        expWhere.date = dateFilter;
+        payWhere.date = dateFilter;
       }
 
       const attendances = await this.prisma.attendance.findMany({
@@ -296,8 +332,8 @@ export class LabourService {
         orderBy: { date: 'asc' },
       });
 
-      const expenses = await this.prisma.expense.findMany({
-        where: expWhere,
+      const payments = await this.prisma.labourPayment.findMany({
+        where: payWhere,
         orderBy: { date: 'asc' },
       });
 
@@ -316,12 +352,12 @@ export class LabourService {
         totalDays += rec.attendance;
       });
 
-      expenses.forEach((e) => {
-        const d = e.date.toISOString().split('T')[0];
+      payments.forEach((p) => {
+        const d = p.date.toISOString().split('T')[0];
         if (!recordMap.has(d))
           recordMap.set(d, { date: d, attendance: 0, amount: 0 });
         const rec = recordMap.get(d);
-        rec.amount += Number(e.amount);
+        rec.amount += Number(p.amount);
         totalPaid += rec.amount;
       });
 
@@ -501,26 +537,30 @@ export class LabourService {
     note?: string,
     userId?: number,
   ) {
-    let labourCategory = await this.prisma.expenseCategory.findUnique({
-      where: { name: 'Labour' },
-    });
-    if (!labourCategory) {
-      labourCategory = await this.prisma.expenseCategory.create({
-        data: { name: 'Labour' },
-      });
-    }
+    const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown Labourer');
+    const cashAccount = await this.ledgerService.getSystemAccount('CASH');
 
-    const expense = await this.prisma.expense.create({
+    const payment = await this.prisma.labourPayment.create({
       data: {
         labourerId,
-        categoryId: labourCategory.id,
         amount,
         date,
-        description: note || 'Labour Payment',
+        note: note || 'Labour Payment',
         createdById: userId,
       },
     });
 
-    return expense;
+    await this.ledgerService.recordDoubleEntry({
+      transactionId: `LABOUR-PAYMENT-${payment.id}`,
+      sourceType: 'LABOUR_PAYMENT',
+      sourceId: payment.id,
+      date: date,
+      debitAccountId: labourerAccount.id,
+      creditAccountId: cashAccount.id,
+      amount: amount,
+      note: note || 'Labour Payment',
+    });
+
+    return payment;
   }
 }

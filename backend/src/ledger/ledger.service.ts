@@ -403,6 +403,66 @@ export class LedgerService implements OnModuleInit {
       }
     });
 
+    // --- DYNAMIC LIVE ACCRUALS (Unsettled Wages) ---
+    // We dynamically calculate what we owe labourers that hasn't been settled yet.
+    // This keeps the ledger clean of daily noise, while making the balance sheet 100% accurate.
+    const labourers = await this.prisma.labourer.findMany({
+      where: { isDeleted: false },
+      include: {
+        settlements: {
+          orderBy: { settlementDate: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    let accruedWages = 0;
+    for (const labourer of labourers) {
+      const lastSettlement = labourer.settlements[0];
+      const startDate = lastSettlement ? lastSettlement.settlementDate : null;
+
+      const dateFilter: any = { lte: asOfDate };
+      if (startDate) {
+        dateFilter.gt = startDate;
+      }
+
+      const attendances = await this.prisma.attendance.findMany({
+        where: {
+          labourerId: labourer.id,
+          date: dateFilter
+        }
+      });
+
+      let totalDays = 0;
+      attendances.forEach(a => {
+        totalDays += Number(a.value);
+      });
+
+      const salary = Number(labourer.defaultDailyWage) || 0;
+      accruedWages += (totalDays * salary);
+    }
+
+    if (accruedWages > 0) {
+      // Inject Virtual Liability
+      liabilities.push({
+        id: 'virtual-accrued-payable',
+        name: 'Unsettled Wages Payable (Accrued)',
+        subType: 'WAGE_EXPENSE',
+        balance: accruedWages
+      });
+      totalLiabilities += accruedWages;
+
+      // Inject Virtual Expense
+      expenses.push({
+        id: 'virtual-accrued-expense',
+        name: 'Unsettled Wages Expense (Accrued)',
+        subType: 'WAGE_EXPENSE',
+        balance: accruedWages
+      });
+      totalExpenses += accruedWages;
+    }
+    // -----------------------------------------------
+
     const netIncome = totalRevenue - totalExpenses;
     totalEquity += netIncome;
 

@@ -49,6 +49,8 @@ model User {
   updatedPurchases        Purchase[]        @relation("PurchaseUpdatedBy")
   createdPurchasePayments PurchasePayment[] @relation("PurchasePaymentCreatedBy")
   updatedPurchasePayments PurchasePayment[] @relation("PurchasePaymentUpdatedBy")
+  createdLabourPayments   LabourPayment[]   @relation("LabourPaymentCreatedBy")
+  updatedLabourPayments   LabourPayment[]   @relation("LabourPaymentUpdatedBy")
 
   @@map("users")
 }
@@ -356,7 +358,7 @@ model Labourer {
 
   // userId    Int?     @map("user_id") // Removed for shared access
   attendance Attendance[]
-  expenses   Expense[]
+  payments   LabourPayment[]
 
   settlements    LabourSettlement[]
   ledgerAccounts LedgerAccount[]
@@ -386,6 +388,26 @@ model LabourSettlement {
   @@map("labour_settlements")
 }
 
+model LabourPayment {
+  id          Int      @id @default(autoincrement())
+  labourerId  Int      @map("labourer_id")
+  amount      Decimal  @db.Decimal(12, 2)
+  date        DateTime @db.Date
+  note        String?
+  method      String   @default("CASH")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  createdById Int?     @map("created_by_id")
+  updatedById Int?     @map("updated_by_id")
+  createdBy   User?    @relation("LabourPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("LabourPaymentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  labourer Labourer @relation(fields: [labourerId], references: [id], onDelete: Restrict)
+
+  @@map("labour_payments")
+}
+
 model Attendance {
   id         Int      @id @default(autoincrement())
   labourerId Int      @map("labourer_id")
@@ -403,7 +425,6 @@ model Expense {
   id          Int  @id @default(autoincrement())
   categoryId  Int  @map("category_id")
   recipientId Int? @map("recipient_id") // Old: Link to Contact
-  labourerId  Int? @map("labourer_id") // Link to Labourer
 
   recipientLinkId Int? @map("recipient_link_id") // New: Link to Recipient
 
@@ -416,7 +437,6 @@ model Expense {
 
   category  ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   recipient Recipient?      @relation(fields: [recipientId], references: [id], onDelete: Restrict)
-  labourer  Labourer?       @relation(fields: [labourerId], references: [id], onDelete: Restrict)
 
   createdById Int?  @map("created_by_id")
   updatedById Int?  @map("updated_by_id")

@@ -62,7 +62,6 @@ export class ExpensesController {
       where.OR = [
         { description: { contains: search, mode: 'insensitive' } },
         { recipient: { name: { contains: search, mode: 'insensitive' } } },
-        { labourer: { name: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
