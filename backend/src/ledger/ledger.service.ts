@@ -196,9 +196,10 @@ export class LedgerService implements OnModuleInit {
     return this.prisma.ledgerAccount.findMany({
       where: {
         type: 'ASSET',
+        subType: { in: ['CASH', 'BANK'] },
         OR: [
-          { subType: 'CASH' },
-          { subType: 'BANK', userId }
+          { userId: null },
+          { userId }
         ]
       },
       orderBy: { name: 'asc' }
