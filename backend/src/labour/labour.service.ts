@@ -421,7 +421,7 @@ export class LabourService {
         totalAttendance: stat.totalDays,
         totalPayable: stat.totalSalary, // Salary generated
         totalPaid: stat.totalPaid,
-        netBalance: stat.balance,
+        netBalance: isCarryForward ? stat.balance : 0,
         wageSnapshot: stat.salary, // Save the wage at this point
         note,
         isCarryForward,
@@ -470,6 +470,24 @@ export class LabourService {
             amount: Number(settlement.totalPaid),
             note: `Payment made during settlement up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
           });
+        }
+
+        // Step 3: Write off the difference if Settle Clear (!isCarryForward)
+        if (!isCarryForward) {
+           const diff = Number(settlement.totalPayable) - Number(settlement.totalPaid);
+           if (Math.abs(diff) > 0.01) { // Tolerate small floating point issues
+              const isShortfall = diff > 0; // We owed them more than we paid
+              await this.ledgerService.recordDoubleEntry({
+                 transactionId: `${transactionId}-WRITEOFF`,
+                 sourceType: 'LABOUR_SETTLEMENT',
+                 sourceId: settlement.id,
+                 date: settlement.settlementDate,
+                 debitAccountId: isShortfall ? labourerAccount.id : wageExpenseAccount.id,
+                 creditAccountId: isShortfall ? wageExpenseAccount.id : labourerAccount.id,
+                 amount: Math.abs(diff),
+                 note: `Settle Clear write-off for mismatches up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
+              });
+           }
         }
       }
     } catch (err) {

@@ -152,7 +152,7 @@ async function main() {
       await prisma.ledgerEntry.create({
         data: {
           transactionId,
-          accountId: systemAccounts['CASH'].id,
+          accountId: p.accountId || systemAccounts['CASH'].id,
           date: p.date,
           debit: amount,
           credit: 0,
@@ -337,6 +337,14 @@ async function main() {
 
     // 10. Migrate Settlements
     console.log('\n8. Migrating Labour Settlements...');
+    
+    // Auto-fix historical Settle Clear records bug
+    console.log('  Fixing historical Settle Clear bugs (netBalance = 0)...');
+    await prisma.labourSettlement.updateMany({
+      where: { isCarryForward: false },
+      data: { netBalance: 0 }
+    });
+
     const settlements = await prisma.labourSettlement.findMany({
       include: { labourer: true },
     });
@@ -408,6 +416,38 @@ async function main() {
             note: `Payment made during settlement up to ${set.settlementDate.toISOString().split('T')[0]}`,
           },
         });
+      }
+
+      // Step 3: Write-off mismatch for Settle Clear (!isCarryForward)
+      if (!set.isCarryForward) {
+          const diff = payable - paid;
+          if (Math.abs(diff) > 0.01) {
+              const isShortfall = diff > 0;
+              await prisma.ledgerEntry.create({
+                 data: {
+                   transactionId: `${transactionId}-WRITEOFF`,
+                   accountId: isShortfall ? labourerAcc.id : systemAccounts['WAGE_EXPENSE'].id,
+                   date: set.settlementDate,
+                   debit: Math.abs(diff),
+                   credit: 0,
+                   sourceType: 'LABOUR_SETTLEMENT',
+                   sourceId: set.id,
+                   note: `Settle Clear write-off for mismatches up to ${set.settlementDate.toISOString().split('T')[0]}`,
+                 }
+              });
+              await prisma.ledgerEntry.create({
+                 data: {
+                   transactionId: `${transactionId}-WRITEOFF`,
+                   accountId: isShortfall ? systemAccounts['WAGE_EXPENSE'].id : labourerAcc.id,
+                   date: set.settlementDate,
+                   debit: 0,
+                   credit: Math.abs(diff),
+                   sourceType: 'LABOUR_SETTLEMENT',
+                   sourceId: set.id,
+                   note: `Settle Clear write-off for mismatches up to ${set.settlementDate.toISOString().split('T')[0]}`,
+                 }
+              });
+          }
       }
     }
     console.log(`  Successfully migrated ${settlements.length} settlements.`);
