@@ -49,4 +49,9 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID of the treasury account used for payment' })
+  @IsOptional()
+  @IsNumber()
+  paymentAccountId?: number;
 }

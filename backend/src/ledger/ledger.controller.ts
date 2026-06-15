@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Request } from '@nestjs/common';
 import { LedgerService } from './ledger.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
@@ -26,6 +26,19 @@ export class LedgerController {
   @ApiOperation({ summary: 'Get all ledger accounts' })
   getAccounts() {
     return this.ledgerService.getAccounts();
+  }
+
+  @Get('treasury-accounts')
+  @ApiOperation({ summary: 'Get treasury accounts for the logged in user' })
+  getTreasuryAccounts(@Request() req: any) {
+    const userId = req.user.userId;
+    return this.ledgerService.getTreasuryAccounts(userId);
+  }
+
+  @Post('transfer')
+  @ApiOperation({ summary: 'Transfer money between treasury accounts' })
+  transferMoney(@Body() data: { fromAccountId: number, toAccountId: number, amount: number, date: string, note?: string }) {
+    return this.ledgerService.transferMoney(data.fromAccountId, data.toAccountId, data.amount, data.date, data.note);
   }
 
   @Post('accounts')

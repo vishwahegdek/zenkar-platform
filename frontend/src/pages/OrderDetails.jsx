@@ -8,6 +8,7 @@ import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
 import BillView from '../components/BillView';
 import { format } from 'date-fns';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -207,9 +208,14 @@ export default function OrderDetails() {
                    {/* Payments List */}
                    <div className="flex justify-between items-center mb-3 mt-6 px-4 md:px-0">
                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payments</h3>
-                       <button onClick={() => setIsManagePaymentsModalOpen(true)} className="text-xs font-medium text-blue-600 hover:underline">
-                          Edit
-                       </button>
+                       <div className="flex gap-3">
+                           <button onClick={() => setIsPaymentModalOpen(true)} className="text-xs font-medium text-green-600 hover:underline">
+                              Add
+                           </button>
+                           <button onClick={() => setIsManagePaymentsModalOpen(true)} className="text-xs font-medium text-blue-600 hover:underline">
+                              Edit
+                           </button>
+                       </div>
                    </div>
                    <div className="bg-gray-50 rounded-none md:rounded-lg border-y md:border border-gray-100 overflow-hidden text-sm">
                       {order.payments && order.payments.length > 0 ? (
@@ -367,10 +373,15 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
+  const [accountId, setAccountId] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ amount: Number(amount), date, note });
+    if (!accountId) {
+      alert("Please select a payment account.");
+      return;
+    }
+    onSubmit({ amount: Number(amount), date, note, accountId });
   };
 
   return (
@@ -401,10 +412,14 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
                 />
              </div>
              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account</label>
+                <PaymentMethodSelector value={accountId} onChange={setAccountId} />
+             </div>
+             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Note (Optional)</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. UPI, Cash"
+                  placeholder="e.g. Reference number"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={note}
                   onChange={e => setNote(e.target.value)}
@@ -427,16 +442,21 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
 }
 
 function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, error }) {
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['treasuryAccounts'],
+    queryFn: () => api.get('/ledger/treasury-accounts'),
+  });
+
   const [items, setItems] = useState(payments.map(p => ({
      id: p.id,
      amount: p.amount,
-     method: p.method || 'CASH',
+     accountId: p.accountId || null,
      date: p.date ? new Date(p.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
      note: p.note || ''
   })));
 
   const addRow = () => {
-      setItems([...items, { amount: '', method: 'CASH', date: new Date().toISOString().split('T')[0], note: '' }]);
+      setItems([...items, { amount: '', accountId: null, date: new Date().toISOString().split('T')[0], note: '' }]);
   };
 
   const removeRow = (index) => {
@@ -476,7 +496,7 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
                    <tr>
                       <th className="px-1 md:px-3 py-2 w-28 md:w-32">Date</th>
                       <th className="px-1 md:px-3 py-2 w-20 md:w-24 text-right">Amount</th>
-                      <th className="px-1 md:px-3 py-2 w-20 md:w-24">Method</th>
+                      <th className="px-1 md:px-3 py-2 min-w-[200px]">Account</th>
                       <th className="px-1 md:px-3 py-2">Note</th>
                       <th className="px-1 py-2 w-8"></th>
                    </tr>
@@ -500,11 +520,13 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
                          <td className="p-1 md:p-2">
                              <select 
                                 className="input-field py-1 px-1 text-xs w-full"
-                                value={item.method}
-                                onChange={e => updateRow(idx, 'method', e.target.value)}
+                                value={item.accountId || ''}
+                                onChange={e => updateRow(idx, 'accountId', Number(e.target.value))}
                              >
-                                <option value="CASH">Cash</option>
-                                <option value="UPI">UPI</option>
+                                <option value="" disabled>Select Account</option>
+                                {accounts.map(acc => (
+                                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                ))}
                              </select>
                          </td>
                          <td className="p-1 md:p-2">

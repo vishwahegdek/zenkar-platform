@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import ProductForm from './ProductForm';
 import CustomerForm from './CustomerForm';
 import ContactForm from '../components/ContactForm';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 export default function QuickSale() {
   const navigate = useNavigate();
@@ -25,8 +26,9 @@ export default function QuickSale() {
     { productName: '', description: '', quantity: 1, unitPrice: 0, lineTotal: 0 }
   ]);
   
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [customPayments, setCustomPayments] = useState([{ method: 'Cash', amount: '' }]);
+  const [paymentMethod, setPaymentMethod] = useState('Paid');
+  const [paymentAccountId, setPaymentAccountId] = useState(null);
+  const [customPayments, setCustomPayments] = useState([{ accountId: null, amount: '' }]);
   const [internalNotes, setInternalNotes] = useState('');
 
   // Validation State
@@ -156,6 +158,17 @@ export default function QuickSale() {
     // items is now guaranteed valid
     const validItems = items;
 
+    // 3. Validate Payment Account
+    if (paymentMethod === 'Paid' && !paymentAccountId) {
+        return toast.error("Please explicitly select a payment method (Cash or Bank).");
+    }
+    if (paymentMethod === 'Custom') {
+        const invalidCustom = customPayments.find(p => !p.accountId || !p.amount);
+        if (invalidCustom) {
+            return toast.error("Please select an account and enter an amount for all split payments.");
+        }
+    }
+
     setIsSaving(true);
     try {
         const payload = {
@@ -164,15 +177,15 @@ export default function QuickSale() {
             customerPhone: customer.phone, 
             contactId: customer.contactId, 
             isQuickSale: true,
-            status: 'closed', 
+            status: paymentMethod === 'Due' ? 'delivered' : 'closed', 
             orderDate: new Date().toISOString(),
             totalAmount: calculateTotal(),
             payments: paymentMethod === 'Due' ? [] 
                     : paymentMethod === 'Custom' ? customPayments.map(p => ({ ...p, amount: Number(p.amount) }))
-                    : [{ amount: calculateTotal(), method: paymentMethod }],
+                    : [{ amount: calculateTotal(), accountId: paymentAccountId }],
             
             advanceAmount: 0, 
-            paymentMethod: paymentMethod === 'Custom' ? 'Split' : paymentMethod,
+            paymentMethod: paymentMethod === 'Custom' ? 'Split' : 'Paid',
             notes: internalNotes,
             items: validItems.map(i => ({
                 ...i,
@@ -296,9 +309,9 @@ export default function QuickSale() {
          </div>
 
         {/* Items Section */}
-        <div className="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
            {/* Items Table Header */}
-           <div className="bg-gray-50 border-b border-gray-200 grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase">
+           <div className="bg-gray-50 rounded-t-xl border-b border-gray-200 grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase">
               <div className="col-span-5 md:col-span-5">Item</div>
               <div className="col-span-2 md:col-span-1 text-center">Qty</div>
               <div className="col-span-3 md:col-span-2 text-right">Price</div>
@@ -393,7 +406,7 @@ export default function QuickSale() {
               + Add Item
            </button>
 
-           <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-200">
+           <div className="flex justify-between items-center px-4 py-3 bg-gray-50 rounded-b-xl border-t border-gray-200">
                <span className="text-sm font-medium text-gray-600">Total</span>
                <span className="text-xl font-bold text-gray-900">₹{calculateTotal().toLocaleString()}</span>
            </div>
@@ -404,7 +417,7 @@ export default function QuickSale() {
                  <div>
                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Method</label>
                     <div className="grid grid-cols-2 gap-2">
-                        {['Cash', 'UPI', 'Due', 'Custom'].map(method => (
+                        {['Paid', 'Due', 'Custom'].map(method => (
                             <button
                                 key={method}
                                 onClick={() => setPaymentMethod(method)}
@@ -419,34 +432,37 @@ export default function QuickSale() {
                         ))}
                     </div>
 
+                    {paymentMethod === 'Paid' && (
+                        <div className="mt-4">
+                            <PaymentMethodSelector value={paymentAccountId} onChange={setPaymentAccountId} />
+                        </div>
+                    )}
+
                     {paymentMethod === 'Custom' && (
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
                             <h4 className="text-xs font-bold text-gray-500 uppercase">Split Payments</h4>
                             {customPayments.map((p, idx) => (
-                                <div key={idx} className="flex gap-2">
-                                    <select 
-                                        className="input-field w-1/3 text-sm py-1"
-                                        value={p.method}
-                                        onChange={e => {
+                                <div key={idx} className="flex flex-col gap-2 p-2 bg-white rounded border border-gray-200">
+                                    <PaymentMethodSelector 
+                                        value={p.accountId} 
+                                        onChange={(val) => {
                                             const newP = [...customPayments];
-                                            newP[idx].method = e.target.value;
+                                            newP[idx].accountId = val;
                                             setCustomPayments(newP);
-                                        }}
-                                    >
-                                        <option>Cash</option>
-                                        <option>UPI</option>
-                                    </select>
-                                    <input 
-                                        type="number" 
-                                        className="input-field w-1/3 text-sm py-1" 
-                                        placeholder="Amount"
-                                        value={p.amount}
-                                        onChange={e => {
-                                            const newP = [...customPayments];
-                                            newP[idx].amount = e.target.value;
-                                            setCustomPayments(newP);
-                                        }}
+                                        }} 
                                     />
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="number" 
+                                            className="input-field w-full text-sm py-1" 
+                                            placeholder="Amount"
+                                            value={p.amount}
+                                            onChange={e => {
+                                                const newP = [...customPayments];
+                                                newP[idx].amount = e.target.value;
+                                                setCustomPayments(newP);
+                                            }}
+                                        />
                                     {idx > 0 && (
                                         <button 
                                             onClick={() => setCustomPayments(customPayments.filter((_, i) => i !== idx))}
@@ -455,11 +471,12 @@ export default function QuickSale() {
                                             ×
                                         </button>
                                     )}
+                                    </div>
                                 </div>
                             ))}
                             <div className="flex justify-between items-center text-xs">
                                 <button 
-                                    onClick={() => setCustomPayments([...customPayments, { method: 'Cash', amount: '' }])}
+                                    onClick={() => setCustomPayments([...customPayments, { accountId: null, amount: '' }])}
                                     className="text-blue-600 font-medium hover:underline"
                                 >
                                     + Add Split

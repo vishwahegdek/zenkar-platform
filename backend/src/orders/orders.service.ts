@@ -228,8 +228,10 @@ export class OrdersService implements OnModuleInit {
             data: {
               orderId: order.id,
               amount: p.amount,
+              method: p.method,
               date: new Date(),
               note: p.note || p.method, // Use method as note if note missing
+              accountId: p.accountId,
               createdById: userId,
             },
           });
@@ -302,7 +304,7 @@ export class OrdersService implements OnModuleInit {
             sourceType: 'PAYMENT',
             sourceId: p.id,
             date: p.date,
-            debitAccountId: cashAccount.id,
+            debitAccountId: p.accountId || cashAccount.id,
             creditAccountId: customerAccount.id,
             amount: Number(p.amount),
             note: p.note || `Payment of ${p.amount} received for Order #${result.id}`,
@@ -722,6 +724,7 @@ export class OrdersService implements OnModuleInit {
     method: string,
     date: Date,
     note?: string,
+    accountId?: number,
     userId?: number,
   ) {
     const payment = await this.prisma.payment.create({
@@ -731,6 +734,7 @@ export class OrdersService implements OnModuleInit {
         method,
         date,
         note,
+        accountId,
         createdById: userId,
       },
     });
@@ -759,7 +763,7 @@ export class OrdersService implements OnModuleInit {
           sourceType: 'PAYMENT',
           sourceId: payment.id,
           date: payment.date,
-          debitAccountId: cashAccount.id,
+          debitAccountId: payment.accountId || cashAccount.id,
           creditAccountId: customerAccount.id,
           amount: Number(payment.amount),
           note: payment.note || `Payment of ${payment.amount} received for Order #${orderId}`,
@@ -780,6 +784,7 @@ export class OrdersService implements OnModuleInit {
       method?: string;
       date: string;
       note?: string;
+      accountId?: number;
     }[],
     userId?: number,
   ) {
@@ -815,6 +820,7 @@ export class OrdersService implements OnModuleInit {
           method: p.method || 'CASH',
           date: new Date(p.date),
           note: p.note,
+          accountId: p.accountId,
         };
 
         if (p.id && existingIds.has(p.id)) {
@@ -871,7 +877,7 @@ export class OrdersService implements OnModuleInit {
             sourceType: 'PAYMENT',
             sourceId: p.id,
             date: p.date,
-            debitAccountId: cashAccount.id,
+            debitAccountId: p.accountId || cashAccount.id,
             creditAccountId: customerAccount.id,
             amount: Number(p.amount),
             note: p.note || `Payment of ${p.amount} received for Order #${orderId}`,

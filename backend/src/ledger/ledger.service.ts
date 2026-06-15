@@ -192,6 +192,35 @@ export class LedgerService implements OnModuleInit {
     });
   }
 
+  async getTreasuryAccounts(userId: number) {
+    return this.prisma.ledgerAccount.findMany({
+      where: {
+        type: 'ASSET',
+        subType: { in: ['CASH', 'BANK'] },
+        OR: [
+          { userId: null },
+          { userId }
+        ]
+      },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  async transferMoney(fromAccountId: number, toAccountId: number, amount: number, dateStr: string, note?: string) {
+    // Generate a unique sourceId using timestamp mapped to 32bit int roughly
+    const sourceId = Math.floor(Date.now() / 1000); 
+    return this.recordDoubleEntry({
+      transactionId: `TRANSFER-${sourceId}`,
+      debitAccountId: toAccountId,
+      creditAccountId: fromAccountId,
+      amount,
+      date: dateStr,
+      sourceType: 'INTERNAL_TRANSFER',
+      sourceId,
+      note: note || 'Internal Transfer',
+    });
+  }
+
   async getLedgerEntries(fromStr: string, toStr: string, accountId?: number) {
     const from = new Date(fromStr + 'T00:00:00.000Z');
     const to = new Date(toStr + 'T23:59:59.999Z');
@@ -331,7 +360,8 @@ export class LedgerService implements OnModuleInit {
         creditSum += Number(e.credit);
       });
 
-      if (debitSum === 0 && creditSum === 0) return;
+      const isTreasury = acc.subType === 'CASH' || acc.subType === 'BANK';
+      if (debitSum === 0 && creditSum === 0 && !isTreasury) return;
 
       let balance = 0;
       if (acc.type === 'ASSET' || acc.type === 'EXPENSE') {
@@ -340,7 +370,7 @@ export class LedgerService implements OnModuleInit {
         balance = creditSum - debitSum;
       }
 
-      if (balance === 0) return;
+      if (balance === 0 && !isTreasury) return;
 
       const item = {
         id: acc.id,

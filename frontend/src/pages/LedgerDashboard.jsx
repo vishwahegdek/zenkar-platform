@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus, ArrowRightLeft } from 'lucide-react';
 import ManualAdjustmentModal from '../components/ManualAdjustmentModal';
+import TransferMoneyModal from '../components/TransferMoneyModal';
 
 export default function LedgerDashboard() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ export default function LedgerDashboard() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAccount, setSelectedAccount] = useState(initialAccountId);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   // If the URL changes, update the local state
   useEffect(() => {
@@ -141,13 +143,22 @@ export default function LedgerDashboard() {
                 </button>
               </div>
 
-              <button 
-                onClick={() => setIsAdjustmentModalOpen(true)}
-                className="hidden md:flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Adjustment
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsTransferModalOpen(true)}
+                  className="hidden md:flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"
+                >
+                  <ArrowRightLeft className="w-4 h-4" />
+                  Transfer
+                </button>
+                <button 
+                  onClick={() => setIsAdjustmentModalOpen(true)}
+                  className="hidden md:flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adjustment
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 
 import SmartSelector from '../components/SmartSelector';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 const ExpenseForm = () => {
   const { id } = useParams();
@@ -24,6 +25,8 @@ const ExpenseForm = () => {
       categoryId: ''
     }
   });
+
+  const [paymentAccountId, setPaymentAccountId] = useState(null);
 
   const { data: categories } = useQuery({
     queryKey: ['expenseCategories'],
@@ -67,7 +70,8 @@ const ExpenseForm = () => {
         // Smart Selector Data
         recipientId: selectedRecipient?.id || null, 
         recipientName: selectedRecipient?.name,
-        contactId: selectedRecipient?.contactId || null
+        contactId: selectedRecipient?.contactId || null,
+        paymentAccountId
       };
 
       if (isEditMode) {
@@ -134,7 +138,12 @@ const ExpenseForm = () => {
                 initialValue={selectedRecipient?.name || ''}
                 onSelect={(item) => setSelectedRecipient(item)}
             />
-             <p className="text-xs text-gray-500 mt-1">Select existing recipient, contact, or type new name.</p>
+         <p className="text-xs text-gray-500 mt-1">Select existing recipient, contact, or type new name.</p>
+        </div>
+
+        {/* Payment Method */}
+        <div className="mb-4">
+          <PaymentMethodSelector value={paymentAccountId} onChange={setPaymentAccountId} />
         </div>
 
         {/* Category */}

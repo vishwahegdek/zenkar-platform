@@ -111,7 +111,7 @@ export class OrdersController {
   addPayment(
     @Param('id') id: string,
     @Body()
-    body: { amount: number; method?: string; date: string; note?: string },
+    body: { amount: number; method?: string; date: string; note?: string; accountId?: number },
     @Req() req,
   ) {
     return this.ordersService.addPayment(
@@ -120,6 +120,7 @@ export class OrdersController {
       body.method || 'CASH',
       new Date(body.date),
       body.note,
+      body.accountId,
       req.user?.userId,
     );
   }

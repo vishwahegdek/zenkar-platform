@@ -41,6 +41,7 @@ export class ExpensesService {
       recipientId?: number;
       paymentMethod?: string;
       date?: Date | string;
+      paymentAccountId?: number;
     },
   ) {
     let recipientId: number | null = data.recipientId || null;
@@ -88,7 +89,7 @@ export class ExpensesService {
 
     // Ledger Entry for Expense
     try {
-      const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+      const creditAccountId = data.paymentAccountId || (await this.ledgerService.getSystemAccount('CASH')).id;
       let debitAccountId: number | null = null;
 
       // General category expense account
@@ -112,7 +113,7 @@ export class ExpensesService {
         sourceId: expense.id,
         date: expense.date,
         debitAccountId,
-        creditAccountId: cashAccount.id,
+        creditAccountId: creditAccountId,
         amount: Number(expense.amount),
         note: expense.description || `Expense of ${expense.amount} under ${expense.category.name}`,
       });
@@ -210,7 +211,7 @@ export class ExpensesService {
     // Ledger update (Delete old and write new)
     try {
       await this.ledgerService.deleteEntriesForSource('EXPENSE', id);
-      const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+      const creditAccountId = data.paymentAccountId || (await this.ledgerService.getSystemAccount('CASH')).id;
       let debitAccountId: number | null = null;
 
       let expenseAccount = await this.prisma.ledgerAccount.findFirst({
@@ -233,7 +234,7 @@ export class ExpensesService {
         sourceId: updated.id,
         date: updated.date,
         debitAccountId,
-        creditAccountId: cashAccount.id,
+        creditAccountId: creditAccountId,
         amount: Number(updated.amount),
         note: updated.description || `Expense of ${updated.amount} under ${updated.category.name}`,
       });

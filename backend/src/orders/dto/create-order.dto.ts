@@ -57,6 +57,11 @@ class PaymentDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsNumber()
+  accountId?: number;
 }
 
 export class CreateOrderDto {

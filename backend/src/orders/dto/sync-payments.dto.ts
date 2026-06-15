@@ -26,6 +26,10 @@ class PaymentItemDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsNumber()
+  accountId?: number;
 }
 
 export class SyncPaymentsDto {

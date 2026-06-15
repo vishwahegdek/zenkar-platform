@@ -31,6 +31,7 @@ model User {
   recipients     Recipient[]
   financeParties FinanceParty[]
   auditLogs      AuditLog[]
+  treasuryAccounts LedgerAccount[]
 
   // Google Sync Credentials
   googleRefreshToken String?   @map("google_refresh_token")
@@ -238,6 +239,10 @@ model Payment {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  accountId Int? @map("account_id")
+  account   LedgerAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
 
   createdById Int?  @map("created_by_id")
   updatedById Int?  @map("updated_by_id")
@@ -565,6 +570,7 @@ model LedgerAccount {
   supplierId  Int?          @map("supplier_id")
   labourerId  Int?          @map("labourer_id")
   recipientId Int?          @map("recipient_id")
+  userId      Int?          @map("user_id") // Links treasury account to specific user (null = global)
   entries     LedgerEntry[]
   createdAt   DateTime      @default(now()) @map("created_at")
   // Relations
@@ -573,6 +579,8 @@ model LedgerAccount {
   supplier    Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   labourer    Labourer?     @relation(fields: [labourerId], references: [id], onDelete: SetNull)
   recipient   Recipient?    @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  payments    Payment[]
 
   @@map("ledger_accounts")
 }
