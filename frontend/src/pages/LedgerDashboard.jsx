@@ -240,6 +240,10 @@ export default function LedgerDashboard() {
         isOpen={isAdjustmentModalOpen} 
         onClose={() => setIsAdjustmentModalOpen(false)} 
       />
+      <TransferMoneyModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+      />
     </div>
   );
 }
