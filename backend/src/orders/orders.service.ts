@@ -113,6 +113,7 @@ export class OrdersService implements OnModuleInit {
     delete orderData.customerAddress;
     delete orderData.advanceAmount;
     delete orderData.skipGoogleSync;
+    delete orderData.paymentAccountId;
 
     const result = await this.prisma.$transaction(async (tx) => {
       let finalCustomerId = createOrderDto.customerId;
@@ -538,6 +539,7 @@ export class OrdersService implements OnModuleInit {
     delete orderData.customerPhone;
     delete orderData.customerAddress;
     delete orderData.skipGoogleSync;
+    delete orderData.paymentAccountId;
 
     const result = await this.prisma.$transaction(async (tx) => {
       // Logic: If status changing to 'closed', calculate balance and set discount
