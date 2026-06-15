@@ -32,6 +32,7 @@ import LedgerDashboard from './pages/LedgerDashboard';
 import LedgerAccounts from './pages/LedgerAccounts';
 import BalanceSheet from './pages/BalanceSheet';
 import IncomeStatement from './pages/IncomeStatement';
+import Settings from './pages/Settings';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -111,6 +112,7 @@ function App() {
               </Route>
               
               <Route path="admin" element={<AdminDashboard />} />
+              <Route path="settings" element={<Settings />} />
 
               <Route path="*" element={<div>Not Found</div>} />
             </Route>

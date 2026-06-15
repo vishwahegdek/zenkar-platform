@@ -10,7 +10,8 @@ import {
   Briefcase, 
   LogOut,
   Menu,
-  TrendingUp // Use TrendingUp or similar for Purchases if available, or just ShoppingCart
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +55,12 @@ export function Sidebar({ className }) {
       items: [
         { name: "Labour", path: "/labour", icon: Briefcase },
         { name: "Contacts", path: "/contacts", icon: Users },
+      ]
+    },
+    {
+      title: "System",
+      items: [
+        { name: "Settings", path: "/settings", icon: Settings },
       ]
     }
   ];

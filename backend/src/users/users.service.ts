@@ -42,4 +42,21 @@ export class UsersService {
       data: data,
     });
   }
+
+  async getSettings(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true }
+    });
+    return user?.preferences || {};
+  }
+
+  async updateSettings(userId: number, preferences: any) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferences },
+      select: { preferences: true }
+    });
+    return user.preferences;
+  }
 }
