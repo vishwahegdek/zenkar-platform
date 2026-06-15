@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 
 import SmartSelector from '../components/SmartSelector';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
@@ -86,9 +87,9 @@ const ExpenseForm = () => {
   });
 
   const onSubmit = (data) => {
-    if (!selectedRecipient) {
-        // Maybe required? Or optional? User said "Recipient field is not mandatory"
-        // So allow null
+    if (!paymentAccountId) {
+      toast.error('Please select a payment method / account.');
+      return;
     }
     mutation.mutate(data);
   };

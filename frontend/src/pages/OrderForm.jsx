@@ -8,6 +8,8 @@ import SmartSelector from '../components/SmartSelector';
 import CustomerForm from './CustomerForm';
 import ContactForm from '../components/ContactForm';
 import ProductForm from './ProductForm';
+import { format } from 'date-fns';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { toast } from 'react-hot-toast';
 
 export default function OrderForm() {
@@ -60,7 +62,7 @@ export default function OrderForm() {
     items: [],
     notes: '',
     advanceAmount: 0,
-    paymentMethod: 'CASH',
+    paymentAccountId: null,
   });
 
   // Fetch Order Data if Edit
@@ -115,6 +117,10 @@ export default function OrderForm() {
     // Allow 0 for contact-based creation
     if (data.customerId === null || data.customerId === undefined) {
         return toast.error("Please select a customer before saving.");
+    }
+    
+    if (Number(data.advanceAmount) > 0 && !data.paymentAccountId) {
+        return toast.error("Please select a payment account for the advance amount.");
     }
     // Validate Product IDs (Strict Selection)
     const invalidProducts = data.items.filter(i => i.productName && !i.productId);
@@ -459,14 +465,12 @@ export default function OrderForm() {
                <div className="flex items-center justify-between gap-4">
                  <span className="text-sm text-gray-600">Advance</span>
                  <div className="flex gap-2">
-                    <select 
-                        className="input-field w-20 py-1 px-1 text-sm"
-                        value={formData.paymentMethod}
-                        onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
-                    >
-                        <option value="CASH">Cash</option>
-                        <option value="UPI">UPI</option>
-                    </select>
+                    <div className="w-32">
+                        <PaymentMethodSelector 
+                            value={formData.paymentAccountId} 
+                            onChange={val => setFormData({...formData, paymentAccountId: val})}
+                        />
+                    </div>
                     <input type="number" className="input-field w-24 text-right"
                         value={formData.advanceAmount}
                         onChange={e => setFormData({...formData, advanceAmount: e.target.value})}

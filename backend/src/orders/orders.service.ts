@@ -246,9 +246,10 @@ export class OrdersService implements OnModuleInit {
           data: {
             orderId: order.id,
             amount: Number(createOrderDto.advanceAmount),
-            method: createOrderDto.paymentMethod || 'CASH',
+            method: createOrderDto.paymentMethod || 'ADVANCE',
             date: new Date(),
             note: 'Initial Advance',
+            accountId: createOrderDto.paymentAccountId || undefined,
             createdById: userId,
           },
         });

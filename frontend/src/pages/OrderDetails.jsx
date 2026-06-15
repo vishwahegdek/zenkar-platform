@@ -8,6 +8,7 @@ import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
 import BillView from '../components/BillView';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 export default function OrderDetails() {
@@ -378,7 +379,7 @@ function PaymentModal({ onClose, onSubmit, isLoading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!accountId) {
-      alert("Please select a payment account.");
+      toast.error("Please select a payment account.");
       return;
     }
     onSubmit({ amount: Number(amount), date, note, accountId });
@@ -471,8 +472,14 @@ function ManagePaymentsModal({ payments = [], onClose, onSubmit, isLoading, erro
 
   const handleSubmit = (e) => {
       e.preventDefault();
-      // Filter out empty rows? Or validate?
-      // Assuming valid inputs or basic required check
+      
+      // Validation: Check if any row with an amount is missing an account
+      const invalidRow = items.find(i => Number(i.amount) > 0 && !i.accountId);
+      if (invalidRow) {
+         toast.error("Please select a payment account for all valid payments.");
+         return;
+      }
+
       const validItems = items.filter(i => i.amount).map(i => ({
         ...i,
         amount: Number(i.amount)
