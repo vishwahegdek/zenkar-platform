@@ -354,42 +354,8 @@ async function main() {
       },
     });
 
-    for (const payment of labourPayments) {
-      if (new Date(payment.date) < CUTOFF_DATE) continue;
-      const amount = Number(payment.amount);
-      if (amount <= 0) continue;
-
-      const transactionId = `LABOUR-PAYMENT-${payment.id}`;
-      const labourerAcc = await getOrCreateLabourerAcc(payment.labourerId, payment.labourer?.name || 'Unknown Labourer');
-
-      // Debit LABOURER (Liability decreases)
-      await prisma.ledgerEntry.create({
-        data: {
-          transactionId,
-          accountId: labourerAcc.id,
-          date: payment.date,
-          debit: amount,
-          credit: 0,
-          sourceType: 'LABOUR_PAYMENT',
-          sourceId: payment.id,
-          note: payment.note || `Labour Payment`,
-        },
-      });
-
-      // Credit Cash Account
-      await prisma.ledgerEntry.create({
-        data: {
-          transactionId,
-          accountId: systemAccounts['CASH'].id,
-          date: payment.date,
-          debit: 0,
-          credit: amount,
-          sourceType: 'LABOUR_PAYMENT',
-          sourceId: payment.id,
-          note: payment.note || `Labour Payment`,
-        },
-      });
-    }
+    // We no longer migrate LabourPayments into the ledger dynamically.
+    // They are handled dynamically via Balance Sheet and recorded formally at Settlement.
     console.log(`  Successfully migrated ${labourPayments.length} labour payments.`);
 
     // 9. Migrate Settlements
@@ -443,9 +409,37 @@ async function main() {
         });
       }
 
-      // Step 2: Recognized payments are now handled in the Expense loop above.
-      // We no longer book totalPaid here to prevent double-counting.
+      // Step 2: Recognize Cash Paid Out
       const paid = Number(set.totalPaid);
+      if (paid > 0) {
+        // Debit Labourer (Liability decreases)
+        await prisma.ledgerEntry.create({
+          data: {
+            transactionId: `${transactionId}-PAID`,
+            accountId: labourerAcc.id,
+            date: set.settlementDate,
+            debit: paid,
+            credit: 0,
+            sourceType: 'LABOUR_SETTLEMENT',
+            sourceId: set.id,
+            note: `Total Cash Paid to labourer up to ${set.settlementDate.toISOString().split('T')[0]}`,
+          },
+        });
+
+        // Credit Cash Account (Cash decreases)
+        await prisma.ledgerEntry.create({
+          data: {
+            transactionId: `${transactionId}-PAID`,
+            accountId: systemAccounts['CASH'].id,
+            date: set.settlementDate,
+            debit: 0,
+            credit: paid,
+            sourceType: 'LABOUR_SETTLEMENT',
+            sourceId: set.id,
+            note: `Total Cash Paid to labourer up to ${set.settlementDate.toISOString().split('T')[0]}`,
+          },
+        });
+      }
 
       // Step 3: Write-off mismatch for Settle Clear (!isCarryForward)
       if (!set.isCarryForward) {

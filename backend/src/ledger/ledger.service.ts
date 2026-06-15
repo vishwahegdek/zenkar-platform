@@ -417,6 +417,7 @@ export class LedgerService implements OnModuleInit {
     });
 
     let accruedWages = 0;
+    let accruedPaid = 0;
     for (const labourer of labourers) {
       const lastSettlement = labourer.settlements[0];
       const startDate = lastSettlement ? lastSettlement.settlementDate : null;
@@ -440,26 +441,69 @@ export class LedgerService implements OnModuleInit {
 
       const salary = Number(labourer.defaultDailyWage) || 0;
       accruedWages += (totalDays * salary);
+
+      const payments = await this.prisma.labourPayment.findMany({
+        where: {
+          labourerId: labourer.id,
+          date: dateFilter
+        }
+      });
+
+      let totalPaid = 0;
+      payments.forEach(p => {
+        totalPaid += Number(p.amount);
+      });
+      accruedPaid += totalPaid;
     }
 
-    if (accruedWages > 0) {
-      // Inject Virtual Liability
-      liabilities.push({
-        id: 'virtual-accrued-payable',
-        name: 'Unsettled Wages Payable (Accrued)',
-        subType: 'WAGE_EXPENSE',
-        balance: accruedWages
-      });
-      totalLiabilities += accruedWages;
+    if (accruedWages > 0 || accruedPaid > 0) {
+      const netAccruedPayable = accruedWages - accruedPaid;
+
+      // Inject Virtual Liability (or Asset if we paid more than they worked)
+      if (netAccruedPayable > 0) {
+        liabilities.push({
+          id: 'virtual-accrued-payable',
+          name: 'Unsettled Wages Payable (Accrued)',
+          subType: 'WAGE_EXPENSE',
+          balance: netAccruedPayable
+        });
+        totalLiabilities += netAccruedPayable;
+      } else if (netAccruedPayable < 0) {
+        assets.push({
+          id: 'virtual-accrued-advance',
+          name: 'Unsettled Wage Advances (Accrued)',
+          subType: 'ADVANCE',
+          balance: Math.abs(netAccruedPayable)
+        });
+        totalAssets += Math.abs(netAccruedPayable);
+      }
 
       // Inject Virtual Expense
-      expenses.push({
-        id: 'virtual-accrued-expense',
-        name: 'Unsettled Wages Expense (Accrued)',
-        subType: 'WAGE_EXPENSE',
-        balance: accruedWages
-      });
-      totalExpenses += accruedWages;
+      if (accruedWages > 0) {
+        expenses.push({
+          id: 'virtual-accrued-expense',
+          name: 'Unsettled Wages Expense (Accrued)',
+          subType: 'WAGE_EXPENSE',
+          balance: accruedWages
+        });
+        totalExpenses += accruedWages;
+      }
+
+      // Adjust Cash Account
+      if (accruedPaid > 0) {
+        let cashAccount = assets.find(a => a.subType === 'CASH');
+        if (!cashAccount) {
+          cashAccount = {
+            id: 'virtual-cash',
+            name: 'Cash',
+            subType: 'CASH',
+            balance: 0
+          };
+          assets.push(cashAccount);
+        }
+        cashAccount.balance -= accruedPaid;
+        totalAssets -= accruedPaid;
+      }
     }
     // -----------------------------------------------
 

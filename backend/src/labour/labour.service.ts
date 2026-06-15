@@ -132,20 +132,6 @@ export class LabourService {
               where: { id: existingPayments[0].id },
               data: { amount: update.amount, updatedById: userId } as any,
             });
-            // Update Ledger
-            await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', existingPayments[0].id);
-            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
-            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
-            await this.ledgerService.recordDoubleEntry({
-              transactionId: `LABOUR-PAYMENT-${existingPayments[0].id}`,
-              sourceType: 'LABOUR_PAYMENT',
-              sourceId: existingPayments[0].id,
-              date: date,
-              debitAccountId: labourerAccount.id,
-              creditAccountId: cashAccount.id,
-              amount: update.amount,
-              note: 'Daily Labour Wage (Updated)',
-            });
           } else if (existingPayments.length === 0) {
             const p = await this.prisma.labourPayment.create({
               data: {
@@ -156,23 +142,8 @@ export class LabourService {
                 createdById: userId,
               } as any,
             });
-            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
-            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
-            await this.ledgerService.recordDoubleEntry({
-              transactionId: `LABOUR-PAYMENT-${p.id}`,
-              sourceType: 'LABOUR_PAYMENT',
-              sourceId: p.id,
-              date: date,
-              debitAccountId: labourerAccount.id,
-              creditAccountId: cashAccount.id,
-              amount: update.amount,
-              note: 'Daily Labour Wage',
-            });
           } else {
             // Multiple exist, user is overriding total. Consolidate them.
-            for (const ep of existingPayments) {
-              await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
-            }
             await this.prisma.labourPayment.deleteMany({
               where: { labourerId, date: date },
             });
@@ -185,27 +156,12 @@ export class LabourService {
                 createdById: userId,
               } as any,
             });
-            const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown');
-            const cashAccount = await this.ledgerService.getSystemAccount('CASH');
-            await this.ledgerService.recordDoubleEntry({
-              transactionId: `LABOUR-PAYMENT-${p.id}`,
-              sourceType: 'LABOUR_PAYMENT',
-              sourceId: p.id,
-              date: date,
-              debitAccountId: labourerAccount.id,
-              creditAccountId: cashAccount.id,
-              amount: update.amount,
-              note: 'Daily Labour Wage (Consolidated)',
-            });
           }
         }
       } else {
         const existingPayments = await this.prisma.labourPayment.findMany({
           where: { labourerId, date: date },
         });
-        for (const ep of existingPayments) {
-          await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
-        }
         await this.prisma.labourPayment.deleteMany({
           where: { labourerId, date: date },
         });
@@ -494,10 +450,21 @@ export class LabourService {
           });
         }
 
-        // Step 2: Recognized what we paid them (totalPaid) is now skipped here
-        // The cash deductions are handled individually and in real-time by the Expense service
-        // when the user clicks 'Record Payment'. Re-booking it here causes double-counting.
-
+        // Step 2: Recognize what we paid them (totalPaid)
+        // Since LabourPayment no longer records double entries directly to the ledger,
+        // we record the cash outflow in bulk at the time of settlement.
+        if (Number(settlement.totalPaid) > 0) {
+          await this.ledgerService.recordDoubleEntry({
+            transactionId: `${transactionId}-PAID`,
+            sourceType: 'LABOUR_SETTLEMENT',
+            sourceId: settlement.id,
+            date: settlement.settlementDate,
+            debitAccountId: labourerAccount.id,
+            creditAccountId: cashAccount.id,
+            amount: Number(settlement.totalPaid),
+            note: `Total Cash Paid to labourer ${labourer.name} up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
+          });
+        }
         // Step 3: Write off the difference if Settle Clear (!isCarryForward)
         if (!isCarryForward) {
            const diff = Number(settlement.totalPayable) - Number(settlement.totalPaid);
@@ -550,16 +517,9 @@ export class LabourService {
       },
     });
 
-    await this.ledgerService.recordDoubleEntry({
-      transactionId: `LABOUR-PAYMENT-${payment.id}`,
-      sourceType: 'LABOUR_PAYMENT',
-      sourceId: payment.id,
-      date: date,
-      debitAccountId: labourerAccount.id,
-      creditAccountId: cashAccount.id,
-      amount: amount,
-      note: note || 'Labour Payment',
-    });
+    // Note: recordDoubleEntry is intentionally omitted here.
+    // Daily payments do not hit the ledger to avoid noise.
+    // They are accrued dynamically in the Balance Sheet and formally recorded at Settlement.
 
     return payment;
   }
