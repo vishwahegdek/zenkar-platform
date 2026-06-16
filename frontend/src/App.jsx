@@ -26,7 +26,7 @@ import QuickSale from './pages/QuickSale';
 import BalanceInitializer from './pages/BalanceInitializer';
 import Login from './pages/Login';
 import CashflowDashboard from './pages/CashflowDashboard';
-import IncomeSheet from './pages/IncomeSheet';
+
 import AdminDashboard from './pages/AdminDashboard';
 import LedgerDashboard from './pages/LedgerDashboard';
 import LedgerAccounts from './pages/LedgerAccounts';
@@ -68,7 +68,7 @@ function App() {
               <Route index element={<OrdersList />} />
               <Route path="dashboard" element={<CashflowDashboard />} />
               <Route path="sales" element={<SalesDashboard />} />
-              <Route path="income-sheet" element={<IncomeSheet />} />
+
               <Route path="orders" element={<OrdersList />} />
               <Route path="quick-sale" element={<QuickSale />} />
               <Route path="orders/new" element={<OrderForm />} />

@@ -26,7 +26,7 @@ export function Sidebar({ className }) {
       items: [
         { name: "Cashflow", path: "/dashboard", icon: LayoutDashboard },
         { name: "Sales Analytics", path: "/sales", icon: TrendingUp },
-        { name: "Income Sheet", path: "/income-sheet", icon: Receipt },
+
         { name: "Quick Sale", path: "/quick-sale", icon: ShoppingCart },
         { name: "Orders", path: "/orders", icon: Package },
         { name: "Customers", path: "/customers", icon: Users },

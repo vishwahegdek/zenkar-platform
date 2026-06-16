@@ -10,7 +10,7 @@ import { Sidebar } from './Sidebar';
 const PAGE_TITLES = {
   '/dashboard': 'Cashflow Dashboard',
   '/sales': 'Sales Analytics',
-  '/income-sheet': 'Income Sheet',
+
   '/quick-sale': 'Quick Sale',
   '/orders': 'Orders',
   '/customers': 'Customer Directory',
