@@ -25,6 +25,7 @@ export function Sidebar({ className }) {
       title: "Sales",
       items: [
         { name: "Cashflow", path: "/dashboard", icon: LayoutDashboard },
+        { name: "Sales Analytics", path: "/sales", icon: TrendingUp },
         { name: "Income Sheet", path: "/income-sheet", icon: Receipt },
         { name: "Quick Sale", path: "/quick-sale", icon: ShoppingCart },
         { name: "Orders", path: "/orders", icon: Package },
@@ -43,7 +44,6 @@ export function Sidebar({ className }) {
       title: "Finance",
       items: [
         { name: "Expenses", path: "/expenses", icon: Receipt },
-        { name: "Finance Book", path: "/finance", icon: BookOpen },
         { name: "Ledger", path: "/ledger", icon: BookOpen },
         { name: "Chart of Accounts", path: "/ledger-accounts", icon: BookOpen },
         { name: "Balance Sheet", path: "/balance-sheet", icon: BookOpen },

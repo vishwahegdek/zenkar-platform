@@ -24,6 +24,7 @@ export class SuppliersService {
       'SUPPLIER',
       supplier.id,
       supplier.name,
+      supplier.contactId
     );
 
     return supplier;

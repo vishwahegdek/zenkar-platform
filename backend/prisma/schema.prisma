@@ -30,7 +30,6 @@ model User {
   contacts       Contact[] // Relation - user can own contacts
   // labourers Labourer[] // Removed for shared access
   recipients     Recipient[]
-  financeParties FinanceParty[]
   auditLogs      AuditLog[]
   treasuryAccounts LedgerAccount[]
 
@@ -313,7 +312,6 @@ model Contact {
   suppliers  Supplier[]
   recipients Recipient[]
 
-  financeParties FinanceParty[]
   phones         ContactPhone[]
 
   ledgerAccounts LedgerAccount[]
@@ -447,39 +445,6 @@ model Expense {
   @@map("expenses")
 }
 
-model FinanceParty {
-  id     Int     @id @default(autoincrement())
-  userId Int?    @map("user_id")
-  name   String?
-  phone  String?
-  notes  String?
-  type   String  @default("CREDITOR") // CREDITOR (Payable), DEBTOR (Receivable) - Hints default view
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  contactId    Int?                 @map("contact_id")
-  user         User?                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  contact      Contact?             @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  transactions FinanceTransaction[]
-
-  @@map("finance_parties")
-}
-
-model FinanceTransaction {
-  id             Int      @id @default(autoincrement())
-  financePartyId Int      @map("finance_party_id")
-  amount         Decimal  @db.Decimal(12, 2)
-  type           String // BORROWED, REPAID, LENT, COLLECTED
-  date           DateTime @db.Date
-  note           String?
-  method         String   @default("CASH")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  party FinanceParty @relation(fields: [financePartyId], references: [id], onDelete: Cascade)
-
-  @@map("finance_transactions")
-}
 
 enum PurchaseStatus {
   ORDERED

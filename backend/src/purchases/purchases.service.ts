@@ -222,6 +222,7 @@ export class PurchasesService {
           'SUPPLIER',
           purchase.supplierId,
           supplierName,
+          purchase.supplier?.contactId
         );
         const inventoryPurchasesAccount = await this.ledgerService.getSystemAccount('GENERAL_EXPENSE');
         
@@ -248,6 +249,7 @@ export class PurchasesService {
           'SUPPLIER',
           purchase.supplierId,
           supplierName,
+          purchase.supplier?.contactId
         );
         const cashAccount = await this.ledgerService.getSystemAccount('CASH');
 

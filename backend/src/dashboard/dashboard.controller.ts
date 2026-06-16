@@ -56,4 +56,17 @@ export class DashboardController {
     return this.dashboardService.getChartData(from, to, timeframe);
   }
 
+  @Get('sales')
+  @ApiOperation({ summary: 'Get sales analytics data' })
+  @ApiQuery({ name: 'from', required: true })
+  @ApiQuery({ name: 'to', required: true })
+  @ApiQuery({ name: 'timeframe', required: false, enum: ['day', 'week', 'month'] })
+  getSalesAnalytics(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('timeframe') timeframe?: 'day' | 'week' | 'month'
+  ) {
+    return this.dashboardService.getSalesAnalytics(from, to, timeframe || 'day');
+  }
+
 }

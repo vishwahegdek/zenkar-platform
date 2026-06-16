@@ -281,6 +281,7 @@ export class OrdersService implements OnModuleInit {
         'CUSTOMER',
         result.customerId!,
         result.customer?.name || 'Walk-In',
+        result.customer?.contactId
       );
       const salesRevenueAccount = await this.ledgerService.getSystemAccount('SALES_REVENUE');
       const isConfirmedOrHigher = result.status === OrderStatus.CONFIRMED || result.status === OrderStatus.DELIVERED || result.status === OrderStatus.CLOSED;
@@ -699,6 +700,7 @@ export class OrdersService implements OnModuleInit {
         'CUSTOMER',
         result.customerId!,
         result.customer?.name || 'Walk-In',
+        result.customer?.contactId
       );
       const salesRevenueAccount = await this.ledgerService.getSystemAccount('SALES_REVENUE');
       const isConfirmedOrHigher = result.status === OrderStatus.CONFIRMED || result.status === OrderStatus.DELIVERED || result.status === OrderStatus.CLOSED;
@@ -759,6 +761,7 @@ export class OrdersService implements OnModuleInit {
           'CUSTOMER',
           order.customerId!,
           order.customer?.name || 'Walk-In',
+          order.customer?.contactId
         );
         const cashAccount = await this.ledgerService.getSystemAccount('CASH');
         await this.ledgerService.recordDoubleEntry({
@@ -867,6 +870,7 @@ export class OrdersService implements OnModuleInit {
           'CUSTOMER',
           order.customerId!,
           order.customer?.name || 'Walk-In',
+          order.customer?.contactId
         );
         const cashAccount = await this.ledgerService.getSystemAccount('CASH');
 

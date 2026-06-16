@@ -17,7 +17,6 @@ import { ContactsModule } from './contacts/contacts.module';
 import { LabourModule } from './labour/labour.module';
 import { RecipientsModule } from './recipients/recipients.module';
 import { NoCacheInterceptor } from './common/interceptors/no-cache.interceptor';
-import { FinanceModule } from './finance/finance.module';
 import { ProductCategoriesModule } from './product-categories.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PurchasesModule } from './purchases/purchases.module';
@@ -39,7 +38,6 @@ import { SuppliersModule } from './suppliers/suppliers.module';
     ExpensesModule,
     ContactsModule,
     LabourModule,
-    FinanceModule,
     ProductCategoriesModule,
     InventoryModule,
     PurchasesModule,

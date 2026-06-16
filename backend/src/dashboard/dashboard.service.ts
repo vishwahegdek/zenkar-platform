@@ -140,12 +140,6 @@ export class DashboardService {
       include: { labourer: true },
     });
 
-    // 3. Fetch Finance Transactions
-    const financeTxs = await this.prisma.financeTransaction.findMany({
-      where: { date: { gte: from, lte: to } },
-      include: { party: { include: { contact: true } } },
-    });
-
     let entries: any[] = [];
 
     // Process Payments (Inflow)
@@ -193,46 +187,7 @@ export class DashboardService {
       });
     });
 
-    // Process Finance Transactions
-    financeTxs.forEach((tx) => {
-      const partyName = tx.party?.contact?.name || tx.party?.name || 'Finance Party';
-      let type: 'IN' | 'OUT';
-      let category: string;
 
-      switch (tx.type) {
-        case 'BORROWED':
-          type = 'IN';
-          category = 'Lending (In)';
-          break;
-        case 'COLLECTED': // They paid us back
-          type = 'IN';
-          category = 'Lending (In)';
-          break;
-        case 'LENT':
-          type = 'OUT';
-          category = 'Lending (Out)';
-          break;
-        case 'REPAID': // We paid them back
-          type = 'OUT';
-          category = 'Lending (Out)';
-          break;
-        default:
-          type = 'IN';
-          category = 'Finance';
-      }
-
-      entries.push({
-        id: `fin-${tx.id}`,
-        date: tx.date,
-        time: tx.createdAt,
-        amount: Number(tx.amount),
-        type,
-        category,
-        description: `${tx.type}${tx.note ? ` (${tx.note})` : ''}`,
-        party: partyName,
-        source: 'Finance',
-      });
-    });
 
     // Filter if query is present
     if (q) {
@@ -275,14 +230,11 @@ export class DashboardService {
 
       console.log('Fetching chart data internal', { from, to, timeframe });
 
-      const [payments, expenses, financeTxs, labourPayments] = await Promise.all([
+      const [payments, expenses, labourPayments] = await Promise.all([
         this.prisma.payment.findMany({
           where: { date: { gte: from, lte: to } },
         }),
         this.prisma.expense.findMany({
-          where: { date: { gte: from, lte: to } },
-        }),
-        this.prisma.financeTransaction.findMany({
           where: { date: { gte: from, lte: to } },
         }),
         this.prisma.labourPayment.findMany({
@@ -316,12 +268,6 @@ export class DashboardService {
       payments.forEach(p => addToBucket(p.date, Number(p.amount), 'income'));
       expenses.forEach(e => addToBucket(e.date, Number(e.amount), 'expense'));
       labourPayments.forEach(p => addToBucket(p.date, Number(p.amount), 'expense'));
-      
-      financeTxs.forEach(tx => {
-        const amount = Number(tx.amount);
-        if (['BORROWED', 'COLLECTED'].includes(tx.type)) addToBucket(tx.date, amount, 'income');
-        else if (['LENT', 'REPAID'].includes(tx.type)) addToBucket(tx.date, amount, 'expense');
-      });
 
       const result = Array.from(buckets.entries())
         .map(([date, data]) => ({ date, ...data }))
@@ -338,5 +284,90 @@ export class DashboardService {
       }
       throw e;
     }
+  }
+
+  async getSalesAnalytics(fromStr: string, toStr: string, timeframe: 'day' | 'week' | 'month' = 'day') {
+    const from = new Date(fromStr + 'T00:00:00.000Z');
+    const to = new Date(toStr + 'T23:59:59.999Z');
+
+    // Fetch valid orders
+    const orders = await this.prisma.order.findMany({
+      where: {
+        orderDate: { gte: from, lte: to },
+        isDeleted: false,
+        status: { notIn: ['CANCELLED'] }
+      },
+      include: {
+        items: {
+          include: { product: { include: { category: true } } }
+        }
+      }
+    });
+
+    let totalSales = 0;
+    let totalDiscount = 0;
+    const salesTrend = new Map<string, number>();
+    const categorySales = new Map<string, number>();
+    const productSales = new Map<string, { quantity: number; revenue: number; name: string }>();
+
+    const getBucketKey = (date: Date) => {
+      const d = new Date(date);
+      if (timeframe === 'month') return d.toISOString().slice(0, 7); // YYYY-MM
+      if (timeframe === 'week') {
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d);
+        monday.setDate(diff);
+        return monday.toISOString().slice(0, 10); // YYYY-MM-DD
+      }
+      return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    };
+
+    orders.forEach(order => {
+      const orderRevenue = Number(order.totalAmount) - Number(order.discount || 0);
+      totalSales += orderRevenue;
+      totalDiscount += Number(order.discount || 0);
+
+      // Daily trend
+      const dateKey = getBucketKey(order.orderDate);
+      salesTrend.set(dateKey, (salesTrend.get(dateKey) || 0) + orderRevenue);
+
+      // Item breakdown
+      order.items.forEach(item => {
+        if (item.status === 'CONFIRMED' || item.status === 'DELIVERED') { 
+          const itemRevenue = Number(item.lineTotal);
+          
+          // Category breakdown
+          const categoryName = item.product?.category?.name || 'Uncategorized';
+          categorySales.set(categoryName, (categorySales.get(categoryName) || 0) + itemRevenue);
+
+          // Product breakdown
+          const productName = item.productName || item.product?.name || 'Unknown Product';
+          const existingProd = productSales.get(productName) || { quantity: 0, revenue: 0, name: productName };
+          existingProd.quantity += Number(item.quantity);
+          existingProd.revenue += itemRevenue;
+          productSales.set(productName, existingProd);
+        }
+      });
+    });
+
+    const averageOrderValue = orders.length > 0 ? totalSales / orders.length : 0;
+
+    return {
+      summary: {
+        totalSales,
+        totalOrders: orders.length,
+        averageOrderValue,
+        totalDiscount
+      },
+      trend: Array.from(salesTrend.entries())
+        .map(([date, revenue]) => ({ date, revenue }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      byCategory: Array.from(categorySales.entries())
+        .map(([name, revenue]) => ({ name, revenue }))
+        .sort((a, b) => b.revenue - a.revenue),
+      topProducts: Array.from(productSales.values())
+        .sort((a, b) => b.revenue - a.revenue)
+    };
   }
 }

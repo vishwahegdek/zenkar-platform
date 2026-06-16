@@ -55,11 +55,15 @@ export class LedgerService implements OnModuleInit {
     entityType: 'CUSTOMER' | 'SUPPLIER' | 'LABOURER' | 'RECIPIENT',
     entityId: number,
     entityName: string,
+    contactId?: number | null,
   ) {
     let whereClause: any = {};
     let createData: any = {
       name: `${entityType.charAt(0) + entityType.slice(1).toLowerCase()}: ${entityName}`,
     };
+    if (contactId) {
+      createData.contactId = contactId;
+    }
 
     if (entityType === 'CUSTOMER') {
       whereClause.customerId = entityId;
@@ -166,6 +170,51 @@ export class LedgerService implements OnModuleInit {
     });
 
     return { debitEntry, creditEntry };
+  }
+
+  async recordJournalEntry(params: {
+    date: string;
+    note: string;
+    entries: { accountId: number; debit: number; credit: number }[];
+  }) {
+    const dateVal = new Date(params.date);
+    await this.validateDateIsOpen(dateVal);
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+    for (const entry of params.entries) {
+      totalDebit += Number(entry.debit) || 0;
+      totalCredit += Number(entry.credit) || 0;
+    }
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      throw new Error(`Total debits (${totalDebit}) must equal total credits (${totalCredit})`);
+    }
+    
+    if (totalDebit === 0) {
+      throw new Error("Journal entry must have a non-zero value");
+    }
+
+    const transactionId = `MANUAL-${Date.now()}`;
+
+    const validEntries = params.entries.filter(e => Number(e.debit) > 0 || Number(e.credit) > 0);
+
+    const ledgerEntriesData = validEntries.map(e => ({
+      transactionId,
+      accountId: e.accountId,
+      date: dateVal,
+      debit: Number(e.debit) || 0,
+      credit: Number(e.credit) || 0,
+      sourceType: 'MANUAL',
+      sourceId: null,
+      note: params.note,
+    }));
+
+    await this.prisma.ledgerEntry.createMany({
+      data: ledgerEntriesData,
+    });
+
+    return { success: true, transactionId };
   }
 
   async deleteEntriesForSource(sourceType: string, sourceId: number) {

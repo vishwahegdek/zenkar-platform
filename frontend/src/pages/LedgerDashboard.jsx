@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns';
@@ -159,13 +159,13 @@ export default function LedgerDashboard() {
                   <ArrowRightLeft className="w-4 h-4" />
                   Transfer
                 </button>
-                <button 
-                  onClick={() => setIsAdjustmentModalOpen(true)}
+                <Link 
+                  to="/ledger/journal/new"
                   className="hidden md:flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  Adjustment
-                </button>
+                  Journal Entry
+                </Link>
               </div>
             </div>
           </div>

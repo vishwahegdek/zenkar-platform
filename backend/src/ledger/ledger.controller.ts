@@ -78,6 +78,14 @@ export class LedgerController {
     return { success: true, transactionId };
   }
 
+  @Post('journal')
+  @ApiOperation({ summary: 'Create a multi-line manual journal entry' })
+  async createJournal(
+    @Body() data: { date: string; note: string; entries: { accountId: number; debit: number; credit: number }[] }
+  ) {
+    return this.ledgerService.recordJournalEntry(data);
+  }
+
   @Get('settings')
   @ApiOperation({ summary: 'Get system accounting settings' })
   getSettings() {

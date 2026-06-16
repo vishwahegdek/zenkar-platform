@@ -15,7 +15,7 @@ import ExpenseForm from './pages/ExpenseForm';
 import ManageExpenses from './pages/ManageExpenses';
 import ContactsManager from './pages/ContactsManager';
 
-import FinancePage from './pages/Finance/FinancePage';
+
 import ProductionPage from './pages/ProductionPage';
 import LabourLayout from './pages/Labour/LabourLayout';
 import LabourEntry from './pages/Labour/LabourEntry';
@@ -33,6 +33,8 @@ import LedgerAccounts from './pages/LedgerAccounts';
 import BalanceSheet from './pages/BalanceSheet';
 import IncomeStatement from './pages/IncomeStatement';
 import Settings from './pages/Settings';
+import JournalEntryForm from './pages/JournalEntryForm';
+import SalesDashboard from './pages/SalesDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -65,6 +67,7 @@ function App() {
             }>
               <Route index element={<OrdersList />} />
               <Route path="dashboard" element={<CashflowDashboard />} />
+              <Route path="sales" element={<SalesDashboard />} />
               <Route path="income-sheet" element={<IncomeSheet />} />
               <Route path="orders" element={<OrdersList />} />
               <Route path="quick-sale" element={<QuickSale />} />
@@ -97,8 +100,9 @@ function App() {
               <Route path="contacts" element={<ContactsManager />} />
 
               <Route path="contacts" element={<ContactsManager />} />
-              <Route path="finance" element={<FinancePage />} />
+
               <Route path="ledger" element={<LedgerDashboard />} />
+              <Route path="ledger/journal/new" element={<JournalEntryForm />} />
               <Route path="ledger-accounts" element={<LedgerAccounts />} />
               <Route path="balance-sheet" element={<BalanceSheet />} />
               <Route path="income-statement" element={<IncomeStatement />} />

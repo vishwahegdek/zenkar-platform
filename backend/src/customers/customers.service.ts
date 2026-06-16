@@ -8,12 +8,14 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContactsService } from '../contacts/contacts.service';
+import { LedgerService } from '../ledger/ledger.service';
 
 @Injectable()
 export class CustomersService {
   constructor(
     private prisma: PrismaService,
     private contactsService: ContactsService, // Inject ContactsService
+    private ledgerService: LedgerService,
   ) {}
 
   async create(createCustomerDto: CreateCustomerDto, userId: number) {
@@ -129,7 +131,7 @@ export class CustomersService {
       }
     }
 
-    return this.prisma.customer.create({
+    const customer = await this.prisma.customer.create({
       data: {
         name: createCustomerDto.name!, // Alert: We ensured it is set above or threw error.
         phone: createCustomerDto.phone,
@@ -138,6 +140,15 @@ export class CustomersService {
         contactId: createCustomerDto.contactId || undefined,
       },
     });
+
+    await this.ledgerService.getOrCreateAccountForEntity(
+      'CUSTOMER',
+      customer.id,
+      customer.name,
+      customer.contactId
+    );
+
+    return customer;
   }
 
   async findAll(userId: number | undefined, params: any) {
