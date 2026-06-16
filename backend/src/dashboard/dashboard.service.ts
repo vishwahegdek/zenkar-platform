@@ -20,7 +20,7 @@ export class DashboardService {
         `
         SELECT 
           (SELECT COUNT(*) FROM "payments" WHERE "date" >= ${dateFilter} AND "date" < ${dateFilter} + INTERVAL '1 day')::int as "transactionsCount",
-          (SELECT COALESCE(SUM("total_amount"), 0) FROM "orders" WHERE "order_date" >= ${dateFilter} AND "order_date" < ${dateFilter} + INTERVAL '1 day' AND "is_deleted" = false) as "totalSales",
+          (SELECT COALESCE(SUM("total_amount"), 0) FROM "orders" WHERE "order_date" >= ${dateFilter} AND "order_date" < ${dateFilter} + INTERVAL '1 day' AND "is_deleted" = false AND "status" NOT IN ('CANCELLED', 'ENQUIRED')) as "totalSales",
           (SELECT COALESCE(SUM("amount"), 0) FROM "payments" WHERE "date" >= ${dateFilter} AND "date" < ${dateFilter} + INTERVAL '1 day') as "totalReceived"
       `,
         ...params,
@@ -295,7 +295,7 @@ export class DashboardService {
       where: {
         orderDate: { gte: from, lte: to },
         isDeleted: false,
-        status: { notIn: ['CANCELLED'] }
+        status: { notIn: ['CANCELLED', 'ENQUIRED'] }
       },
       include: {
         items: {
