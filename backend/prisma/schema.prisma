@@ -402,6 +402,9 @@ model LabourPayment {
   createdBy   User?    @relation("LabourPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy   User?    @relation("LabourPaymentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
+  accountId Int? @map("account_id")
+  account   LedgerAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
   labourer Labourer @relation(fields: [labourerId], references: [id], onDelete: Restrict)
 
   @@map("labour_payments")
@@ -567,6 +570,7 @@ model LedgerAccount {
   recipient   Recipient?    @relation(fields: [recipientId], references: [id], onDelete: SetNull)
   user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   payments    Payment[]
+  labourPayments LabourPayment[]
 
   @@map("ledger_accounts")
 }

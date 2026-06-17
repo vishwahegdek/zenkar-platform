@@ -127,41 +127,48 @@ export class LabourService {
         const currentTotal = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
         if (currentTotal !== update.amount) {
-          if (existingPayments.length === 1) {
-            await this.prisma.labourPayment.update({
-              where: { id: existingPayments[0].id },
-              data: { amount: update.amount, updatedById: userId } as any,
-            });
-          } else if (existingPayments.length === 0) {
-            const p = await this.prisma.labourPayment.create({
-              data: {
-                labourerId,
-                amount: update.amount,
-                date: date,
-                note: 'Daily Labour Wage',
-                createdById: userId,
-              } as any,
-            });
-          } else {
-            // Multiple exist, user is overriding total. Consolidate them.
-            await this.prisma.labourPayment.deleteMany({
-              where: { labourerId, date: date },
-            });
-            const p = await this.prisma.labourPayment.create({
-              data: {
-                labourerId,
-                amount: update.amount,
-                date: date,
-                note: 'Daily Labour Wage (Consolidated)',
-                createdById: userId,
-              } as any,
-            });
+          // Delete existing entries and their ledger records
+          for (const ep of existingPayments) {
+            await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
           }
+          await this.prisma.labourPayment.deleteMany({
+            where: { labourerId, date: date },
+          });
+
+          const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+          
+          const p = await this.prisma.labourPayment.create({
+            data: {
+              labourerId,
+              amount: update.amount,
+              date: date,
+              note: 'Daily Labour Wage',
+              createdById: userId,
+              accountId: cashAccount.id,
+            } as any,
+          });
+
+          // Ledger Entry
+          const labourerObj = await this.prisma.labourer.findUnique({ where: { id: labourerId } });
+          const labourerAcc = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, labourerObj?.name || 'Labourer');
+          await this.ledgerService.recordDoubleEntry({
+            transactionId: `LABOUR-PAY-${p.id}`,
+            sourceType: 'LABOUR_PAYMENT',
+            sourceId: p.id,
+            date: p.date,
+            debitAccountId: labourerAcc.id,
+            creditAccountId: cashAccount.id,
+            amount: Number(p.amount),
+            note: 'Daily Labour Wage Cash Payment',
+          });
         }
       } else {
         const existingPayments = await this.prisma.labourPayment.findMany({
           where: { labourerId, date: date },
         });
+        for (const ep of existingPayments) {
+           await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
+        }
         await this.prisma.labourPayment.deleteMany({
           where: { labourerId, date: date },
         });
@@ -291,6 +298,7 @@ export class LabourService {
       const payments = await this.prisma.labourPayment.findMany({
         where: payWhere,
         orderBy: { date: 'asc' },
+        include: { account: true },
       });
 
       let totalDays = 0;
@@ -302,19 +310,20 @@ export class LabourService {
       attendances.forEach((a) => {
         const d = a.date.toISOString().split('T')[0];
         if (!recordMap.has(d))
-          recordMap.set(d, { date: d, attendance: 0, amount: 0 });
+          recordMap.set(d, { date: d, attendance: 0, payments: [] });
         const rec = recordMap.get(d);
-        rec.attendance = Number(a.value);
-        totalDays += rec.attendance;
+        rec.attendance += Number(a.value);
+        totalDays += Number(a.value);
       });
 
       payments.forEach((p) => {
         const d = p.date.toISOString().split('T')[0];
         if (!recordMap.has(d))
-          recordMap.set(d, { date: d, attendance: 0, amount: 0 });
+          recordMap.set(d, { date: d, attendance: 0, payments: [] });
         const rec = recordMap.get(d);
-        rec.amount += Number(p.amount);
-        totalPaid += rec.amount;
+        const accName = p.account ? p.account.name.split(':')[0] : 'Cash';
+        rec.payments.push({ amount: Number(p.amount), accountName: accName, note: p.note });
+        totalPaid += Number(p.amount);
       });
 
       const records = Array.from(recordMap.values()).sort((a, b) =>
@@ -451,20 +460,7 @@ export class LabourService {
         }
 
         // Step 2: Recognize what we paid them (totalPaid)
-        // Since LabourPayment no longer records double entries directly to the ledger,
-        // we record the cash outflow in bulk at the time of settlement.
-        if (Number(settlement.totalPaid) > 0) {
-          await this.ledgerService.recordDoubleEntry({
-            transactionId: `${transactionId}-PAID`,
-            sourceType: 'LABOUR_SETTLEMENT',
-            sourceId: settlement.id,
-            date: settlement.settlementDate,
-            debitAccountId: labourerAccount.id,
-            creditAccountId: cashAccount.id,
-            amount: Number(settlement.totalPaid),
-            note: `Total Cash Paid to labourer ${labourer.name} up to ${settlement.settlementDate.toISOString().split('T')[0]}`,
-          });
-        }
+        // Payments now hit the ledger directly when recorded, so we skip bulk recording here.
         // Step 3: Write off the difference if Settle Clear (!isCarryForward)
         if (!isCarryForward) {
            const diff = Number(settlement.totalPayable) - Number(settlement.totalPaid);
@@ -503,9 +499,11 @@ export class LabourService {
     date: Date,
     note?: string,
     userId?: number,
+    accountId?: number,
   ) {
-    const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, 'Unknown Labourer');
-    const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+    const labourerObj = await this.prisma.labourer.findUnique({ where: { id: labourerId } });
+    const labourerAccount = await this.ledgerService.getOrCreateAccountForEntity('LABOURER', labourerId, labourerObj?.name || 'Labourer');
+    const paymentAccount = accountId ? await this.prisma.ledgerAccount.findUnique({ where: { id: accountId } }) : await this.ledgerService.getSystemAccount('CASH');
 
     const payment = await this.prisma.labourPayment.create({
       data: {
@@ -514,12 +512,22 @@ export class LabourService {
         date,
         note: note || 'Labour Payment',
         createdById: userId,
+        accountId: paymentAccount?.id,
       },
     });
 
-    // Note: recordDoubleEntry is intentionally omitted here.
-    // Daily payments do not hit the ledger to avoid noise.
-    // They are accrued dynamically in the Balance Sheet and formally recorded at Settlement.
+    if (paymentAccount) {
+      await this.ledgerService.recordDoubleEntry({
+        transactionId: `LABOUR-PAY-${payment.id}`,
+        sourceType: 'LABOUR_PAYMENT',
+        sourceId: payment.id,
+        date: payment.date,
+        debitAccountId: labourerAccount.id,
+        creditAccountId: paymentAccount.id,
+        amount: Number(amount),
+        note: note || 'Labour Payment',
+      });
+    }
 
     return payment;
   }

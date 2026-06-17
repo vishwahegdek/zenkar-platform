@@ -28,13 +28,6 @@ export default function LabourLayout() {
             Daily Entry
           </NavLink>
           <NavLink 
-            to="/labour/report" 
-            className={({ isActive }) => `px-4 py-2 rounded ${isActive ? 'bg-green-700' : 'bg-green-600 hover:bg-green-500'}`}
-            style={{ backgroundColor: theme.navBg, color: theme.navText, textDecoration: 'none' }}
-          >
-            Report
-          </NavLink>
-          <NavLink 
             to="/labour/manage" 
             className={({ isActive }) => `px-4 py-2 rounded ${isActive ? 'bg-green-700' : 'bg-green-600 hover:bg-green-500'}`}
             style={{ backgroundColor: theme.navBg, color: theme.navText, textDecoration: 'none' }}

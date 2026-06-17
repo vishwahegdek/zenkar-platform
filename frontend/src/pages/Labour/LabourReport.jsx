@@ -1,11 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import PaymentMethodSelector from '../../components/PaymentMethodSelector';
 
 export default function LabourReport() {
-  const [selectedLabourerId, setSelectedLabourerId] = useState('');
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialId = queryParams.get('labourerId') || '';
+
+  const [selectedLabourerId, setSelectedLabourerId] = useState(initialId ? Number(initialId) : '');
   const [searchTerm, setSearchTerm] = useState(''); // For searchable input
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -23,6 +29,13 @@ export default function LabourReport() {
      if (!labourList) return [];
      return labourList.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [labourList, searchTerm]);
+
+  useEffect(() => {
+    if (initialId && labourList) {
+        const found = labourList.find(l => l.id === Number(initialId));
+        if (found) setSearchTerm(found.name);
+    }
+  }, [initialId, labourList]);
 
   const handleSelectLabourer = (labourer) => {
       setSelectedLabourerId(labourer.id);
@@ -75,13 +88,13 @@ export default function LabourReport() {
      setConfirmModal({ open: true, type, date: settlementDate });
   };
 
-  const [paymentModal, setPaymentModal] = useState({ open: false, amount: '', note: '' });
+  const [paymentModal, setPaymentModal] = useState({ open: false, amount: '', note: '', accountId: null });
 
   const { mutate: recordPayment } = useMutation({
     mutationFn: (data) => api.post(`/labour/${employeeData.id}/payment`, data),
     onSuccess: () => {
         toast.success('Payment recorded successfully.');
-        setPaymentModal({ open: false, amount: '', note: '' });
+        setPaymentModal({ open: false, amount: '', note: '', accountId: null });
         refetch();
     },
     onError: (err) => toast.error('Failed to record payment: ' + err.message)
@@ -95,7 +108,8 @@ export default function LabourReport() {
     recordPayment({
       amount: Number(paymentModal.amount),
       date: settlementDate,
-      note: paymentModal.note
+      note: paymentModal.note,
+      accountId: paymentModal.accountId
     });
   };
 
@@ -107,37 +121,7 @@ export default function LabourReport() {
   return (
     <div className="pb-20 bg-gray-900 min-h-screen">
       
-      {/* 1. Header & Search Area - Compact & Sticky */}
-      <div className="bg-gray-800 p-2 sticky top-0 z-40 border-b border-gray-700 shadow-md">
-          <div className="relative max-w-lg mx-auto">
-             <input 
-                type="text"
-                placeholder="Search & Select Employee..."
-                value={searchTerm}
-                onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setIsDropdownOpen(true);
-                    if(e.target.value === '') setSelectedLabourerId('');
-                }}
-                onFocus={() => setIsDropdownOpen(true)}
-                className="w-full p-2 pl-3 rounded bg-gray-700 text-white border border-gray-600 focus:border-green-500 focus:outline-none placeholder-gray-400 font-bold"
-                autoFocus
-             />
-             {isDropdownOpen && filteredLabourers.length > 0 && (
-                 <ul className="absolute w-full mt-1 bg-gray-700 border border-gray-600 rounded shadow-xl max-h-60 overflow-y-auto z-50">
-                     {filteredLabourers.map(emp => (
-                         <li 
-                            key={emp.id}
-                            onClick={() => handleSelectLabourer(emp)}
-                            className="p-3 text-white hover:bg-green-600 cursor-pointer border-b border-gray-600 last:border-0"
-                         >
-                            {emp.name}
-                         </li>
-                     ))}
-                 </ul>
-             )}
-          </div>
-      </div>
+      {/* 1. Header Removed */}
 
       {isLoading && <div className="text-center text-gray-400 mt-4">Loading Report...</div>}
 
@@ -146,9 +130,14 @@ export default function LabourReport() {
          <div className="bg-gray-800 shadow-xl overflow-hidden">
             
             {/* Employee Info & Settle Bar */}
-            <div className="p-3 bg-gray-900 border-b border-gray-700 flex flex-wrap justify-between items-center gap-2">
-                <div>
-                     <div className="text-xs text-gray-400">
+            <div className="p-3 bg-gray-900 border-b border-gray-700 flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-white">{employeeData.name}</h2>
+                    <button onClick={() => window.history.back()} className="text-sm text-gray-400 hover:text-white">← Back</button>
+                </div>
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                         <div className="text-xs text-gray-400">
                         Current Wage: <span className="text-white font-mono">₹{employeeData.salary}</span> | 
                         Last Settled: <span className="text-yellow-400 font-mono">
                             {employeeData.lastSettlementDate 
@@ -209,6 +198,7 @@ export default function LabourReport() {
                        </div>
                     </div>
                 )}
+                </div>
             </div>
 
             {/* Data Table - Edge to Edge */}
@@ -239,20 +229,33 @@ export default function LabourReport() {
                         ) : (
                             employeeData.records.map((rec, idx) => (
                                 <tr key={idx} className="border-b border-gray-700 hover:bg-gray-700/50">
-                                    <td className="p-2 font-mono border-r border-gray-700/50">{rec.date}</td>
-                                    <td className="p-2 text-center border-r border-gray-700/50">
+                                    <td className="p-2 border-r border-gray-700/50 align-top">
+                                        <div className="font-mono mt-1">{rec.date}</div>
+                                    </td>
+                                    <td className="p-2 text-center border-r border-gray-700/50 align-top">
                                         {rec.attendance > 0 ? (
-                                            <span className="bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded text-xs font-bold">
+                                            <span className="bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded text-xs font-bold inline-block mt-1">
                                                 {rec.attendance}
                                             </span>
-                                        ) : '-'}
+                                        ) : <span className="inline-block mt-1">-</span>}
                                     </td>
-                                    <td className="p-2 text-right">
-                                        {rec.amount !== 0 ? (
-                                            <span className={`font-mono ${rec.amount < 0 ? 'text-blue-300' : 'text-yellow-300'}`}>
-                                                {rec.amount < 0 ? `-₹${Math.abs(rec.amount)}` : `₹${rec.amount}`}
-                                            </span>
-                                        ) : '-'}
+                                    <td className="p-2 text-right align-top">
+                                        {rec.payments && rec.payments.length > 0 ? (
+                                            <div className="flex flex-col gap-2">
+                                                {rec.payments.map((p, pIdx) => (
+                                                    <div key={pIdx} className="flex flex-col items-end">
+                                                        <span className={`font-mono ${p.amount < 0 ? 'text-blue-300' : 'text-yellow-300'}`}>
+                                                            {p.amount < 0 ? `-₹${Math.abs(p.amount)}` : `₹${p.amount}`}
+                                                        </span>
+                                                        {p.accountName && (
+                                                            <div className="text-[10px] text-gray-400 font-medium truncate max-w-[150px]" title={p.accountName}>
+                                                                {p.accountName}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : <span className="inline-block mt-1">-</span>}
                                     </td>
                                 </tr>
                             ))
@@ -365,6 +368,13 @@ export default function LabourReport() {
                              value={settlementDate}
                              onChange={(e) => setSettlementDate(e.target.value)}
                              className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2 focus:border-green-500 focus:outline-none"
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Payment Method</label>
+                         <PaymentMethodSelector 
+                             value={paymentModal.accountId} 
+                             onChange={val => setPaymentModal({...paymentModal, accountId: val})}
                          />
                      </div>
                      <div>

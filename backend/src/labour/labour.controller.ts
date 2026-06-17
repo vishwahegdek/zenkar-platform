@@ -108,7 +108,7 @@ export class LabourController {
   recordPayment(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { amount: number; date: string; note?: string },
+    @Body() body: { amount: number; date: string; note?: string; accountId?: number },
   ) {
     return this.labourService.recordPayment(
       Number(id),
@@ -116,6 +116,7 @@ export class LabourController {
       new Date(body.date),
       body.note,
       req.user.userId,
+      body.accountId ? Number(body.accountId) : undefined,
     );
   }
 }

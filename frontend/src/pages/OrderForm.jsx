@@ -96,7 +96,7 @@ export default function OrderForm() {
            lineTotal: Number(i.lineTotal)
         })),
         notes: order.notes || '',
-        advanceAmount: Number(order.advanceAmount || 0),
+        // advanceAmount is intentionally omitted during edits as it's a creation-time field
       });
       initialLoadDone.current = true;
     } else if (!isEdit && !initialLoadDone.current) {
@@ -119,7 +119,7 @@ export default function OrderForm() {
         return toast.error("Please select a customer before saving.");
     }
     
-    if (Number(data.advanceAmount) > 0 && !data.paymentAccountId) {
+    if (!isEdit && Number(data.advanceAmount) > 0 && !data.paymentAccountId) {
         return toast.error("Please select a payment account for the advance amount.");
     }
     // Validate Product IDs (Strict Selection)
@@ -138,7 +138,7 @@ export default function OrderForm() {
       dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
       status: data.status || 'confirmed',
       totalAmount: calculateTotal(),
-      advanceAmount: Number(data.advanceAmount) || 0,
+      ...( !isEdit ? { advanceAmount: Number(data.advanceAmount) || 0 } : {} ),
       
       items: data.items
         .filter(i => i.productName) // Only include items with product selected or name entered

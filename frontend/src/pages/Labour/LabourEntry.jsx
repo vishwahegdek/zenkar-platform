@@ -121,7 +121,6 @@ export default function LabourEntry() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className="responsive-hide" style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>ID</th>
               <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Name</th>
               <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Att.</th>
               <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Amt.</th>
@@ -135,11 +134,17 @@ export default function LabourEntry() {
 
               return (
               <tr key={labourer.id} style={{ opacity: rowOpacity, backgroundColor: rowBg }}>
-                <td className="responsive-hide" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
-                  {labourer.id}
-                </td>
                 <td className="responsive-padding responsive-text" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd', fontSize: '16px' }}>
-                  {labourer.name}
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.location.href = `/labour/report?labourerId=${labourer.id}`;
+                    }}
+                    className="text-blue-400 hover:text-blue-300 font-bold underline cursor-pointer"
+                  >
+                    {labourer.name}
+                  </button>
                 </td>
                 <td className="responsive-padding" style={{ backgroundColor: theme.tableCellBg, color: theme.tableCellColor, padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>
                   <div className="flex justify-center gap-2">
