@@ -7,7 +7,8 @@ export default function LabourLayout() {
   const isDailyEntry = location.pathname.includes('/labour/daily');
   const isReport = location.pathname.includes('/labour/report');
   const isManage = location.pathname.includes('/labour/manage');
-  const isFullWidth = isDailyEntry || isReport || isManage;
+  const isSettlements = location.pathname.includes('/labour/settlements');
+  const isFullWidth = isDailyEntry || isReport || isManage || isSettlements;
 
   const theme = {
     bg: 'rgb(59, 100, 116)',
