@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
 import { format } from 'date-fns';
 
 export default function LabourSettlements() {
-  const [selectedLabourerId, setSelectedLabourerId] = useState('');
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialId = queryParams.get('labourerId');
+  
+  const [selectedLabourerId, setSelectedLabourerId] = useState(initialId ? Number(initialId) : '');
+
+  useEffect(() => {
+    if (initialId) {
+      setSelectedLabourerId(Number(initialId));
+    }
+  }, [initialId]);
 
   // Fetch all active labourers for the dropdown
   const { data: labourers, isLoading: isLoadingLabourers } = useQuery({
@@ -38,22 +49,18 @@ export default function LabourSettlements() {
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-white text-3xl font-bold mb-6">Settlement History</h1>
-
-        {/* Labourer Selection Dropdown */}
-        <div className="bg-gray-800 p-4 rounded-lg shadow-lg mb-6 border border-gray-700">
-          <label className="block text-gray-400 text-sm font-bold mb-2">Select Labourer</label>
-          <select 
-            value={selectedLabourerId} 
-            onChange={(e) => setSelectedLabourerId(e.target.value)}
-            className="w-full bg-gray-900 text-white border border-gray-600 rounded p-3 text-lg focus:border-green-500 focus:outline-none"
-          >
-            <option value="">-- Choose Labourer --</option>
-            {labourers?.map(l => (
-              <option key={l.id} value={l.id}>{l.name} (Wage: ₹{l.defaultDailyWage})</option>
-            ))}
-          </select>
+        <div className="flex justify-between items-center mb-6">
+            <h1 className="text-white text-3xl font-bold">Settlement History</h1>
+            <button onClick={() => window.history.back()} className="text-gray-400 hover:text-white bg-gray-800 px-3 py-1 rounded border border-gray-700">
+                ← Back to Report
+            </button>
         </div>
+
+        {!selectedLabourerId && (
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 text-center text-gray-400">
+                No labourer selected. Please navigate from a specific Labourer's report.
+            </div>
+        )}
 
         {/* Loading States */}
         {isLoadingLabourers && <p className="text-white">Loading labourers...</p>}

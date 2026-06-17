@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import PaymentMethodSelector from '../../components/PaymentMethodSelector';
 
 export default function LabourReport() {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const initialId = queryParams.get('labourerId') || '';
 
@@ -149,18 +150,12 @@ export default function LabourReport() {
 
                 {/* History Selector */}
                 <div className="flex gap-2">
-                    <select 
-                        className="p-1 rounded bg-gray-700 text-white text-xs border border-gray-600"
-                        value={selectedSettlementId}
-                        onChange={(e) => setSelectedSettlementId(e.target.value)}
+                    <button 
+                        onClick={() => navigate(`/labour/settlements?labourerId=${employeeData.id}`)}
+                        className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs border border-gray-600 flex items-center gap-1 font-semibold transition-colors"
                     >
-                        <option value="">Current Period</option>
-                        {settlements?.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {format(new Date(s.settlementDate), 'dd/MM/yyyy')} {s.isCarryForward ? '(CF)' : ''} - ₹{Number(s.netBalance).toFixed(0)}
-                            </option>
-                        ))}
-                    </select>
+                        📋 View Settlements
+                    </button>
                 </div>
 
                 {/* Settle Actions - Only show if in Current Period */}

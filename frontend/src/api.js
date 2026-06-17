@@ -8,6 +8,14 @@ const getHeaders = (options = {}) => {
 };
 
 const handleResponseError = async (res) => {
+    if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
+    }
+
     const errorText = await res.text();
     let message = errorText || 'API Request Failed';
     try {

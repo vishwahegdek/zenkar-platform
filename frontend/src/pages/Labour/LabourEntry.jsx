@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api';
 import { format, addDays } from 'date-fns';
 import toast from 'react-hot-toast';
 
 export default function LabourEntry() {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
 
@@ -83,7 +85,16 @@ export default function LabourEntry() {
            .responsive-input { width: 60px !important; padding: 4px !important; }
         }
       `}</style>
-      <h1 className="text-center text-white text-2xl font-bold py-2 mb-0">Labour Entry</h1>
+      <div className="flex justify-between items-center py-3 px-4 bg-gray-900 border-b border-gray-700 shadow-sm">
+        <h1 className="text-white text-2xl font-bold m-0">Labour Entry</h1>
+        <button 
+           type="button"
+           onClick={() => navigate('/labour/manage')}
+           className="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-md shadow text-sm font-semibold flex items-center gap-1 transition-colors"
+        >
+           ⚙️ Manage
+        </button>
+      </div>
       
       <div className="flex justify-center items-center gap-4 mb-4 p-2 bg-black/20">
         <button 

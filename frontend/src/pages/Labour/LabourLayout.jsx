@@ -18,32 +18,7 @@ export default function LabourLayout() {
 
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: 'Arial, sans-serif', color: 'white' }}>
-      <nav className="flex items-center p-4 bg-opacity-90 sticky top-0 z-50 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <div className="flex gap-4 min-w-max ml-auto">
-          <NavLink 
-            to="/labour/daily" 
-            className={({ isActive }) => `px-4 py-2 rounded ${isActive ? 'bg-green-700' : 'bg-green-600 hover:bg-green-500'}`}
-            style={{ backgroundColor: theme.navBg, color: theme.navText, textDecoration: 'none' }}
-          >
-            Daily Entry
-          </NavLink>
-          <NavLink 
-            to="/labour/manage" 
-            className={({ isActive }) => `px-4 py-2 rounded ${isActive ? 'bg-green-700' : 'bg-green-600 hover:bg-green-500'}`}
-            style={{ backgroundColor: theme.navBg, color: theme.navText, textDecoration: 'none' }}
-          >
-            Manage
-          </NavLink>
-          <NavLink 
-            to="/labour/settlements" 
-            className={({ isActive }) => `px-4 py-2 rounded ${isActive ? 'bg-green-700' : 'bg-green-600 hover:bg-green-500'}`}
-            style={{ backgroundColor: theme.navBg, color: theme.navText, textDecoration: 'none' }}
-          >
-            Settlements
-          </NavLink>
-        </div>
-      </nav>
-      
+
       <div className={isFullWidth ? "p-0 w-full" : "p-4 max-w-5xl mx-auto"}>
         <Outlet />
       </div>
