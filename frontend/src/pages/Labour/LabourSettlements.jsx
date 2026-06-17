@@ -38,85 +38,75 @@ export default function LabourSettlements() {
 
   const selectedLabourer = labourers?.find(l => l.id === Number(selectedLabourerId));
 
-  const theme = {
-    bg: 'rgb(59, 100, 116)',
-    cardBg: '#1e293b',
-    text: 'white',
-    tableHeaderBg: '#4caf50',
-    tableCellBg: '#2d3748',
-  };
-
   return (
-    <div style={{ backgroundColor: theme.bg, minHeight: '100vh', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-            <h1 className="text-white text-3xl font-bold">Settlement History</h1>
-            <button onClick={() => window.history.back()} className="text-gray-400 hover:text-white bg-gray-800 px-3 py-1 rounded border border-gray-700">
-                ← Back to Report
+    <div className="pb-20 bg-gray-900 min-h-screen font-sans">
+      <div className="p-3 bg-gray-900 border-b border-gray-700 flex flex-col gap-3">
+        <div className="flex justify-between items-center">
+            <h1 className="text-xl font-bold text-white">Settlement History</h1>
+            <button onClick={() => window.history.back()} className="text-sm text-gray-400 hover:text-white">
+                ← Back
             </button>
         </div>
+      </div>
 
-        {!selectedLabourerId && (
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 text-center text-gray-400">
-                No labourer selected. Please navigate from a specific Labourer's report.
-            </div>
-        )}
+      {!selectedLabourerId && (
+          <div className="p-6 text-center text-gray-500 italic">
+              No labourer selected. Please navigate from a specific Labourer's report.
+          </div>
+      )}
 
-        {/* Loading States */}
-        {isLoadingLabourers && <p className="text-white">Loading labourers...</p>}
-        {selectedLabourerId && isLoadingSettlements && <p className="text-white">Loading settlements...</p>}
+      {/* Loading States */}
+      {selectedLabourerId && isLoadingSettlements && <p className="text-center text-gray-400 mt-4">Loading settlements...</p>}
 
-        {/* Settlements Table */}
-        {selectedLabourerId && settlements && !isLoadingSettlements && (
-          <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
-            <div className="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Settlements for {selectedLabourer?.name}</h2>
+      {/* Settlements Table */}
+      {selectedLabourerId && settlements && !isLoadingSettlements && (
+          <div className="bg-gray-800 shadow-xl overflow-hidden mt-2">
+            <div className="p-3 bg-gray-900 border-b border-gray-700">
+              <div className="text-xs text-gray-400">
+                  Labourer: <span className="text-white font-bold text-sm">{selectedLabourer?.name}</span>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead>
+                <thead className="bg-gray-700 text-gray-200 uppercase text-[10px] font-bold sticky top-0">
                   <tr>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700">Period Ending</th>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700 text-center">Wage Snap.</th>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700 text-center">Attendance</th>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700 text-right">Payable</th>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700 text-right">Paid</th>
-                    <th className="p-3 text-sm font-bold text-gray-300 uppercase tracking-wide border-b border-gray-600 bg-gray-700 text-right">Balance</th>
+                    <th className="p-2 border-b border-gray-600">Period</th>
+                    <th className="p-2 border-b border-gray-600 text-center">Work</th>
+                    <th className="p-2 border-b border-gray-600 text-right">Paid</th>
+                    <th className="p-2 border-b border-gray-600 text-right">Bal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="text-gray-300 text-sm">
                   {settlements.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="p-6 text-center text-gray-400">
+                      <td colSpan="4" className="p-6 text-center text-gray-500 italic">
                         No settlements found for this labourer.
                       </td>
                     </tr>
                   ) : (
                     settlements.map((settlement, idx) => (
-                      <tr key={settlement.id} className="hover:bg-gray-750 transition-colors">
-                        <td className="p-3 text-white whitespace-nowrap">
-                          {format(new Date(settlement.settlementDate), 'dd MMM yyyy')}
+                      <tr key={settlement.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                        <td className="p-2 align-top border-r border-gray-700/50">
+                          <div className="font-mono text-[11px] mt-1 whitespace-nowrap text-gray-300">
+                            {format(new Date(settlement.settlementDate), 'dd/MM/yy')}
+                          </div>
                           {settlement.isCarryForward && (
-                            <span className="ml-2 text-xs bg-yellow-600/30 text-yellow-400 px-2 py-0.5 rounded">CF</span>
+                            <span className="text-[10px] text-yellow-500 font-bold inline-block mt-0.5">CF</span>
                           )}
                         </td>
-                        <td className="p-3 text-center text-gray-300">
-                           ₹{Number(settlement.wageSnapshot)}
+                        <td className="p-2 align-top text-center border-r border-gray-700/50">
+                          <div className="text-[11px] font-bold text-white mt-1">{Number(settlement.totalAttendance)}d</div>
+                          <div className="text-[9px] text-gray-500 mt-0.5">@₹{Number(settlement.wageSnapshot)}</div>
+                          <div className="text-[11px] text-green-400 font-mono mt-1">₹{Number(settlement.totalPayable)}</div>
                         </td>
-                        <td className="p-3 text-center text-white font-bold">
-                          {Number(settlement.totalAttendance)} days
+                        <td className="p-2 align-top text-right border-r border-gray-700/50">
+                          <div className="text-[11px] text-blue-400 font-mono mt-1">₹{Number(settlement.totalPaid)}</div>
                         </td>
-                        <td className="p-3 text-right text-green-400 font-mono">
-                          ₹{Number(settlement.totalPayable)}
-                        </td>
-                        <td className="p-3 text-right text-blue-400 font-mono">
-                          ₹{Number(settlement.totalPaid)}
-                        </td>
-                        <td className="p-3 text-right font-mono font-bold">
-                           <span className={Number(settlement.netBalance) > 0 ? 'text-red-400' : 'text-gray-300'}>
-                              ₹{Number(settlement.netBalance)}
-                           </span>
+                        <td className="p-2 align-top text-right">
+                          <div className={`text-[11px] font-mono font-bold mt-1 ${Number(settlement.netBalance) > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                             ₹{Number(settlement.netBalance)}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -126,7 +116,6 @@ export default function LabourSettlements() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }
