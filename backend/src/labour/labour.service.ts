@@ -30,11 +30,14 @@ export class LabourService {
       },
     });
 
+    const cashAccount = await this.ledgerService.getSystemAccount('CASH');
+
     // 3. Get paymnets (LabourPayments) for this date
     const payments = await this.prisma.labourPayment.findMany({
       where: {
         date: { gte: startOfDay, lte: endOfDay },
         labourerId: { in: labourers.map((c) => c.id) },
+        accountId: cashAccount.id, // ONLY fetch CASH payments
       },
     });
 
@@ -119,9 +122,10 @@ export class LabourService {
       }
 
       // B. LabourPayment
+      const cashAccount = await this.ledgerService.getSystemAccount('CASH');
       if (update.amount !== 0) {
         const existingPayments = await this.prisma.labourPayment.findMany({
-          where: { labourerId, date: { equals: date } },
+          where: { labourerId, date: { equals: date }, accountId: cashAccount.id },
         });
 
         const currentTotal = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -132,10 +136,8 @@ export class LabourService {
             await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
           }
           await this.prisma.labourPayment.deleteMany({
-            where: { labourerId, date: date },
+            where: { labourerId, date: date, accountId: cashAccount.id },
           });
-
-          const cashAccount = await this.ledgerService.getSystemAccount('CASH');
           
           const p = await this.prisma.labourPayment.create({
             data: {
@@ -164,13 +166,13 @@ export class LabourService {
         }
       } else {
         const existingPayments = await this.prisma.labourPayment.findMany({
-          where: { labourerId, date: date },
+          where: { labourerId, date: date, accountId: cashAccount.id },
         });
         for (const ep of existingPayments) {
            await this.ledgerService.deleteEntriesForSource('LABOUR_PAYMENT', ep.id);
         }
         await this.prisma.labourPayment.deleteMany({
-          where: { labourerId, date: date },
+          where: { labourerId, date: date, accountId: cashAccount.id },
         });
       }
     }

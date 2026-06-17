@@ -134,7 +134,7 @@ export default function LabourEntry() {
             <tr>
               <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Name</th>
               <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Att.</th>
-              <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Amt.</th>
+              <th style={{ backgroundColor: theme.tableHeaderBg, color: theme.tableHeaderColor, padding: '10px' }}>Cash</th>
             </tr>
           </thead>
           <tbody>
