@@ -8,7 +8,7 @@ import {
 } from 'date-fns';
 import { 
   ChevronLeft, ChevronRight, Activity, 
-  Users, UserCheck, CalendarDays, BarChart2
+  Users, UserCheck, CalendarDays, BarChart2, IndianRupee
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
@@ -86,6 +86,14 @@ export default function LabourAnalytics() {
     queryKey: ['labourers'],
     queryFn: () => api.get('/labour'),
   });
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const displayTrend = useMemo(() => {
     if (!data?.trend) return [];
@@ -181,7 +189,7 @@ export default function LabourAnalytics() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
         
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
             <div className="flex justify-between items-start">
               <div>
@@ -192,6 +200,19 @@ export default function LabourAnalytics() {
               </div>
               <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                 <CalendarDays className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-tighter">Amount Paid</p>
+                <h3 className="text-xl font-black text-slate-800 mt-1">
+                  {isLoading ? '...' : formatCurrency(data?.summary?.totalAmountPaid || 0)}
+                </h3>
+              </div>
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                <IndianRupee className="w-4 h-4" />
               </div>
             </div>
           </div>

@@ -189,10 +189,21 @@ export class LabourService {
        whereClause.labourerId = labourerId;
     }
 
-    const attendances = await this.prisma.attendance.findMany({
-      where: whereClause,
-      include: { labourer: true }
-    });
+    const paymentsWhereClause: any = { date: { gte: from, lte: to } };
+    if (labourerId) {
+       paymentsWhereClause.labourerId = labourerId;
+    }
+
+    const [attendances, payments] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where: whereClause,
+        include: { labourer: true }
+      }),
+      this.prisma.labourPayment.aggregate({
+        where: paymentsWhereClause,
+        _sum: { amount: true }
+      })
+    ]);
 
     const trendMap = new Map<string, number>();
     for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
@@ -227,7 +238,8 @@ export class LabourService {
             averageDailyAttendance: Number(averageDaily.toFixed(1)),
             activeLabourers: labourerMap.size,
             totalPossibleDays,
-            attendancePercentage: Number(attendancePercentage.toFixed(1))
+            attendancePercentage: Number(attendancePercentage.toFixed(1)),
+            totalAmountPaid: Number(payments._sum.amount || 0)
         },
         trend: Array.from(trendMap.entries())
             .map(([date, attendance]) => ({ date, attendance }))
