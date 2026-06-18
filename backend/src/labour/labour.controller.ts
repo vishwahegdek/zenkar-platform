@@ -40,6 +40,16 @@ export class LabourController {
     );
   }
 
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get labour attendance analytics' })
+  getAnalytics(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('labourerId') labourerId?: string,
+  ) {
+    return this.labourService.getAnalytics(from, to, labourerId ? Number(labourerId) : undefined);
+  }
+
   @Get('report')
   getReport(
     @Request() req,

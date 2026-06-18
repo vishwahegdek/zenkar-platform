@@ -8,7 +8,8 @@ export default function LabourLayout() {
   const isReport = location.pathname.includes('/labour/report');
   const isManage = location.pathname.includes('/labour/manage');
   const isSettlements = location.pathname.includes('/labour/settlements');
-  const isFullWidth = isDailyEntry || isReport || isManage || isSettlements;
+  const isAnalytics = location.pathname.includes('/labour/analytics');
+  const isFullWidth = isDailyEntry || isReport || isManage || isSettlements || isAnalytics;
 
   const theme = {
     bg: 'rgb(59, 100, 116)',

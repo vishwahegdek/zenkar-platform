@@ -306,7 +306,7 @@ export class DashboardService {
 
     let totalSales = 0;
     let totalDiscount = 0;
-    const salesTrend = new Map<string, number>();
+    const salesTrend = new Map<string, { total: number; categories: Record<string, number> }>();
     const categorySales = new Map<string, number>();
     const productSales = new Map<string, { quantity: number; revenue: number; name: string }>();
 
@@ -328,9 +328,13 @@ export class DashboardService {
       totalSales += orderRevenue;
       totalDiscount += Number(order.discount || 0);
 
-      // Daily trend
+      // Daily trend initialization
       const dateKey = getBucketKey(order.orderDate);
-      salesTrend.set(dateKey, (salesTrend.get(dateKey) || 0) + orderRevenue);
+      if (!salesTrend.has(dateKey)) {
+        salesTrend.set(dateKey, { total: 0, categories: {} });
+      }
+      const trendBucket = salesTrend.get(dateKey)!;
+      trendBucket.total += orderRevenue;
 
       // Item breakdown
       order.items.forEach(item => {
@@ -340,6 +344,9 @@ export class DashboardService {
           // Category breakdown
           const categoryName = item.product?.category?.name || 'Uncategorized';
           categorySales.set(categoryName, (categorySales.get(categoryName) || 0) + itemRevenue);
+          
+          // Category Trend
+          trendBucket.categories[categoryName] = (trendBucket.categories[categoryName] || 0) + itemRevenue;
 
           // Product breakdown
           const productName = item.productName || item.product?.name || 'Unknown Product';
@@ -361,7 +368,7 @@ export class DashboardService {
         totalDiscount
       },
       trend: Array.from(salesTrend.entries())
-        .map(([date, revenue]) => ({ date, revenue }))
+        .map(([date, data]) => ({ date, revenue: data.total, categories: data.categories }))
         .sort((a, b) => a.date.localeCompare(b.date)),
       byCategory: Array.from(categorySales.entries())
         .map(([name, revenue]) => ({ name, revenue }))

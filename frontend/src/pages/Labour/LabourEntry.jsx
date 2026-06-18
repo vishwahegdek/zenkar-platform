@@ -87,13 +87,22 @@ export default function LabourEntry() {
       `}</style>
       <div className="flex justify-between items-center py-3 px-4 bg-gray-900 border-b border-gray-700 shadow-sm">
         <h1 className="text-white text-2xl font-bold m-0">Labour Entry</h1>
-        <button 
-           type="button"
-           onClick={() => navigate('/labour/manage')}
-           className="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-md shadow text-sm font-semibold flex items-center gap-1 transition-colors"
-        >
-           ⚙️ Manage
-        </button>
+        <div className="flex gap-2">
+            <button 
+               type="button"
+               onClick={() => navigate('/labour/analytics')}
+               className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-md shadow text-sm font-semibold flex items-center gap-1 transition-colors"
+            >
+               📊 Analytics
+            </button>
+            <button 
+               type="button"
+               onClick={() => navigate('/labour/manage')}
+               className="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-md shadow text-sm font-semibold flex items-center gap-1 transition-colors"
+            >
+               ⚙️ Manage
+            </button>
+        </div>
       </div>
       
       <div className="flex justify-center items-center gap-4 mb-4 p-2 bg-black/20">

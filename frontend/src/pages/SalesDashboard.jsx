@@ -22,6 +22,7 @@ export default function SalesDashboard() {
   const [customTo, setCustomTo] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [chartTimeframe, setChartTimeframe] = useState('day');
   const [showChart, setShowChart] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const { from, to, label } = useMemo(() => {
     const anchor = selectedDate;
@@ -80,6 +81,16 @@ export default function SalesDashboard() {
     queryKey: ['salesAnalytics', from, to, chartTimeframe],
     queryFn: () => api.get(`/dashboard/sales?from=${from}&to=${to}&timeframe=${chartTimeframe}`),
   });
+
+  const displayTrend = useMemo(() => {
+    if (!data?.trend) return [];
+    if (selectedCategory === 'All') return data.trend;
+    
+    return data.trend.map(t => ({
+       date: t.date,
+       revenue: t.categories?.[selectedCategory] || 0
+    }));
+  }, [data?.trend, selectedCategory]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -201,6 +212,18 @@ export default function SalesDashboard() {
                     <span>Revenue Trend</span>
                  </h2>
                  <div className="flex items-center gap-3">
+                    {data?.byCategory?.length > 0 && (
+                      <select 
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="text-xs border-gray-200 rounded-md py-1 pl-2 pr-6 text-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 outline-none"
+                      >
+                        <option value="All">All Categories</option>
+                        {data.byCategory.map(c => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
                     <button 
                         onClick={() => setShowChart(!showChart)}
                         className="text-xs font-medium text-blue-600 md:hidden"
@@ -231,9 +254,9 @@ export default function SalesDashboard() {
                     <div className="h-full flex items-center justify-center">
                       <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
                     </div>
-                  ) : data?.trend?.length > 0 ? (
+                  ) : displayTrend?.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.trend}>
+                      <BarChart data={displayTrend}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis 
                           dataKey="date" 

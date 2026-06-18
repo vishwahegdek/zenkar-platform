@@ -180,6 +180,63 @@ export class LabourService {
     return { success: true };
   }
 
+  async getAnalytics(fromStr: string, toStr: string, labourerId?: number) {
+    const from = new Date(fromStr + 'T00:00:00.000Z');
+    const to = new Date(toStr + 'T23:59:59.999Z');
+
+    const whereClause: any = { date: { gte: from, lte: to } };
+    if (labourerId) {
+       whereClause.labourerId = labourerId;
+    }
+
+    const attendances = await this.prisma.attendance.findMany({
+      where: whereClause,
+      include: { labourer: true }
+    });
+
+    const trendMap = new Map<string, number>();
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+        trendMap.set(d.toISOString().slice(0, 10), 0);
+    }
+
+    const labourerMap = new Map<number, { id: number, name: string, totalDays: number }>();
+    
+    let totalAttendance = 0;
+
+    attendances.forEach(att => {
+        const val = Number(att.value);
+        totalAttendance += val;
+        
+        const dateKey = att.date.toISOString().slice(0, 10);
+        trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + val);
+
+        if (!labourerMap.has(att.labourerId)) {
+            labourerMap.set(att.labourerId, { id: att.labourerId, name: att.labourer.name, totalDays: 0 });
+        }
+        labourerMap.get(att.labourerId)!.totalDays += val;
+    });
+
+    const diffDays = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)));
+    const averageDaily = totalAttendance / diffDays;
+    const totalPossibleDays = diffDays * Math.max(1, labourerMap.size);
+    const attendancePercentage = totalPossibleDays > 0 ? (totalAttendance / totalPossibleDays) * 100 : 0;
+
+    return {
+        summary: {
+            totalManDays: totalAttendance,
+            averageDailyAttendance: Number(averageDaily.toFixed(1)),
+            activeLabourers: labourerMap.size,
+            totalPossibleDays,
+            attendancePercentage: Number(attendancePercentage.toFixed(1))
+        },
+        trend: Array.from(trendMap.entries())
+            .map(([date, attendance]) => ({ date, attendance }))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        byLabourer: Array.from(labourerMap.values())
+            .sort((a, b) => b.totalDays - a.totalDays)
+    };
+  }
+
   async getReport(
     from?: string,
     to?: string,

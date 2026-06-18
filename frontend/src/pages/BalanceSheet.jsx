@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
-import { format } from 'date-fns';
-import { Scale, Calendar, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { format, addDays } from 'date-fns';
+import { Scale, Calendar, AlertTriangle, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function BalanceSheet() {
   const [asOfDate, setAsOfDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  const handleDateChange = (days) => {
+    const newDate = addDays(new Date(asOfDate), days);
+    setAsOfDate(format(newDate, 'yyyy-MM-dd'));
+  };
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['balanceSheet', asOfDate],
@@ -99,14 +104,28 @@ export default function BalanceSheet() {
             
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500 font-medium hidden md:inline-block">As of:</span>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={asOfDate}
-                  onChange={(e) => setAsOfDate(e.target.value)}
-                  className="pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors"
-                />
-                <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="flex items-center shadow-sm rounded-lg">
+                <button 
+                  onClick={() => handleDateChange(-1)}
+                  className="p-2 border border-gray-200 rounded-l-lg hover:bg-gray-100 bg-gray-50 text-gray-600 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={asOfDate}
+                    onChange={(e) => setAsOfDate(e.target.value)}
+                    className="pl-9 pr-3 py-2 border-y border-x-0 border-gray-200 focus:ring-0 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors w-[150px]"
+                  />
+                  <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <button 
+                  onClick={() => handleDateChange(1)}
+                  className="p-2 border border-gray-200 rounded-r-lg hover:bg-gray-100 bg-gray-50 text-gray-600 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
