@@ -419,7 +419,7 @@ export class LedgerService implements OnModuleInit {
 
       if (balance === 0 && !isTreasury) return;
 
-      const item = {
+      const item: any = {
         id: acc.id,
         name: acc.name,
         subType: acc.subType,
@@ -463,7 +463,7 @@ export class LedgerService implements OnModuleInit {
       }
     });
 
-    let accruedWages = 0;
+    let totalAccruedWages = 0;
     for (const labourer of labourers) {
       const lastSettlement = labourer.settlements[0];
       const startDate = lastSettlement ? lastSettlement.settlementDate : null;
@@ -480,49 +480,95 @@ export class LedgerService implements OnModuleInit {
         }
       });
 
+      const payments = await this.prisma.labourPayment.findMany({
+        where: {
+          labourerId: labourer.id,
+          date: dateFilter
+        }
+      });
+
       let totalDays = 0;
       attendances.forEach(a => {
         totalDays += Number(a.value);
       });
 
+      let periodPaid = 0;
+      payments.forEach(p => {
+        periodPaid += Number(p.amount);
+      });
+
       const salary = Number(labourer.defaultDailyWage) || 0;
-      accruedWages += (totalDays * salary);
+      const labourerAccruedWage = totalDays * salary;
+      
+      if (labourerAccruedWage >= 0) {
+        totalAccruedWages += labourerAccruedWage;
+        
+        const realName = `Labourer: ${labourer.name}`;
+        const existingL = liabilities.find(l => l.name === realName);
+        const existingA = assets.find(a => a.name === realName);
+        
+        const periodMeta = { totalAccrued: labourerAccruedWage, totalPaid: periodPaid };
+        
+        if (existingL) {
+          existingL.balance += labourerAccruedWage;
+          totalLiabilities += labourerAccruedWage;
+          existingL.name = labourer.name;
+          existingL.meta = periodMeta;
+        } else if (existingA) {
+          const newBalance = -existingA.balance + labourerAccruedWage;
+          totalAssets -= existingA.balance;
+          const index = assets.indexOf(existingA);
+          assets.splice(index, 1);
+          
+          if (newBalance > 0) {
+            liabilities.push({
+              id: existingA.id,
+              name: labourer.name,
+              subType: 'LABOURER',
+              balance: newBalance,
+              meta: periodMeta
+            });
+            totalLiabilities += newBalance;
+          } else if (newBalance < 0) {
+            assets.push({
+              id: existingA.id,
+              name: labourer.name,
+              subType: 'LABOURER',
+              balance: Math.abs(newBalance),
+              meta: periodMeta
+            });
+            totalAssets += Math.abs(newBalance);
+          } else {
+             liabilities.push({
+              id: existingA.id,
+              name: labourer.name,
+              subType: 'LABOURER',
+              balance: 0,
+              meta: periodMeta
+            });
+          }
+        } else if (labourerAccruedWage > 0 || periodPaid > 0) {
+          liabilities.push({
+            id: `virtual-accrued-${labourer.id}`,
+            name: labourer.name,
+            subType: 'LABOURER',
+            balance: labourerAccruedWage,
+            meta: periodMeta
+          });
+          totalLiabilities += labourerAccruedWage;
+        }
+      }
     }
 
-    if (accruedWages > 0) {
-      const netAccruedPayable = accruedWages;
-
-      // Inject Virtual Liability (or Asset if we paid more than they worked)
-      if (netAccruedPayable > 0) {
-        liabilities.push({
-          id: 'virtual-accrued-payable',
-          name: 'Unsettled Wages Payable (Accrued)',
-          subType: 'WAGE_EXPENSE',
-          balance: netAccruedPayable
-        });
-        totalLiabilities += netAccruedPayable;
-      } else if (netAccruedPayable < 0) {
-        assets.push({
-          id: 'virtual-accrued-advance',
-          name: 'Unsettled Wage Advances (Accrued)',
-          subType: 'ADVANCE',
-          balance: Math.abs(netAccruedPayable)
-        });
-        totalAssets += Math.abs(netAccruedPayable);
-      }
-
+    if (totalAccruedWages > 0) {
       // Inject Virtual Expense
-      if (accruedWages > 0) {
-        expenses.push({
-          id: 'virtual-accrued-expense',
-          name: 'Unsettled Wages Expense (Accrued)',
-          subType: 'WAGE_EXPENSE',
-          balance: accruedWages
-        });
-        totalExpenses += accruedWages;
-      }
-
-
+      expenses.push({
+        id: 'virtual-accrued-expense',
+        name: 'Unsettled Wages Expense (Accrued)',
+        subType: 'WAGE_EXPENSE',
+        balance: totalAccruedWages
+      });
+      totalExpenses += totalAccruedWages;
     }
     // -----------------------------------------------
 

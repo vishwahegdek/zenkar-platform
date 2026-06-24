@@ -28,9 +28,17 @@ export default function BalanceSheet() {
 
   const AccountRow = ({ item }) => (
     <div className="flex justify-between items-center py-2 px-3 hover:bg-gray-50 transition-colors group">
-      <Link to={`/ledger?accountId=${item.id}`} className="text-sm text-gray-700 font-medium group-hover:text-blue-600 transition-colors">
-        {item.name}
-      </Link>
+      <div className="flex flex-col">
+        <Link to={`/ledger?accountId=${item.id}`} className="text-sm text-gray-700 font-medium group-hover:text-blue-600 transition-colors">
+          {item.name}
+        </Link>
+        {item.meta && item.meta.totalAccrued !== undefined && (
+          <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-0.5 font-medium">
+            <span className="text-blue-600/80">Accrued: {formatCurrency(item.meta.totalAccrued)}</span>
+            <span className="text-green-600/80">Paid: {formatCurrency(item.meta.totalPaid)}</span>
+          </div>
+        )}
+      </div>
       <span className="text-sm font-semibold text-gray-900">
         {formatCurrency(item.balance)}
       </span>
