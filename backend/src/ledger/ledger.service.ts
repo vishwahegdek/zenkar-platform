@@ -561,8 +561,9 @@ export class LedgerService implements OnModuleInit {
             });
           }
         } else if (labourerAccruedWage > 0 || periodPaid > 0) {
+          const realAccount = accounts.find(a => a.subType === 'LABOURER' && a.labourerId === labourer.id);
           liabilities.push({
-            id: `virtual-accrued-${labourer.id}`,
+            id: realAccount ? realAccount.id : `virtual-accrued-${labourer.id}`,
             name: labourer.name,
             subType: 'LABOURER',
             balance: labourerAccruedWage,
