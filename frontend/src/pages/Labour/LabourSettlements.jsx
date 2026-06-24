@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api';
 import { format } from 'date-fns';
 
 export default function LabourSettlements() {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const initialId = queryParams.get('labourerId');
   
@@ -86,7 +87,11 @@ export default function LabourSettlements() {
                     </tr>
                   ) : (
                     settlements.map((settlement, idx) => (
-                      <tr key={settlement.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                      <tr 
+                        key={settlement.id} 
+                        className="border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer"
+                        onClick={() => navigate(`/labour/report?labourerId=${selectedLabourerId}&settlementId=${settlement.id}`)}
+                      >
                         <td className="p-2 align-top border-r border-gray-700/50">
                           <div className="font-mono text-[11px] mt-1 whitespace-nowrap text-gray-300">
                             {format(new Date(settlement.settlementDate), 'dd/MM/yy')}

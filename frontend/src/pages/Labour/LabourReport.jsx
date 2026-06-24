@@ -44,7 +44,8 @@ export default function LabourReport() {
       setIsDropdownOpen(false);
   };
 
-  const [selectedSettlementId, setSelectedSettlementId] = useState(''); // Empty = Current Period
+  const initialSettlementId = queryParams.get('settlementId') || '';
+  const [selectedSettlementId, setSelectedSettlementId] = useState(initialSettlementId); // Empty = Current Period
 
   // Fetch Report
   const { data: reportData, isLoading, refetch } = useQuery({
