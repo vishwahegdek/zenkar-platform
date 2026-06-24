@@ -62,6 +62,12 @@ export default function LedgerDashboard() {
           label: format(anchor, 'MMMM yyyy')
         };
       }
+      case 'all':
+        return {
+          from: '2000-01-01',
+          to: '2099-12-31',
+          label: 'All Time'
+        };
       case 'custom':
         return {
           ...customRange,
@@ -77,6 +83,7 @@ export default function LedgerDashboard() {
         case 'today': setSelectedDate(d => subDays(d, 1)); break;
         case 'week': setSelectedDate(d => subWeeks(d, 1)); break;
         case 'month': setSelectedDate(d => subMonths(d, 1)); break;
+        case 'all': break;
         default: break;
     }
   };
@@ -86,6 +93,7 @@ export default function LedgerDashboard() {
         case 'today': setSelectedDate(d => addDays(d, 1)); break;
         case 'week': setSelectedDate(d => addWeeks(d, 1)); break;
         case 'month': setSelectedDate(d => addMonths(d, 1)); break;
+        case 'all': break;
         default: break;
     }
   };
@@ -147,7 +155,7 @@ export default function LedgerDashboard() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex bg-gray-100 p-1 rounded-lg self-start md:self-auto overflow-x-auto max-w-full">
-                {['today', 'week', 'month', 'custom'].map((mode) => (
+                {['today', 'week', 'month', 'custom', 'all'].map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setRangeType(mode)}
@@ -157,7 +165,7 @@ export default function LedgerDashboard() {
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    {mode === 'today' ? 'Day' : mode}
+                    {mode === 'today' ? 'Day' : mode === 'all' ? 'All Time' : mode}
                   </button>
                 ))}
               </div>
@@ -173,7 +181,7 @@ export default function LedgerDashboard() {
                 />
               </div>
 
-              {rangeType !== 'custom' && (
+              {rangeType !== 'custom' && rangeType !== 'all' && (
                 <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
                   <button onClick={handlePrevious} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
                     <ChevronLeft className="w-5 h-5" />
