@@ -251,13 +251,6 @@ export default function LedgerDashboard() {
               <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
               <p className="text-sm text-gray-400 font-medium">Loading ledger...</p>
             </div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Filter className="w-6 h-6 text-gray-300" />
-              </div>
-              <p className="text-gray-500 font-medium">No ledger entries found.</p>
-            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-gray-600">
@@ -306,9 +299,19 @@ export default function LedgerDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredEntries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
+                  {filteredEntries.length === 0 ? (
+                    <tr>
+                      <td colSpan={selectedAccount ? 7 : 6} className="p-12 text-center">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Filter className="w-6 h-6 text-gray-300" />
+                        </div>
+                        <p className="text-gray-500 font-medium">No ledger entries found.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEntries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap">
                         {format(new Date(entry.date), 'dd MMM yyyy')}
                         <div className="text-[10px] text-gray-400">{format(new Date(entry.createdAt), 'HH:mm')}</div>
                       </td>
@@ -332,7 +335,8 @@ export default function LedgerDashboard() {
                         </td>
                       )}
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>
