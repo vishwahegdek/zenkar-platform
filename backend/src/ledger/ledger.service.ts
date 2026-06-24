@@ -500,6 +500,13 @@ export class LedgerService implements OnModuleInit {
       const salary = Number(labourer.defaultDailyWage) || 0;
       const labourerAccruedWage = totalDays * salary;
       
+      let openingBalance = 0;
+      if (lastSettlement && lastSettlement.isCarryForward) {
+        openingBalance = Number(lastSettlement.netBalance);
+      }
+      
+      const expectedRealBalance = openingBalance - periodPaid;
+      
       if (labourerAccruedWage >= 0) {
         totalAccruedWages += labourerAccruedWage;
         
@@ -507,7 +514,13 @@ export class LedgerService implements OnModuleInit {
         const existingL = liabilities.find(l => l.name === realName);
         const existingA = assets.find(a => a.name === realName);
         
-        const periodMeta = { totalAccrued: labourerAccruedWage, totalPaid: periodPaid };
+        let actualRealBalance = 0;
+        if (existingL) actualRealBalance = existingL.balance;
+        else if (existingA) actualRealBalance = -existingA.balance;
+        
+        const isOutOfSync = Math.abs(expectedRealBalance - actualRealBalance) > 0.01;
+        
+        const periodMeta = { totalAccrued: labourerAccruedWage, totalPaid: periodPaid, isOutOfSync };
         
         if (existingL) {
           existingL.balance += labourerAccruedWage;
