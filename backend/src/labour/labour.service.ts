@@ -448,13 +448,18 @@ export class LabourService {
     const existing = await this.prisma.labourer.findFirst({ where: { id } });
     if (!existing) throw new Error('Labourer not found');
 
-    return this.prisma.labourer.update({
+    const updatedLabourer = await this.prisma.labourer.update({
       where: { id },
       data: {
         name: data.name,
         defaultDailyWage: data.defaultDailyWage,
       },
     });
+
+    // Keep Ledger Account name in sync
+    await this.ledgerService.getOrCreateAccountForEntity('LABOURER', id, data.name);
+
+    return updatedLabourer;
   }
 
   async deleteLabourer(id: number) {

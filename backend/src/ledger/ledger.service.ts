@@ -423,7 +423,8 @@ export class LedgerService implements OnModuleInit {
         id: acc.id,
         name: acc.name,
         subType: acc.subType,
-        balance
+        balance,
+        labourerId: acc.labourerId
       };
 
       switch (acc.type) {
@@ -510,9 +511,8 @@ export class LedgerService implements OnModuleInit {
       if (labourerAccruedWage >= 0) {
         totalAccruedWages += labourerAccruedWage;
         
-        const realName = `Labourer: ${labourer.name}`;
-        const existingL = liabilities.find(l => l.name === realName);
-        const existingA = assets.find(a => a.name === realName);
+        const existingL = liabilities.find(l => l.subType === 'LABOURER' && l.labourerId === labourer.id);
+        const existingA = assets.find(a => a.subType === 'LABOURER' && a.labourerId === labourer.id);
         
         let actualRealBalance = 0;
         if (existingL) actualRealBalance = existingL.balance;
