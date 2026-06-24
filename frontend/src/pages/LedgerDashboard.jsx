@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus, ArrowRightLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus, ArrowRightLeft, Search } from 'lucide-react';
 import ManualAdjustmentModal from '../components/ManualAdjustmentModal';
 import TransferMoneyModal from '../components/TransferMoneyModal';
 import SearchableSelect from '../components/SearchableSelect';
@@ -12,11 +12,23 @@ import SmartOrderText from '../components/SmartOrderText';
 export default function LedgerDashboard() {
   const [searchParams] = useSearchParams();
   const initialAccountId = searchParams.get('accountId') || '';
-  const [rangeType, setRangeType] = useState(initialAccountId ? 'all' : 'month');
+  const [rangeType, setRangeType] = useState(initialAccountId ? 'custom' : 'month');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [customRange, setCustomRange] = useState({
+    from: format(new Date(), 'yyyy-MM-dd'),
+    to: format(new Date(), 'yyyy-MM-dd'),
+  });
   const [selectedAccount, setSelectedAccount] = useState(initialAccountId);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  
+  const [columnFilters, setColumnFilters] = useState({
+    date: '',
+    transactionId: '',
+    account: '',
+    note: '',
+    amount: ''
+  });
 
   // If the URL changes, update the local state
   useEffect(() => {
@@ -50,11 +62,10 @@ export default function LedgerDashboard() {
           label: format(anchor, 'MMMM yyyy')
         };
       }
-      case 'all':
+      case 'custom':
         return {
-          from: '2000-01-01',
-          to: '2099-12-31',
-          label: 'All Time'
+          ...customRange,
+          label: `${format(new Date(customRange.from), 'MMM d')} - ${format(new Date(customRange.to), 'MMM d, yyyy')}`
         };
       default:
         return { from: format(anchor, 'yyyy-MM-dd'), to: format(anchor, 'yyyy-MM-dd'), label: '' };
@@ -66,7 +77,6 @@ export default function LedgerDashboard() {
         case 'today': setSelectedDate(d => subDays(d, 1)); break;
         case 'week': setSelectedDate(d => subWeeks(d, 1)); break;
         case 'month': setSelectedDate(d => subMonths(d, 1)); break;
-        case 'all': break;
         default: break;
     }
   };
@@ -76,7 +86,6 @@ export default function LedgerDashboard() {
         case 'today': setSelectedDate(d => addDays(d, 1)); break;
         case 'week': setSelectedDate(d => addWeeks(d, 1)); break;
         case 'month': setSelectedDate(d => addMonths(d, 1)); break;
-        case 'all': break;
         default: break;
     }
   };
@@ -99,6 +108,29 @@ export default function LedgerDashboard() {
     queryFn: () => api.get(`/ledger/entries?from=${from}&to=${to}${selectedAccount ? `&accountId=${selectedAccount}` : ''}`),
   });
 
+  const filteredEntries = useMemo(() => {
+    return entries.filter(entry => {
+      const formattedDate = format(new Date(entry.date), 'dd MMM yyyy').toLowerCase();
+      const matchDate = !columnFilters.date || formattedDate.includes(columnFilters.date.toLowerCase());
+      
+      const matchTxn = !columnFilters.transactionId || 
+        (entry.transactionId && entry.transactionId.toLowerCase().includes(columnFilters.transactionId.toLowerCase()));
+      
+      const matchAccount = !columnFilters.account || 
+        (entry.accountName && entry.accountName.toLowerCase().includes(columnFilters.account.toLowerCase())) ||
+        (entry.accountType && entry.accountType.toLowerCase().includes(columnFilters.account.toLowerCase()));
+        
+      const matchNote = !columnFilters.note || 
+        (entry.note && entry.note.toLowerCase().includes(columnFilters.note.toLowerCase()));
+        
+      const matchAmount = !columnFilters.amount || 
+        (entry.debit && String(entry.debit).includes(columnFilters.amount)) || 
+        (entry.credit && String(entry.credit).includes(columnFilters.amount));
+
+      return matchDate && matchTxn && matchAccount && matchNote && matchAmount;
+    });
+  }, [entries, columnFilters]);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -112,22 +144,23 @@ export default function LedgerDashboard() {
       {/* Sticky Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex bg-gray-100 p-1 rounded-lg self-start md:self-auto">
-              {['today', 'week', 'month', 'all'].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setRangeType(mode)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all whitespace-nowrap ${
-                    rangeType === mode
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {mode === 'today' ? 'Day' : mode === 'all' ? 'All Time' : mode}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex bg-gray-100 p-1 rounded-lg self-start md:self-auto overflow-x-auto max-w-full">
+                {['today', 'week', 'month', 'custom'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setRangeType(mode)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all whitespace-nowrap ${
+                      rangeType === mode
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {mode === 'today' ? 'Day' : mode}
+                  </button>
+                ))}
+              </div>
 
             <div className="flex items-center gap-2">
               <div className="w-[200px]">
@@ -140,17 +173,19 @@ export default function LedgerDashboard() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
-                <button onClick={handlePrevious} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm font-bold text-gray-900 min-w-[140px] text-center leading-none px-2 whitespace-nowrap">
-                  {label}
-                </span>
-                <button onClick={handleNext} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              {rangeType !== 'custom' && (
+                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                  <button onClick={handlePrevious} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-bold text-gray-900 min-w-[140px] text-center leading-none px-2 whitespace-nowrap">
+                    {label}
+                  </span>
+                  <button onClick={handleNext} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button 
@@ -168,7 +203,26 @@ export default function LedgerDashboard() {
                   Journal Entry
                 </Link>
               </div>
+              </div>
             </div>
+            
+            {rangeType === 'custom' && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <input
+                  type="date"
+                  value={customRange.from}
+                  onChange={(e) => setCustomRange(prev => ({ ...prev, from: e.target.value }))}
+                  className="flex-1 md:flex-none md:w-48 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+                <span className="text-gray-400">to</span>
+                <input
+                  type="date"
+                  value={customRange.to}
+                  onChange={(e) => setCustomRange(prev => ({ ...prev, to: e.target.value }))}
+                  className="flex-1 md:flex-none md:w-48 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -180,7 +234,7 @@ export default function LedgerDashboard() {
               <BookOpen className="w-4 h-4 text-blue-600" /> General Ledger
             </h2>
             <span className="text-[10px] font-medium text-gray-400 px-2 py-0.5 bg-gray-50 rounded-full">
-              {entries.length} entries
+              {filteredEntries.length} {filteredEntries.length !== entries.length ? `(of ${entries.length})` : ''} entries
             </span>
           </div>
 
@@ -189,7 +243,7 @@ export default function LedgerDashboard() {
               <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
               <p className="text-sm text-gray-400 font-medium">Loading ledger...</p>
             </div>
-          ) : entries.length === 0 ? (
+          ) : filteredEntries.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Filter className="w-6 h-6 text-gray-300" />
@@ -209,9 +263,42 @@ export default function LedgerDashboard() {
                     <th className="px-4 py-3 font-medium text-right text-green-600">Credit (CR)</th>
                     {selectedAccount && <th className="px-4 py-3 font-medium text-right text-blue-600">Balance</th>}
                   </tr>
+                  <tr className="bg-gray-50 border-t border-gray-100">
+                    <th className="px-2 py-1.5">
+                       <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input type="text" placeholder="Filter Date..." value={columnFilters.date} onChange={e => setColumnFilters(f => ({...f, date: e.target.value}))} className="w-full text-xs pl-6 pr-2 py-1 rounded border border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none" />
+                       </div>
+                    </th>
+                    <th className="px-2 py-1.5">
+                       <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input type="text" placeholder="Filter Txn..." value={columnFilters.transactionId} onChange={e => setColumnFilters(f => ({...f, transactionId: e.target.value}))} className="w-full text-xs pl-6 pr-2 py-1 rounded border border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none" />
+                       </div>
+                    </th>
+                    <th className="px-2 py-1.5">
+                       <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input type="text" placeholder="Filter Account..." value={columnFilters.account} onChange={e => setColumnFilters(f => ({...f, account: e.target.value}))} className="w-full text-xs pl-6 pr-2 py-1 rounded border border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none" />
+                       </div>
+                    </th>
+                    <th className="px-2 py-1.5">
+                       <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input type="text" placeholder="Filter Note..." value={columnFilters.note} onChange={e => setColumnFilters(f => ({...f, note: e.target.value}))} className="w-full text-xs pl-6 pr-2 py-1 rounded border border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none" />
+                       </div>
+                    </th>
+                    <th colSpan={2} className="px-2 py-1.5">
+                       <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input type="text" placeholder="Filter Amount..." value={columnFilters.amount} onChange={e => setColumnFilters(f => ({...f, amount: e.target.value}))} className="w-full text-xs pl-6 pr-2 py-1 rounded border border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none" />
+                       </div>
+                    </th>
+                    {selectedAccount && <th className="px-2 py-1.5"></th>}
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {entries.map((entry) => (
+                  {filteredEntries.map((entry) => (
                     <tr key={entry.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap">
                         {format(new Date(entry.date), 'dd MMM yyyy')}
