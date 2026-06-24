@@ -482,9 +482,22 @@ export class OrdersService implements OnModuleInit {
     }));
   }
 
-  async findOne(id: number) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
+  async findOne(idOrOrderNo: number | string) {
+    let whereClause: any;
+    
+    if (typeof idOrOrderNo === 'string' && idOrOrderNo.toUpperCase().startsWith('ORD-')) {
+       whereClause = { orderNo: idOrOrderNo.toUpperCase() };
+    } else {
+       const parsedId = parseInt(String(idOrOrderNo), 10);
+       if (!isNaN(parsedId)) {
+          whereClause = { id: parsedId };
+       } else {
+          return null;
+       }
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: whereClause,
       include: {
         customer: true,
         items: { include: { images: true } },

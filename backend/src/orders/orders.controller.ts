@@ -14,11 +14,23 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { SyncPaymentsDto } from './dto/sync-payments.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @ApiTags('orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  private async resolveId(idOrOrderNo: string): Promise<number> {
+    const parsedId = parseInt(idOrOrderNo, 10);
+    // If it's purely a number
+    if (!isNaN(parsedId) && String(parsedId) === idOrOrderNo) {
+      return parsedId;
+    }
+    const order = await this.ordersService.findOne(idOrOrderNo);
+    if (!order) throw new NotFoundException(`Order ${idOrOrderNo} not found`);
+    return order.id;
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
@@ -68,30 +80,32 @@ export class OrdersController {
       return this.ordersService.updateItemStatus(+itemId, status, req.user?.userId);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Retrieve a specific order by ID' })
+  @Get(':idOrOrderNo')
+  @ApiOperation({ summary: 'Retrieve a specific order by ID or Order Number' })
   @ApiResponse({ status: 200, description: 'The order details.' })
   @ApiResponse({ status: 404, description: 'Order not found.' })
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
+  findOne(@Param('idOrOrderNo') idOrOrderNo: string) {
+    return this.ordersService.findOne(idOrOrderNo);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update an order' })
   @ApiResponse({ status: 200, description: 'The updated order.' })
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateOrderDto: UpdateOrderDto,
     @Req() req,
   ) {
-    return this.ordersService.update(+id, updateOrderDto, req.user?.userId);
+    const orderId = await this.resolveId(id);
+    return this.ordersService.update(orderId, updateOrderDto, req.user?.userId);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete (soft delete) an order' })
   @ApiResponse({ status: 200, description: 'Order successfully deleted.' })
-  remove(@Param('id') id: string, @Req() req) {
-    return this.ordersService.remove(+id, req.user?.userId);
+  async remove(@Param('id') id: string, @Req() req) {
+    const orderId = await this.resolveId(id);
+    return this.ordersService.remove(orderId, req.user?.userId);
   }
 
   @Post(':id/payments')
@@ -108,14 +122,15 @@ export class OrdersController {
     },
   })
   @ApiResponse({ status: 201, description: 'Payment added successfully.' })
-  addPayment(
+  async addPayment(
     @Param('id') id: string,
     @Body()
     body: { amount: number; method?: string; date: string; note?: string; accountId?: number },
     @Req() req,
   ) {
+    const orderId = await this.resolveId(id);
     return this.ordersService.addPayment(
-      +id,
+      orderId,
       +body.amount,
       body.method || 'CASH',
       new Date(body.date),
@@ -128,13 +143,14 @@ export class OrdersController {
   @Patch(':id/payments')
   @ApiOperation({ summary: 'Sync/Replace all payments for an order' })
   @ApiResponse({ status: 200, description: 'Payments synced successfully.' })
-  syncPayments(
+  async syncPayments(
     @Param('id') id: string,
     @Body() body: SyncPaymentsDto,
     @Req() req,
   ) {
+    const orderId = await this.resolveId(id);
     return this.ordersService.syncPayments(
-      +id,
+      orderId,
       body.payments,
       req.user?.userId,
     );
@@ -142,13 +158,15 @@ export class OrdersController {
 
   @Get(':id/gst-invoice')
   @ApiOperation({ summary: 'Get GST Invoice for order' })
-  getGstInvoice(@Param('id') id: string) {
-    return this.ordersService.getGstInvoice(+id);
+  async getGstInvoice(@Param('id') id: string) {
+    const orderId = await this.resolveId(id);
+    return this.ordersService.getGstInvoice(orderId);
   }
 
   @Post(':id/gst-invoice')
   @ApiOperation({ summary: 'Create/Update GST Invoice' })
-  upsertGstInvoice(@Param('id') id: string, @Body() body: any, @Req() req) {
-    return this.ordersService.upsertGstInvoice(+id, body, req.user?.userId);
+  async upsertGstInvoice(@Param('id') id: string, @Body() body: any, @Req() req) {
+    const orderId = await this.resolveId(id);
+    return this.ordersService.upsertGstInvoice(orderId, body, req.user?.userId);
   }
 }

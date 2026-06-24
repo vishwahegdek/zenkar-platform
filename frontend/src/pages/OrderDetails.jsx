@@ -63,8 +63,11 @@ export default function OrderDetails() {
 
 
 
+  // Use the true numeric database ID for mutations once the order is loaded
+  const orderId = order?.id || id;
+
   const paymentMutation = useMutation({
-    mutationFn: (data) => api.post(`/orders/${id}/payments`, data),
+    mutationFn: (data) => api.post(`/orders/${orderId}/payments`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['orders', id]);
       setIsPaymentModalOpen(false);
@@ -72,7 +75,7 @@ export default function OrderDetails() {
   });
 
   const managePaymentsMutation = useMutation({
-    mutationFn: (data) => api.patch(`/orders/${id}/payments`, data),
+    mutationFn: (data) => api.patch(`/orders/${orderId}/payments`, data),
     onSuccess: () => {
        queryClient.invalidateQueries(['orders', id]);
        setIsManagePaymentsModalOpen(false);
@@ -80,7 +83,7 @@ export default function OrderDetails() {
   });
 
   const discountMutation = useMutation({
-      mutationFn: (val) => api.patch(`/orders/${id}`, { discount: val }),
+      mutationFn: (val) => api.patch(`/orders/${orderId}`, { discount: val }),
       onSuccess: () => {
           queryClient.invalidateQueries(['orders', id]);
           setIsDiscountModalOpen(false);

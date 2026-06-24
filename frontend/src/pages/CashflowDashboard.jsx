@@ -36,6 +36,7 @@ import {
   Wallet,
   BarChart2
 } from 'lucide-react';
+import SmartOrderText from '../components/SmartOrderText';
 
 export default function CashflowDashboard() {
   const [rangeType, setRangeType] = useState('today');
@@ -343,7 +344,7 @@ export default function CashflowDashboard() {
                     </div>
                     
                     <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
-                      {entry.description}
+                      <SmartOrderText text={entry.description} />
                     </p>
                     
                     <div className="flex items-center gap-3 mt-2 text-[10px] font-medium uppercase tracking-wider text-gray-400">

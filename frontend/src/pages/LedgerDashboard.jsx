@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, BookOpen, Filter, Plus, ArrowRightLeft } fro
 import ManualAdjustmentModal from '../components/ManualAdjustmentModal';
 import TransferMoneyModal from '../components/TransferMoneyModal';
 import SearchableSelect from '../components/SearchableSelect';
+import SmartOrderText from '../components/SmartOrderText';
 
 export default function LedgerDashboard() {
   const [searchParams] = useSearchParams();
@@ -222,7 +223,7 @@ export default function LedgerDashboard() {
                         <div className="text-[10px] text-gray-500 uppercase">{entry.accountType}</div>
                       </td>
                       <td className="px-4 py-3 max-w-xs truncate" title={entry.note}>
-                        {entry.note || <span className="text-gray-300 italic">No note</span>}
+                        {entry.note ? <SmartOrderText text={entry.note} /> : <span className="text-gray-300 italic">No note</span>}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-red-600">
                         {entry.debit > 0 ? formatCurrency(entry.debit) : '-'}
