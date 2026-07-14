@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   TrendingUp,
-  Settings
+  Settings,
+  Calculator
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +29,7 @@ export function Sidebar({ className }) {
         { name: "Sales Analytics", path: "/sales", icon: TrendingUp },
 
         { name: "Quick Sale", path: "/quick-sale", icon: ShoppingCart },
+        { name: "Wood Estimator", path: "/wood-estimator", icon: Calculator },
         { name: "Orders", path: "/orders", icon: Package },
         { name: "Customers", path: "/customers", icon: Users },
       ]

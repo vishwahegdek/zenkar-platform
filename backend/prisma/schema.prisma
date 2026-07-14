@@ -593,3 +593,14 @@ model LedgerEntry {
 
   @@map("ledger_entries")
 }
+
+model WoodType {
+  id        String   @id // e.g. "halasu", "teak", "custom_123"
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  isSeeded  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("wood_types")
+}
