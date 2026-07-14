@@ -121,7 +121,8 @@ export default function WoodEstimator() {
     { id: 'l1', desc: 'Fitting', amount: '2000' },
     { id: 'l2', desc: 'Finishing', amount: '2000' }
   ]);
-  const [carvings, setCarvings] = useState([]);
+  const [hasCarving, setHasCarving] = useState(false);
+  const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
   const [carvingRateOption, setCarvingRateOption] = useState('3.5');
   const [carvingRate, setCarvingRate] = useState('');
 
@@ -331,7 +332,7 @@ export default function WoodEstimator() {
   }, [labourItems]);
 
   const activeCarvingRate = carvingRateOption === 'custom' ? carvingRate : carvingRateOption;
-  const totalCarvingCost = totalCarvingArea * (parseFloat(activeCarvingRate) || 0);
+  const totalCarvingCost = hasCarving ? (totalCarvingArea * (parseFloat(activeCarvingRate) || 0)) : 0;
   const finalCost = woodCost + totalLabour + totalCarvingCost;
 
   return (
@@ -400,15 +401,6 @@ export default function WoodEstimator() {
         <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">3. Customize Dimensions</h2>
-            {activeTemplate !== 'door_frame' && (
-              <button 
-                onClick={addBlock}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase font-bold text-white bg-gray-900 hover:bg-gray-800 rounded transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                Add Block
-              </button>
-            )}
           </div>
           
           {activeTemplate === 'door_frame' ? (
@@ -667,6 +659,14 @@ export default function WoodEstimator() {
                   </div>
                 </div>
               ))}
+              
+              <button 
+                onClick={addBlock}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
+              >
+                <Plus className="w-4 h-4" />
+                Add Block
+              </button>
             </div>
           )}
           
@@ -731,86 +731,99 @@ export default function WoodEstimator() {
         {/* 5. Carving Details */}
         <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900 last:border-b-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">5. Carving Area</h2>
-            <button 
-              onClick={addCarving}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-md transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Area
-            </button>
+            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider flex items-center gap-4">
+              5. Carving Area
+              <button 
+                onClick={() => setHasCarving(!hasCarving)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${hasCarving ? 'bg-gray-900' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasCarving ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </h2>
           </div>
 
-          <div className="mb-6 bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 shadow-sm">
-            <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Carving Rate per sq.in</label>
-            <div className="flex gap-2 flex-wrap">
-              {['3.5', '5', 'custom'].map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => setCarvingRateOption(opt)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
-                    carvingRateOption === opt 
-                      ? 'bg-gray-900 border-gray-900 text-white shadow-sm' 
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {opt === 'custom' ? 'Custom' : `₹${opt}`}
-                </button>
-              ))}
-            </div>
-            {carvingRateOption === 'custom' && (
-              <input 
-                type="number" 
-                value={carvingRate} 
-                onChange={(e) => setCarvingRate(e.target.value)}
-                className="input-field max-w-[200px] mt-4" 
-                placeholder="Enter rate (₹)"
-              />
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {carvings.map((carving, index) => (
-              <div key={carving.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-bold text-gray-700">Area {index + 1}</span>
-                  <button onClick={() => removeCarving(carving.id)} className="text-gray-400 hover:text-red-600 p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+          {hasCarving && (
+            <>
+              <div className="mb-6 bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 shadow-sm">
+                <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Carving Rate per sq.in</label>
+                <div className="flex gap-2 flex-wrap">
+                  {['3.5', '5', 'custom'].map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => setCarvingRateOption(opt)}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
+                        carvingRateOption === opt 
+                          ? 'bg-gray-900 border-gray-900 text-white shadow-sm' 
+                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {opt === 'custom' ? 'Custom' : `₹${opt}`}
+                    </button>
+                  ))}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <UnitInput 
-                    label="Length" 
-                    value={carving.l} 
-                    onChange={(v) => updateCarving(carving.id, 'l', v)} 
-                    unit={carving.lu} 
-                    onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
+                {carvingRateOption === 'custom' && (
+                  <input 
+                    type="number" 
+                    value={carvingRate} 
+                    onChange={(e) => setCarvingRate(e.target.value)}
+                    className="input-field max-w-[200px] mt-4" 
+                    placeholder="Enter rate (₹)"
                   />
-                  <UnitInput 
-                    label="Width" 
-                    value={carving.w} 
-                    onChange={(v) => updateCarving(carving.id, 'w', v)} 
-                    unit={carving.wu} 
-                    onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
-                  />
-                </div>
+                )}
               </div>
-            ))}
-          </div>
 
-          {carvings.length > 0 && (
-            <div className="mt-5 bg-gray-100 p-4 rounded-xl flex flex-col gap-2 border border-gray-200">
-              <div className="flex justify-between items-center text-gray-600 font-medium text-sm">
-                <span>Total Area:</span>
-                <span className="font-bold text-gray-900">{totalCarvingArea.toFixed(2)} sq.in</span>
+              <div className="space-y-4">
+                {carvings.map((carving, index) => (
+                  <div key={carving.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-bold text-gray-700">Area {index + 1}</span>
+                      <button onClick={() => removeCarving(carving.id)} className="text-gray-400 hover:text-red-600 p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <UnitInput 
+                        label="Length" 
+                        value={carving.l} 
+                        onChange={(v) => updateCarving(carving.id, 'l', v)} 
+                        unit={carving.lu} 
+                        onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
+                      />
+                      <UnitInput 
+                        label="Width" 
+                        value={carving.w} 
+                        onChange={(v) => updateCarving(carving.id, 'w', v)} 
+                        unit={carving.wu} 
+                        onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-              {totalCarvingCost > 0 && (
-                <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-gray-200">
-                  <span>Carving Cost:</span>
-                  <span className="text-lg">₹{totalCarvingCost.toFixed(2)}</span>
+              
+              <button 
+                onClick={addCarving}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
+              >
+                <Plus className="w-4 h-4" />
+                Add Area
+              </button>
+
+              {carvings.length > 0 && (
+                <div className="mt-5 bg-gray-100 p-4 rounded-xl flex flex-col gap-2 border border-gray-200">
+                  <div className="flex justify-between items-center text-gray-600 font-medium text-sm">
+                    <span>Total Area:</span>
+                    <span className="font-bold text-gray-900">{totalCarvingArea.toFixed(2)} sq.in</span>
+                  </div>
+                  {totalCarvingCost > 0 && (
+                    <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-gray-200">
+                      <span>Carving Cost:</span>
+                      <span className="text-lg">₹{totalCarvingCost.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </section>
       </div>
