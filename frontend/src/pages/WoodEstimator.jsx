@@ -118,8 +118,7 @@ export default function WoodEstimator() {
 
   // Labour and Carving State
   const [labourItems, setLabourItems] = useState([
-    { id: 'l1', desc: 'Fitting', amount: '2000' },
-    { id: 'l2', desc: 'Finishing', amount: '2000' }
+    { id: 'l1', desc: 'Fitting & Finishing', amount: '2000' }
   ]);
   const [hasCarving, setHasCarving] = useState(false);
   const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
