@@ -2,13 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Pencil, Plus, Trash2, X, Settings2 } from 'lucide-react';
 import { api } from '../api';
 
-const INITIAL_WOOD_TYPES = [
-  { id: '1', name: 'Teak Wood', price: '4500' },
-  { id: '2', name: 'Halasu', price: '3500' },
-  { id: '3', name: 'Kindal', price: '1500' },
-  { id: '4', name: 'Sal Wood', price: '2000' },
-];
-
 const TEMPLATES = [
   { id: 'door_frame', name: 'Door Frame (Smart Form)' },
   { id: 'custom', name: 'Custom Blocks (Blank)' },
@@ -54,8 +47,8 @@ const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, cl
 export default function WoodEstimator() {
   const [activeTemplate, setActiveTemplate] = useState('door_frame');
 
-  const [woodTypes, setWoodTypes] = useState(INITIAL_WOOD_TYPES);
-  const [selectedWood, setSelectedWood] = useState(INITIAL_WOOD_TYPES[0]);
+  const [woodTypes, setWoodTypes] = useState([]);
+  const [selectedWood, setSelectedWood] = useState(null);
 
   useEffect(() => {
     api.get('/wood-types')
@@ -67,12 +60,12 @@ export default function WoodEstimator() {
             try {
               const parsed = JSON.parse(savedSelection);
               const exists = data.find(w => w.id === parsed.id);
-              setSelectedWood(exists || data[0]);
+              setSelectedWood(exists || data[0] || null);
             } catch (e) {
-              setSelectedWood(data[0]);
+              setSelectedWood(data[0] || null);
             }
           } else {
-            setSelectedWood(data[0]);
+            setSelectedWood(data[0] || null);
           }
         }
       })
@@ -129,6 +122,7 @@ export default function WoodEstimator() {
     { id: 'l2', desc: 'Finishing', amount: '2000' }
   ]);
   const [carvings, setCarvings] = useState([]);
+  const [carvingRateOption, setCarvingRateOption] = useState('3.5');
   const [carvingRate, setCarvingRate] = useState('');
 
   // Wood Types Management
@@ -336,7 +330,8 @@ export default function WoodEstimator() {
     return labourItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
   }, [labourItems]);
 
-  const totalCarvingCost = totalCarvingArea * (parseFloat(carvingRate) || 0);
+  const activeCarvingRate = carvingRateOption === 'custom' ? carvingRate : carvingRateOption;
+  const totalCarvingCost = totalCarvingArea * (parseFloat(activeCarvingRate) || 0);
   const finalCost = woodCost + totalLabour + totalCarvingCost;
 
   return (
@@ -348,17 +343,17 @@ export default function WoodEstimator() {
       <div className="max-w-4xl mx-auto w-full flex flex-col">
         
         {/* 1. Choose Product */}
-        <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 uppercase tracking-wider">1. Choose Product</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:-mx-6 md:px-6 snap-x">
+        <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
+          <h2 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">1. Choose Product</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
             {TEMPLATES.map(template => (
               <button
                 key={template.id}
                 onClick={() => applyTemplate(template.id)}
-                className={`flex-shrink-0 w-auto px-4 py-2.5 rounded-lg border-2 text-sm text-left transition-all snap-start whitespace-nowrap ${
+                className={`flex-shrink-0 w-auto px-3 py-1.5 rounded-md border-2 text-xs text-left transition-all snap-start whitespace-nowrap ${
                   activeTemplate === template.id 
-                    ? 'border-gray-900 bg-gray-900 text-white font-semibold shadow-md' 
-                    : 'border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-medium'
+                    ? 'border-gray-900 bg-gray-900 text-white font-semibold shadow-sm' 
+                    : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700 font-medium'
                 }`}
               >
                 {template.name}
@@ -368,32 +363,32 @@ export default function WoodEstimator() {
         </section>
 
         {/* 2. Select Wood Type */}
-        <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">2. Select Wood Type</h2>
+        <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">2. Select Wood Type</h2>
             <button 
               onClick={() => setWoodModalVisible(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-900 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase font-bold text-gray-900 bg-gray-200 hover:bg-gray-300 rounded transition-colors"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3 h-3" />
               Edit
             </button>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:-mx-6 md:px-6 snap-x">
+          <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
             {woodTypes.map(wood => (
               <button
                 key={wood.id}
                 onClick={() => setSelectedWood(wood)}
-                className={`flex-shrink-0 w-36 p-3 rounded-lg border-2 text-left transition-all snap-start ${
+                className={`flex-shrink-0 w-32 p-2 rounded-md border-2 text-left transition-all snap-start ${
                   selectedWood?.id === wood.id 
-                    ? 'border-gray-900 bg-gray-900 shadow-md' 
-                    : 'border-gray-300 bg-white hover:bg-gray-100'
+                    ? 'border-gray-900 bg-gray-900 shadow-sm' 
+                    : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <div className={`text-sm font-bold ${selectedWood?.id === wood.id ? 'text-white' : 'text-gray-700'}`}>
+                <div className={`text-xs font-bold ${selectedWood?.id === wood.id ? 'text-white' : 'text-gray-700'}`}>
                   {wood.name}
                 </div>
-                <div className={`text-xs mt-1 ${selectedWood?.id === wood.id ? 'text-gray-300' : 'text-gray-500'}`}>
+                <div className={`text-[10px] mt-0.5 ${selectedWood?.id === wood.id ? 'text-gray-300' : 'text-gray-500'}`}>
                   ₹{wood.price}/cft
                 </div>
               </button>
@@ -402,15 +397,15 @@ export default function WoodEstimator() {
         </section>
 
         {/* 3. Customize Dimensions */}
-        <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">3. Customize Dimensions</h2>
+        <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">3. Customize Dimensions</h2>
             {activeTemplate !== 'door_frame' && (
               <button 
                 onClick={addBlock}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-md transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase font-bold text-white bg-gray-900 hover:bg-gray-800 rounded transition-colors"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3 h-3" />
                 Add Block
               </button>
             )}
@@ -746,15 +741,32 @@ export default function WoodEstimator() {
             </button>
           </div>
 
-          <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Carving Rate per sq.in (₹)</label>
-            <input 
-              type="number" 
-              value={carvingRate} 
-              onChange={(e) => setCarvingRate(e.target.value)}
-              className="input-field max-w-[200px]" 
-              placeholder="e.g. 150"
-            />
+          <div className="mb-6 bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 shadow-sm">
+            <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Carving Rate per sq.in</label>
+            <div className="flex gap-2 flex-wrap">
+              {['3.5', '5', 'custom'].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setCarvingRateOption(opt)}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
+                    carvingRateOption === opt 
+                      ? 'bg-gray-900 border-gray-900 text-white shadow-sm' 
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt === 'custom' ? 'Custom' : `₹${opt}`}
+                </button>
+              ))}
+            </div>
+            {carvingRateOption === 'custom' && (
+              <input 
+                type="number" 
+                value={carvingRate} 
+                onChange={(e) => setCarvingRate(e.target.value)}
+                className="input-field max-w-[200px] mt-4" 
+                placeholder="Enter rate (₹)"
+              />
+            )}
           </div>
 
           <div className="space-y-4">
