@@ -128,6 +128,10 @@ export default function CustomersList() {
                       <h3 className="font-semibold text-lg text-gray-900">{customer.name}</h3>
                       <p className="text-gray-500 text-sm mt-1">{customer.phone || 'No Phone'}</p>
                       <p className="text-gray-500 text-sm">{customer.address || 'No Address'}</p>
+                      <div className="flex gap-3 mt-3 text-[10px] uppercase font-bold tracking-wider">
+                         {customer.user?.username && <span className="text-blue-500">By {customer.user.username}</span>}
+                         {customer.createdAt && <span className="text-gray-400">{new Date(customer.createdAt).toLocaleDateString('en-GB')}</span>}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                        <Link to={`/customers/${customer.id}/edit`} className="text-blue-600 hover:bg-blue-50 p-2 rounded-full">

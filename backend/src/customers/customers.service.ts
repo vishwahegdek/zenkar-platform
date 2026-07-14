@@ -175,7 +175,10 @@ export class CustomersService {
         skip,
         take,
         orderBy: { createdAt: 'desc' },
-        include: { contact: { include: { phones: true } } },
+        include: { 
+          contact: { include: { phones: true } },
+          user: { select: { id: true, username: true } }
+        },
       }),
       this.prisma.customer.count({ where }),
     ]);

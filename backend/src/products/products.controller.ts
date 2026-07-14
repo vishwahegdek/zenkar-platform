@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -24,8 +25,8 @@ export class ProductsController {
     status: 201,
     description: 'The product has been successfully created.',
   })
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+  create(@Body() createProductDto: CreateProductDto, @Req() req: any) {
+    return this.productsService.create(createProductDto, req.user?.userId || req.user?.id);
   }
 
   @Get()
@@ -56,8 +57,8 @@ export class ProductsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a product' })
   @ApiResponse({ status: 200, description: 'The updated product.' })
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(+id, updateProductDto);
+  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto, @Req() req: any) {
+    return this.productsService.update(+id, updateProductDto, req.user?.userId || req.user?.id);
   }
 
   @Delete(':id')

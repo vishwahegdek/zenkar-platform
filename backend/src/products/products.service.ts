@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createProductDto: CreateProductDto) {
+  async create(createProductDto: CreateProductDto, userId?: number) {
     let categoryId = Number(createProductDto.categoryId);
 
     if (!categoryId) {
@@ -33,6 +33,7 @@ export class ProductsService {
         notes: createProductDto.notes,
         categoryId: categoryId,
         isPurchasable: createProductDto.isPurchasable || false,
+        createdById: userId,
       },
     });
   }
@@ -60,7 +61,10 @@ export class ProductsService {
         take: limit,
         skip: skip,
         orderBy: { name: 'asc' },
-        include: { category: true },
+        include: { 
+          category: true,
+          createdBy: { select: { id: true, username: true } }
+        },
       }),
       this.prisma.product.count({ where: whereClause }),
     ]);
@@ -82,10 +86,13 @@ export class ProductsService {
     });
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
+  update(id: number, updateProductDto: UpdateProductDto, userId?: number) {
     return this.prisma.product.update({
       where: { id },
-      data: updateProductDto,
+      data: {
+        ...updateProductDto,
+        updatedById: userId
+      },
     });
   }
 

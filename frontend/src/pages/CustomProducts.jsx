@@ -123,6 +123,11 @@ export default function CustomProducts() {
                          With Carving
                        </span>
                     )}
+                    {product.createdBy && (
+                       <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-md border border-blue-200">
+                         By {product.createdBy}
+                       </span>
+                    )}
                   </div>
 
                   <div className="space-y-1.5 text-xs text-gray-600 font-medium bg-gray-50 p-3 rounded-xl border border-gray-100">

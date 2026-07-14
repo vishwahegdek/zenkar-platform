@@ -610,6 +610,7 @@ model SavedEstimate {
   name      String
   data      Json
   totalCost Decimal  @db.Decimal(12, 2) @map("total_cost")
+  createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("saved_estimates")

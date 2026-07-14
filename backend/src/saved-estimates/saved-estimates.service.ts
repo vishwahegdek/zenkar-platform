@@ -11,6 +11,7 @@ export class SavedEstimatesService {
         name: data.name,
         data: data.data,
         totalCost: data.totalCost,
+        createdBy: data.createdBy,
       },
     });
   }

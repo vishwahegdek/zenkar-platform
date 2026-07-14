@@ -381,6 +381,9 @@ export class OrdersService implements OnModuleInit {
         where,
         include: {
           customer: true,
+          createdBy: {
+            select: { id: true, username: true }
+          },
           items: {
             include: { images: true },
           },

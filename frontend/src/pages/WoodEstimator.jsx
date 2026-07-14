@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
 const TEMPLATES = [
@@ -46,6 +47,7 @@ const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, cl
 };
 
 export default function WoodEstimator() {
+  const { user } = useAuth();
   const location = useLocation();
   const [activeTemplate, setActiveTemplate] = useState('door_frame');
 
@@ -176,7 +178,8 @@ export default function WoodEstimator() {
       await api.post('/saved-estimates', {
         name: saveEstimateName,
         data,
-        totalCost: finalCost
+        totalCost: finalCost,
+        createdBy: user?.name || user?.username || 'admin'
       });
       setSaveModalVisible(false);
       setSaveEstimateName('');

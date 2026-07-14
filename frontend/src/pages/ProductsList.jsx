@@ -147,6 +147,11 @@ export default function ProductsList() {
                         <div className="font-bold text-gray-900">₹{Number(product.defaultUnitPrice).toLocaleString()}</div>
                       </div>
                       
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-2 mt-1">
+                        <span className="text-blue-400 font-bold">{product.createdBy?.username ? `By ${product.createdBy.username}` : ''}</span>
+                        <span>{product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-GB') : ''}</span>
+                      </div>
+
                       {product.notes && (
                         <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{product.notes}</div>
                       )}
@@ -172,6 +177,7 @@ export default function ProductsList() {
                     <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
                       <tr>
                         <th className="px-6 py-3 w-64">Name</th>
+                        <th className="px-6 py-3 w-32">Created Info</th>
                         <th className="px-6 py-3 w-32 text-right">Price (₹)</th>
                         <th className="px-6 py-3">Notes</th>
                         <th className="px-6 py-3 w-32 text-center">Actions</th>
@@ -184,6 +190,14 @@ export default function ProductsList() {
                             <Link to={`/products/${product.id}/edit`} className="hover:underline text-blue-600">
                               {product.name}
                             </Link>
+                          </td>
+                          <td className="px-6 py-4">
+                             <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                               {product.createdBy?.username ? `By ${product.createdBy.username}` : ''}
+                             </div>
+                             <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                {product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-GB') : ''}
+                             </div>
                           </td>
                           <td className="px-6 py-4 text-right font-medium">
                              {Number(product.defaultUnitPrice).toLocaleString()}
@@ -213,7 +227,7 @@ export default function ProductsList() {
                       ))}
                       {filteredProducts.length === 0 && (
                         <tr>
-                           <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                           <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                               No products found.
                            </td>
                         </tr>
