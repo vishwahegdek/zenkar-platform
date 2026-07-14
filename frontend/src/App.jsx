@@ -25,6 +25,7 @@ import LabourSettlements from './pages/Labour/LabourSettlements';
 import LabourAnalytics from './pages/Labour/LabourAnalytics';
 import QuickSale from './pages/QuickSale';
 import WoodEstimator from './pages/WoodEstimator';
+import CustomProducts from './pages/CustomProducts';
 import BalanceInitializer from './pages/BalanceInitializer';
 import Login from './pages/Login';
 import CashflowDashboard from './pages/CashflowDashboard';
@@ -74,6 +75,7 @@ function App() {
               <Route path="orders" element={<OrdersList />} />
               <Route path="quick-sale" element={<QuickSale />} />
               <Route path="wood-estimator" element={<WoodEstimator />} />
+              <Route path="custom-products" element={<CustomProducts />} />
               <Route path="orders/new" element={<OrderForm />} />
               <Route path="orders/:id" element={<OrderDetails />} />
               <Route path="orders/:id/edit" element={<OrderForm />} />

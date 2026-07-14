@@ -12,7 +12,8 @@ import {
   Menu,
   TrendingUp,
   Settings,
-  Calculator
+  Calculator,
+  Box
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +31,7 @@ export function Sidebar({ className }) {
 
         { name: "Quick Sale", path: "/quick-sale", icon: ShoppingCart },
         { name: "Wood Estimator", path: "/wood-estimator", icon: Calculator },
+        { name: "Custom Products", path: "/custom-products", icon: Box },
         { name: "Orders", path: "/orders", icon: Package },
         { name: "Customers", path: "/customers", icon: Users },
       ]

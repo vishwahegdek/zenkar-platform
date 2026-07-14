@@ -604,3 +604,13 @@ model WoodType {
 
   @@map("wood_types")
 }
+
+model SavedEstimate {
+  id        Int      @id @default(autoincrement())
+  name      String
+  data      Json
+  totalCost Decimal  @db.Decimal(12, 2) @map("total_cost")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("saved_estimates")
+}

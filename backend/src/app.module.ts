@@ -23,6 +23,7 @@ import { PurchasesModule } from './purchases/purchases.module';
 import { LedgerModule } from './ledger/ledger.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { WoodTypesModule } from './wood-types/wood-types.module';
+import { SavedEstimatesModule } from './saved-estimates/saved-estimates.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { WoodTypesModule } from './wood-types/wood-types.module';
     LedgerModule,
     SuppliersModule,
     WoodTypesModule,
+    SavedEstimatesModule,
   ],
   controllers: [AppController],
   providers: [

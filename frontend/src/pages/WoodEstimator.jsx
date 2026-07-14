@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Pencil, Plus, Trash2, X, Settings2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2 } from 'lucide-react';
 import { api } from '../api';
 
 const TEMPLATES = [
@@ -45,6 +46,7 @@ const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, cl
 };
 
 export default function WoodEstimator() {
+  const location = useLocation();
   const [activeTemplate, setActiveTemplate] = useState('door_frame');
 
   const [woodTypes, setWoodTypes] = useState([]);
@@ -147,6 +149,106 @@ export default function WoodEstimator() {
     try {
       await api.delete(`/wood-types/${id}`);
     } catch (e) { console.error(e); }
+  };
+
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [saveEstimateName, setSaveEstimateName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [loadModalVisible, setLoadModalVisible] = useState(false);
+  const [savedEstimates, setSavedEstimates] = useState([]);
+  const [isLoadingEstimates, setIsLoadingEstimates] = useState(false);
+
+  const saveEstimate = async () => {
+    if (!saveEstimateName.trim()) return;
+    setIsSaving(true);
+    try {
+      const data = {
+        activeTemplate,
+        selectedWoodId: selectedWood?.id,
+        blocks,
+        dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit,
+        dfHeight, dfHeightUnit, dfWidth, dfWidthUnit, excludeBottomPiece,
+        hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit, borderHeight, borderHeightUnit, borderWidth, borderCustomTUnit,
+        hasArch, archLength, archLengthUnit, archWidth, archWidthUnit, archThickness, archThicknessUnit,
+        labourItems, hasCarving, carvings, carvingRateOption, carvingRate
+      };
+      await api.post('/saved-estimates', {
+        name: saveEstimateName,
+        data,
+        totalCost: finalCost
+      });
+      setSaveModalVisible(false);
+      setSaveEstimateName('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (loadModalVisible) {
+      setIsLoadingEstimates(true);
+      api.get('/saved-estimates')
+        .then(data => setSavedEstimates(data))
+        .catch(console.error)
+        .finally(() => setIsLoadingEstimates(false));
+    }
+  }, [loadModalVisible]);
+
+  const loadEstimate = (estimate) => {
+    const { data } = estimate;
+    setActiveTemplate(data.activeTemplate || 'door_frame');
+    if (data.selectedWoodId) {
+      const wood = woodTypes.find(w => w.id === data.selectedWoodId);
+      if (wood) setSelectedWood(wood);
+    }
+    setBlocks(data.blocks || STANDARD_BLOCKS.custom);
+    
+    setDfThicknessOption(data.dfThicknessOption || '5x3');
+    setDfCustomW(data.dfCustomW || ''); setDfCustomWUnit(data.dfCustomWUnit || 'in');
+    setDfCustomT(data.dfCustomT || ''); setDfCustomTUnit(data.dfCustomTUnit || 'in');
+    setDfHeight(data.dfHeight || '7'); setDfHeightUnit(data.dfHeightUnit || 'ft');
+    setDfWidth(data.dfWidth || '3.5'); setDfWidthUnit(data.dfWidthUnit || 'ft');
+    setExcludeBottomPiece(!!data.excludeBottomPiece);
+    
+    setHasBorder(!!data.hasBorder);
+    setBorderThicknessOption(data.borderThicknessOption || '4x1.5');
+    setBorderCustomW(data.borderCustomW || ''); setBorderCustomWUnit(data.borderCustomWUnit || 'in');
+    setBorderCustomT(data.borderCustomT || ''); setBorderCustomTUnit(data.borderCustomTUnit || 'in');
+    setBorderHeight(data.borderHeight || '7.5'); setBorderHeightUnit(data.borderHeightUnit || 'ft');
+    setBorderWidth(data.borderWidth || '4.5'); setBorderWidthUnit(data.borderWidthUnit || 'ft');
+    
+    setHasArch(!!data.hasArch);
+    setArchLength(data.archLength || '5'); setArchLengthUnit(data.archLengthUnit || 'ft');
+    setArchWidth(data.archWidth || '6'); setArchWidthUnit(data.archWidthUnit || 'in');
+    setArchThickness(data.archThickness || '1.5'); setArchThicknessUnit(data.archThicknessUnit || 'in');
+    
+    setLabourItems(data.labourItems || [{ id: 'l1', desc: 'Fitting & Finishing', amount: '2000' }]);
+    setHasCarving(!!data.hasCarving);
+    setCarvings(data.carvings || [{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
+    setCarvingRateOption(data.carvingRateOption || '3.5');
+    setCarvingRate(data.carvingRate || '');
+    
+    setLoadModalVisible(false);
+  };
+
+  useEffect(() => {
+    if (location.state?.loadEstimate && woodTypes.length > 0) {
+      loadEstimate(location.state.loadEstimate);
+      // clean up state to prevent reload loops
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state, woodTypes]);
+
+  const deleteSavedEstimate = async (id) => {
+    try {
+      await api.delete(`/saved-estimates/${id}`);
+      setSavedEstimates(savedEstimates.filter(s => s.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const updateWoodTypeLocal = (id, field, value) => {
@@ -332,12 +434,30 @@ export default function WoodEstimator() {
 
   const activeCarvingRate = carvingRateOption === 'custom' ? carvingRate : carvingRateOption;
   const totalCarvingCost = hasCarving ? (totalCarvingArea * (parseFloat(activeCarvingRate) || 0)) : 0;
-  const finalCost = woodCost + totalLabour + totalCarvingCost;
+  
+  const profitMargin = (woodCost * 0.15) + totalLabour;
+  const finalCost = woodCost + totalLabour + totalCarvingCost + profitMargin;
 
   return (
     <div className="flex flex-col min-h-full bg-white pb-24">
-      <div className="p-4 md:p-6 bg-white border-b-8 border-gray-900">
+      <div className="p-4 md:p-6 bg-white border-b-8 border-gray-900 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Product Estimation</h1>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setLoadModalVisible(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-900 border-2 border-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Load</span>
+          </button>
+          <button 
+            onClick={() => setSaveModalVisible(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-lg shadow-sm transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">Save</span>
+          </button>
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto w-full flex flex-col">
@@ -675,10 +795,10 @@ export default function WoodEstimator() {
           </div>
         </section>
 
-        {/* 4. Lumpsum (Splits) */}
+        {/* 4. Labour Cost (Splits) */}
         <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">4. Lumpsum</h2>
+            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">4. Labour Cost</h2>
             <button 
               onClick={addLabourItem}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-md transition-colors"
@@ -723,7 +843,7 @@ export default function WoodEstimator() {
           </div>
 
           <div className="mt-5 flex justify-end items-center text-sm text-gray-600 font-bold px-2">
-            Total Lumpsum: <span className="ml-3 font-black text-xl text-gray-900">₹{totalLabour.toFixed(2)}</span>
+            Total Labour Cost: <span className="ml-3 font-black text-xl text-gray-900">₹{totalLabour.toFixed(2)}</span>
           </div>
         </section>
 
@@ -845,6 +965,10 @@ export default function WoodEstimator() {
                 <span className="font-bold text-white text-xs">₹{totalCarvingCost.toFixed(0)}</span>
               </div>
             )}
+            <div className="flex flex-col border-l border-gray-700 pl-3">
+              <span>Margin</span>
+              <span className="font-bold text-amber-400 text-xs">₹{profitMargin.toFixed(0)}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Estimate</span>
@@ -907,6 +1031,85 @@ export default function WoodEstimator() {
                 <Plus className="w-5 h-5" />
                 Add New Wood Type
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Modal */}
+      {saveModalVisible && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border-4 border-gray-900 overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b-2 border-gray-100 bg-gray-50">
+              <h3 className="font-bold text-gray-900 text-lg uppercase tracking-wide">Save Estimate</h3>
+              <button onClick={() => setSaveModalVisible(false)} className="text-gray-400 hover:text-gray-900 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Estimate Name</label>
+                <input 
+                  type="text" 
+                  value={saveEstimateName} 
+                  onChange={(e) => setSaveEstimateName(e.target.value)}
+                  className="input-field w-full text-base" 
+                  placeholder="e.g. Master Bedroom Door"
+                  autoFocus
+                />
+              </div>
+              <button 
+                onClick={saveEstimate}
+                disabled={!saveEstimateName.trim() || isSaving}
+                className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {isSaving ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Modal */}
+      {loadModalVisible && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border-4 border-gray-900 overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b-2 border-gray-100 bg-gray-50 shrink-0">
+              <h3 className="font-bold text-gray-900 text-lg uppercase tracking-wide">Load Saved Estimate</h3>
+              <button onClick={() => setLoadModalVisible(false)} className="text-gray-400 hover:text-gray-900 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 bg-gray-50/50">
+              {isLoadingEstimates ? (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p className="font-medium">Loading saved estimates...</p>
+                </div>
+              ) : savedEstimates.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 font-medium">
+                  No saved estimates found.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedEstimates.map(est => (
+                    <div key={est.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 flex justify-between items-center hover:border-gray-900 transition-colors cursor-pointer group" onClick={() => loadEstimate(est)}>
+                      <div>
+                        <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors">{est.name}</div>
+                        <div className="text-sm font-medium text-gray-500 mt-1">₹{est.totalCost}</div>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); deleteSavedEstimate(est.id); }}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border-2 border-gray-100 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        title="Delete saved estimate"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
