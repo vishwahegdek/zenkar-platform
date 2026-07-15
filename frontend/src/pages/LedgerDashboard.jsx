@@ -170,8 +170,8 @@ export default function LedgerDashboard() {
                 ))}
               </div>
 
-            <div className="flex items-center gap-2">
-              <div className="w-[200px]">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 w-full">
+              <div className="w-full md:w-[200px]">
                 <SearchableSelect
                   options={accountOptions}
                   value={selectedAccount}
@@ -182,11 +182,11 @@ export default function LedgerDashboard() {
               </div>
 
               {rangeType !== 'custom' && rangeType !== 'all' && (
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                <div className="flex justify-between md:justify-start items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
                   <button onClick={handlePrevious} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-sm font-bold text-gray-900 min-w-[140px] text-center leading-none px-2 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900 md:min-w-[140px] text-center leading-none px-2 whitespace-nowrap">
                     {label}
                   </span>
                   <button onClick={handleNext} className="p-1 hover:bg-white hover:shadow-sm rounded-md text-gray-600 transition-all">
@@ -195,23 +195,23 @@ export default function LedgerDashboard() {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
                 <button 
                   onClick={() => setIsTransferModalOpen(true)}
-                  className="hidden md:flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"
+                  className="flex-1 md:flex-none flex justify-center items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"
                 >
                   <ArrowRightLeft className="w-4 h-4" />
                   Transfer
                 </button>
                 <Link 
                   to="/ledger/journal/new"
-                  className="hidden md:flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+                  className="flex-1 md:flex-none flex justify-center items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
                   Journal Entry
                 </Link>
               </div>
-              </div>
+            </div>
             </div>
             
             {rangeType === 'custom' && (
