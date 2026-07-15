@@ -170,10 +170,6 @@ export default function OrdersList() {
                         QS
                       </span>
                   )}
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mt-0.5">
-                     {order.createdBy?.username ? `By ${order.createdBy.username}` : ''}
-                  </p>
-                  <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'dd/MM/yyyy hh:mm a')}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                     <StatusSelect order={order} onChange={handleStatusChange} />
@@ -231,12 +227,6 @@ export default function OrdersList() {
                         QS
                       </span>
                     )}
-                    <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mt-1">
-                       {order.createdBy?.username ? `By ${order.createdBy.username}` : ''}
-                    </div>
-                    <div className="text-[10px] text-gray-400 font-medium">
-                       {format(new Date(order.createdAt), 'dd/MM/yy hh:mm a')}
-                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{order.customer?.name}</div>
