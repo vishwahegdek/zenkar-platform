@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Req } from '@nestjs/common';
 import { SavedEstimatesService } from './saved-estimates.service';
 
 @Controller('saved-estimates')
@@ -6,8 +6,9 @@ export class SavedEstimatesController {
   constructor(private readonly savedEstimatesService: SavedEstimatesService) {}
 
   @Post()
-  create(@Body() createDto: any) {
-    return this.savedEstimatesService.create(createDto);
+  create(@Body() createDto: any, @Req() req: any) {
+    const userId = req.user?.id;
+    return this.savedEstimatesService.create(createDto, userId);
   }
 
   @Get()

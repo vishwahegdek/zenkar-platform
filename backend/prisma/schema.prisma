@@ -51,6 +51,7 @@ model User {
   updatedPurchasePayments PurchasePayment[] @relation("PurchasePaymentUpdatedBy")
   createdLabourPayments   LabourPayment[]   @relation("LabourPaymentCreatedBy")
   updatedLabourPayments   LabourPayment[]   @relation("LabourPaymentUpdatedBy")
+  createdSavedEstimates   SavedEstimate[]   @relation("SavedEstimateCreatedBy")
 
   @@map("users")
 }
@@ -609,9 +610,10 @@ model SavedEstimate {
   id        Int      @id @default(autoincrement())
   name      String
   data      Json
-  totalCost Decimal  @db.Decimal(12, 2) @map("total_cost")
-  createdBy String?  @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  totalCost   Decimal  @db.Decimal(12, 2) @map("total_cost")
+  createdById Int?     @map("created_by_id")
+  createdBy   User?    @relation("SavedEstimateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("saved_estimates")
 }

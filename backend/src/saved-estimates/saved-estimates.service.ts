@@ -5,13 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SavedEstimatesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: any) {
+  async create(data: any, userId?: number) {
     return this.prisma.savedEstimate.create({
       data: {
         name: data.name,
         data: data.data,
         totalCost: data.totalCost,
-        createdBy: data.createdBy,
+        createdById: userId,
       },
     });
   }
