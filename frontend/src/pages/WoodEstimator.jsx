@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2 } from 'lucide-react';
+import { calculateEstimate, ESTIMATION_ENGINE_VERSION } from '../utils/estimationEngine';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
-const TEMPLATES = [
-  { id: 'door_frame', name: 'Door Frame (Smart Form)' },
-  { id: 'custom', name: 'Custom Blocks (Blank)' },
+const PRODUCT_TEMPLATES = [
+  { id: 'door_frame', name: 'Smart Door Frame' },
+  { id: 'custom', name: 'Custom Blocks' },
   { id: 'standard_door', name: 'Standard Door' },
   { id: 'window_frame', name: 'Window Frame' },
 ];
@@ -45,6 +46,13 @@ const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, cl
     </div>
   );
 };
+
+const TEMPLATES = [
+  { id: 'door_frame', name: 'Door Frame (Smart Form)' },
+  { id: 'custom', name: 'Custom Blocks (Blank)' },
+  { id: 'standard_door', name: 'Standard Door' },
+  { id: 'window_frame', name: 'Window Frame' },
+];
 
 export default function WoodEstimator() {
   const { user } = useAuth();
@@ -113,21 +121,28 @@ export default function WoodEstimator() {
   const [borderWidthUnit, setBorderWidthUnit] = useState('ft');
 
   const [hasArch, setHasArch] = useState(false);
-  const [archLength, setArchLength] = useState('5');
-  const [archLengthUnit, setArchLengthUnit] = useState('ft');
-  const [archWidth, setArchWidth] = useState('6');
-  const [archWidthUnit, setArchWidthUnit] = useState('in');
-  const [archThickness, setArchThickness] = useState('1.5');
-  const [archThicknessUnit, setArchThicknessUnit] = useState('in');
+  const [archHeight, setArchHeight] = useState('1');
+  const [archHeightUnit, setArchHeightUnit] = useState('ft');
 
   // Labour and Carving State
-  const [labourItems, setLabourItems] = useState([
-    { id: 'l1', desc: 'Fitting & Finishing', amount: '2000' }
-  ]);
+  const [labourItems, setLabourItems] = useState([]);
   const [hasCarving, setHasCarving] = useState(false);
   const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
   const [carvingRateOption, setCarvingRateOption] = useState('3.5');
   const [carvingRate, setCarvingRate] = useState('');
+  const [mainCarvingFace, setMainCarvingFace] = useState('w');
+  const [fittingLabour, setFittingLabour] = useState('1200');
+
+  useEffect(() => {
+    if (activeTemplate === 'door_frame') {
+      if (hasBorder) {
+        setFittingLabour('2000');
+        setHasCarving(true);
+      } else {
+        setFittingLabour('1200');
+      }
+    }
+  }, [hasBorder, activeTemplate]);
 
   // Wood Types Management
   const addWoodType = async () => {
@@ -137,20 +152,6 @@ export default function WoodEstimator() {
     } catch (e) {
       console.error(e);
     }
-  };
-
-  const removeWoodType = async (id) => {
-    const wood = woodTypes.find(w => w.id === id);
-    if (wood?.isSeeded) return;
-    
-    const updated = woodTypes.filter(w => w.id !== id);
-    setWoodTypes(updated);
-    if (selectedWood?.id === id && updated.length > 0) {
-      setSelectedWood(updated[0]);
-    }
-    try {
-      await api.delete(`/wood-types/${id}`);
-    } catch (e) { console.error(e); }
   };
 
   const [saveModalVisible, setSaveModalVisible] = useState(false);
@@ -171,14 +172,15 @@ export default function WoodEstimator() {
         blocks,
         dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit,
         dfHeight, dfHeightUnit, dfWidth, dfWidthUnit, excludeBottomPiece,
-        hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit, borderHeight, borderHeightUnit, borderWidth, borderCustomTUnit,
-        hasArch, archLength, archLengthUnit, archWidth, archWidthUnit, archThickness, archThicknessUnit,
-        labourItems, hasCarving, carvings, carvingRateOption, carvingRate
+        hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit,
+        hasArch, archHeight, archHeightUnit,
+        labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour,
+        version: ESTIMATION_ENGINE_VERSION
       };
       await api.post('/saved-estimates', {
         name: saveEstimateName,
         data,
-        totalCost: finalCost,
+        totalCost: estimateData.finalCost,
         createdBy: user?.name || user?.username || 'admin'
       });
       setSaveModalVisible(false);
@@ -220,19 +222,18 @@ export default function WoodEstimator() {
     setBorderThicknessOption(data.borderThicknessOption || '4x1.5');
     setBorderCustomW(data.borderCustomW || ''); setBorderCustomWUnit(data.borderCustomWUnit || 'in');
     setBorderCustomT(data.borderCustomT || ''); setBorderCustomTUnit(data.borderCustomTUnit || 'in');
-    setBorderHeight(data.borderHeight || '7.5'); setBorderHeightUnit(data.borderHeightUnit || 'ft');
-    setBorderWidth(data.borderWidth || '4.5'); setBorderWidthUnit(data.borderWidthUnit || 'ft');
     
     setHasArch(!!data.hasArch);
-    setArchLength(data.archLength || '5'); setArchLengthUnit(data.archLengthUnit || 'ft');
-    setArchWidth(data.archWidth || '6'); setArchWidthUnit(data.archWidthUnit || 'in');
-    setArchThickness(data.archThickness || '1.5'); setArchThicknessUnit(data.archThicknessUnit || 'in');
+    setArchHeight(data.archHeight || data.archWidth || '1');
+    setArchHeightUnit(data.archHeightUnit || data.archWidthUnit || 'ft');
     
-    setLabourItems(data.labourItems || [{ id: 'l1', desc: 'Fitting & Finishing', amount: '2000' }]);
+    setLabourItems(data.labourItems || []);
     setHasCarving(!!data.hasCarving);
     setCarvings(data.carvings || [{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
     setCarvingRateOption(data.carvingRateOption || '3.5');
     setCarvingRate(data.carvingRate || '');
+    setMainCarvingFace(data.mainCarvingFace || 'w');
+    setFittingLabour(data.fittingLabour || '1200');
     
     setLoadModalVisible(false);
   };
@@ -240,7 +241,6 @@ export default function WoodEstimator() {
   useEffect(() => {
     if (location.state?.loadEstimate && woodTypes.length > 0) {
       loadEstimate(location.state.loadEstimate);
-      // clean up state to prevent reload loops
       window.history.replaceState({}, document.title)
     }
   }, [location.state, woodTypes]);
@@ -269,7 +269,6 @@ export default function WoodEstimator() {
     } catch (e) { console.error(e); }
   };
 
-  // Block Management
   const applyTemplate = (templateId) => {
     setActiveTemplate(templateId);
     if (STANDARD_BLOCKS[templateId]) {
@@ -292,154 +291,45 @@ export default function WoodEstimator() {
     setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
   };
 
-  // Labour Management
   const addLabourItem = () => setLabourItems([...labourItems, { id: Date.now().toString(), desc: '', amount: '' }]);
   const removeLabourItem = (id) => setLabourItems(labourItems.filter(l => l.id !== id));
   const updateLabourItem = (id, field, value) => {
     setLabourItems(labourItems.map(l => l.id === id ? { ...l, [field]: value } : l));
   };
 
-  // Carving Management
   const addCarving = () => setCarvings([...carvings, { id: Date.now().toString(), l: '', lu: 'in', w: '', wu: 'in' }]);
   const removeCarving = (id) => setCarvings(carvings.filter(c => c.id !== id));
   const updateCarving = (id, field, value) => {
     setCarvings(carvings.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
-  // Door Frame Block Calculation
-  const doorFrameBlocks = useMemo(() => {
-    if (activeTemplate !== 'door_frame') return [];
-    
-    let w = 5, t = 3;
-    let wu = 'in', tu = 'in';
-    
-    if (dfThicknessOption === '6x4') { 
-      w = 6; t = 4; 
-    }
-    else if (dfThicknessOption === 'custom') { 
-      w = parseFloat(dfCustomW) || 0; 
-      wu = dfCustomWUnit;
-      t = parseFloat(dfCustomT) || 0; 
-      tu = dfCustomTUnit;
-    }
-    
-    let h = parseFloat(dfHeight) || 0;
-    let wd = parseFloat(dfWidth) || 0;
-    
-    const computed = [
-      { id: 'df1', name: 'Main Leg 1', l: h, lu: dfHeightUnit, w, wu, t, tu },
-      { id: 'df2', name: 'Main Leg 2', l: h, lu: dfHeightUnit, w, wu, t, tu },
-      { id: 'df3', name: 'Main Head', l: wd, lu: dfWidthUnit, w, wu, t, tu },
-    ];
-    
-    if (!excludeBottomPiece) {
-      computed.push({ id: 'df4', name: 'Main Bottom', l: wd, lu: dfWidthUnit, w, wu, t, tu });
-    }
-    
-    if (hasBorder) {
-      let bw = 4, bt = 1.5;
-      let bwu = 'in', btu = 'in';
-      
-      if (borderThicknessOption === '3x1.5') { 
-        bw = 3; bt = 1.5; 
-      }
-      else if (borderThicknessOption === 'custom') { 
-        bw = parseFloat(borderCustomW) || 0; 
-        bwu = borderCustomWUnit;
-        bt = parseFloat(borderCustomT) || 0; 
-        btu = borderCustomTUnit;
-      }
-      
-      let bh = parseFloat(borderHeight) || 0;
-      let bwd = parseFloat(borderWidth) || 0;
-      
-      computed.push({ id: 'bf1', name: 'Border Leg 1', l: bh, lu: borderHeightUnit, w: bw, wu: bwu, t: bt, tu: btu });
-      computed.push({ id: 'bf2', name: 'Border Leg 2', l: bh, lu: borderHeightUnit, w: bw, wu: bwu, t: bt, tu: btu });
-      
-      if (hasArch) {
-        let al = parseFloat(archLength) || 0;
-        let aw = parseFloat(archWidth) || 0;
-        let at = parseFloat(archThickness) || 0;
-        computed.push({ id: 'b_arch', name: 'Border Arch', l: al, lu: archLengthUnit, w: aw, wu: archWidthUnit, t: at, tu: archThicknessUnit });
-      } else {
-        computed.push({ id: 'bf3', name: 'Border Head', l: bwd, lu: borderWidthUnit, w: bw, wu: bwu, t: bt, tu: btu });
-      }
-    }
-    return computed;
-  }, [
-    activeTemplate, dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit, 
+  const currentStateData = {
+    activeTemplate, selectedWoodId: selectedWood?.id, blocks,
+    dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit,
     dfHeight, dfHeightUnit, dfWidth, dfWidthUnit, excludeBottomPiece,
-    hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit, 
-    borderHeight, borderHeightUnit, borderWidth, borderWidthUnit,
-    hasArch, archLength, archLengthUnit, archWidth, archWidthUnit, archThickness, archThicknessUnit
+    hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit,
+    hasArch, archHeight, archHeightUnit,
+    labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour
+  };
+
+  const estimateData = useMemo(() => calculateEstimate(currentStateData, woodTypes), [
+    currentStateData, woodTypes
   ]);
 
-  // Global Calculations
-  const computedBlocks = activeTemplate === 'door_frame' ? doorFrameBlocks : blocks;
-
-  const totalCft = useMemo(() => {
-    return computedBlocks.reduce((sum, b) => {
-      let l = parseFloat(b.l) || 0;
-      if (b.lu === 'ft') l *= 12;
-      
-      let w = parseFloat(b.w) || 0;
-      if (b.wu === 'ft') w *= 12;
-      
-      let t = parseFloat(b.t) || 0;
-      if (b.tu === 'ft') t *= 12;
-      
-      return sum + ((l * w * t) / 1728);
-    }, 0);
-  }, [computedBlocks]);
-
-  const woodCost = useMemo(() => {
-    const isHalasu = selectedWood?.name?.toLowerCase().includes('halasu');
-    const kindalWood = woodTypes.find(w => w.name?.toLowerCase().includes('kindal'));
-    const kindalPrice = kindalWood ? (parseFloat(kindalWood.price) || 0) : 1500;
-    const defaultPrice = parseFloat(selectedWood?.price) || 0;
-
-    return computedBlocks.reduce((sum, b) => {
-      let l = parseFloat(b.l) || 0;
-      if (b.lu === 'ft') l *= 12;
-      
-      let w = parseFloat(b.w) || 0;
-      if (b.wu === 'ft') w *= 12;
-      
-      let t = parseFloat(b.t) || 0;
-      if (b.tu === 'ft') t *= 12;
-      
-      const cft = (l * w * t) / 1728;
-      
-      // Local tradition: If Halasu is selected, the bottom piece (df4) uses Kindal pricing
-      if (isHalasu && b.id === 'df4') {
-        return sum + (cft * kindalPrice);
-      }
-      
-      return sum + (cft * defaultPrice);
-    }, 0);
-  }, [computedBlocks, selectedWood, woodTypes]);
-
-  const totalCarvingArea = useMemo(() => {
-    return carvings.reduce((sum, c) => {
-      let l = parseFloat(c.l) || 0;
-      if (c.lu === 'ft') l *= 12;
-      
-      let w = parseFloat(c.w) || 0;
-      if (c.wu === 'ft') w *= 12;
-      
-      return sum + (l * w);
-    }, 0);
-  }, [carvings]);
-
-  const totalLabour = useMemo(() => {
-    return labourItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-  }, [labourItems]);
-
-  const activeCarvingRate = carvingRateOption === 'custom' ? carvingRate : carvingRateOption;
-  const totalCarvingCost = hasCarving ? (totalCarvingArea * (parseFloat(activeCarvingRate) || 0)) : 0;
-  
-  const profitMargin = (woodCost * 0.15) + totalLabour;
-  const finalCost = woodCost + totalLabour + totalCarvingCost + profitMargin;
+  const {
+    computedBlocks,
+    totalVolumeCft: totalCft,
+    totalWoodCost: woodCost,
+    totalCarvingArea,
+    totalCarvingCost,
+    innerDimensions,
+    computedCarvingBlocks,
+    finishingLabour,
+    totalLabour,
+    profitMargin,
+    finalCost,
+    inventoryError
+  } = estimateData;
 
   return (
     <div className="flex flex-col min-h-full bg-white pb-24">
@@ -464,8 +354,6 @@ export default function WoodEstimator() {
       </div>
 
       <div className="max-w-4xl mx-auto w-full flex flex-col">
-        
-        {/* 1. Choose Product */}
         <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
           <h2 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">1. Choose Product</h2>
           <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
@@ -485,7 +373,6 @@ export default function WoodEstimator() {
           </div>
         </section>
 
-        {/* 2. Select Wood Type */}
         <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">2. Select Wood Type</h2>
@@ -519,7 +406,6 @@ export default function WoodEstimator() {
           </div>
         </section>
 
-        {/* 3. Customize Dimensions */}
         <section className="bg-white p-3 md:p-4 border-b-4 border-gray-900">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">3. Customize Dimensions</h2>
@@ -527,7 +413,6 @@ export default function WoodEstimator() {
           
           {activeTemplate === 'door_frame' ? (
             <div className="space-y-6">
-              {/* Main Frame Configurations */}
               <div className="bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 space-y-4 shadow-sm">
                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
                   <Settings2 className="w-4 h-4 text-gray-900" />
@@ -593,8 +478,37 @@ export default function WoodEstimator() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
+                <div className="pt-4 border-t border-gray-200 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Front Face (Carving Side)</label>
+                    {(() => {
+                      let w = 5, t = 3;
+                      if (dfThicknessOption === '6x4') { w = 6; t = 4; }
+                      else if (dfThicknessOption === 'custom') { 
+                        w = parseFloat(dfCustomW) || 0; 
+                        t = parseFloat(dfCustomT) || 0; 
+                      }
+                      return (
+                        <div className="flex gap-2">
+                          <button onClick={() => setMainCarvingFace('w')} className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${mainCarvingFace === 'w' ? 'bg-gray-900 border-gray-900 text-white shadow-sm' : 'bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}>Width ({w}")</button>
+                          <button onClick={() => setMainCarvingFace('t')} className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${mainCarvingFace === 't' ? 'bg-gray-900 border-gray-900 text-white shadow-sm' : 'bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}>Thickness ({t}")</button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {innerDimensions && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Calculated Inner Dimensions</div>
+                      <div className="text-xl font-black text-blue-900">
+                        {Math.floor(innerDimensions.h / 12)}ft {Math.round(innerDimensions.h % 12)}in 
+                        <span className="mx-2 text-blue-400 font-medium">×</span> 
+                        {Math.floor(innerDimensions.w / 12)}ft {Math.round(innerDimensions.w % 12)}in
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2">
                     <h4 className="font-bold text-gray-800 text-sm">Exclude Bottom Piece?</h4>
                     <button 
                       onClick={() => setExcludeBottomPiece(!excludeBottomPiece)}
@@ -606,7 +520,6 @@ export default function WoodEstimator() {
                 </div>
               </div>
 
-              {/* Border Frame Configurations */}
               <div className="bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2">
@@ -661,27 +574,6 @@ export default function WoodEstimator() {
                           </div>
                         )}
                       </div>
-
-                      <div className="flex gap-3">
-                        <UnitInput 
-                          label="Border Height" 
-                          value={borderHeight} 
-                          onChange={setBorderHeight} 
-                          unit={borderHeightUnit} 
-                          onUnitChange={setBorderHeightUnit} 
-                          placeholder="7.5" 
-                        />
-                        {!hasArch && (
-                          <UnitInput 
-                            label="Border Width" 
-                            value={borderWidth} 
-                            onChange={setBorderWidth} 
-                            unit={borderWidthUnit} 
-                            onUnitChange={setBorderWidthUnit} 
-                            placeholder="4.5" 
-                          />
-                        )}
-                      </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
@@ -696,30 +588,14 @@ export default function WoodEstimator() {
                       </div>
                       
                       {hasArch && (
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                           <UnitInput 
-                            label="Arch Length" 
-                            value={archLength} 
-                            onChange={setArchLength} 
-                            unit={archLengthUnit} 
-                            onUnitChange={setArchLengthUnit} 
-                            placeholder="5" 
-                          />
-                          <UnitInput 
-                            label="Arch Width" 
-                            value={archWidth} 
-                            onChange={setArchWidth} 
-                            unit={archWidthUnit} 
-                            onUnitChange={setArchWidthUnit} 
-                            placeholder="6" 
-                          />
-                          <UnitInput 
-                            label="Arch Thick" 
-                            value={archThickness} 
-                            onChange={setArchThickness} 
-                            unit={archThicknessUnit} 
-                            onUnitChange={setArchThicknessUnit} 
-                            placeholder="1.5" 
+                            label="Arch Height" 
+                            value={archHeight} 
+                            onChange={setArchHeight} 
+                            unit={archHeightUnit} 
+                            onUnitChange={setArchHeightUnit} 
+                            placeholder="1" 
                           />
                         </div>
                       )}
@@ -728,26 +604,30 @@ export default function WoodEstimator() {
                 )}
               </div>
               
-              {/* Computed Blocks Display for Door Frame */}
               <div className="mt-4 border-2 border-gray-900 rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-gray-900 px-4 py-2.5 text-xs font-bold text-white uppercase tracking-wide border-b-2 border-gray-900">
                   Computed Blocks Breakdown
                 </div>
-                <div className="divide-y divide-gray-100 bg-white">
-                  {computedBlocks.map(b => (
-                     <div key={b.id} className="px-4 py-3 flex justify-between text-sm">
-                       <span className="text-gray-600 font-medium">{b.name}</span>
-                       <span className="text-gray-900 font-bold bg-gray-50 px-2 py-0.5 rounded">
-                         {b.l}{b.lu} x {b.w}{b.wu} x {b.t}{b.tu}
-                       </span>
-                     </div>
-                  ))}
-                </div>
+                {inventoryError ? (
+                  <div className="px-4 py-4 text-sm font-bold text-red-600 bg-red-50 text-center border-b border-red-100">
+                    ⚠ {inventoryError}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 bg-white">
+                    {computedBlocks.map(b => (
+                       <div key={b.id} className="px-4 py-3 flex justify-between text-sm">
+                         <span className="text-gray-600 font-medium">{b.name}</span>
+                         <span className="text-gray-900 font-bold bg-gray-50 px-2 py-0.5 rounded">
+                           {b.l}{b.lu} x {b.w}{b.wu} x {b.t}{b.tu}
+                         </span>
+                       </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Generic Block Builder for Custom / Other Templates */}
               {blocks.map((block, index) => (
                 <div key={block.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <div className="flex justify-between items-center mb-3">
@@ -798,20 +678,53 @@ export default function WoodEstimator() {
           </div>
         </section>
 
-        {/* 4. Labour Cost (Splits) */}
         <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">4. Labour Cost</h2>
+            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">4. Lumpsum</h2>
             <button 
               onClick={addLabourItem}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-md transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Split
+              Add Custom Row
             </button>
           </div>
           
           <div className="space-y-3">
+            <div className="flex gap-2 md:gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Description</label>
+                <div className="text-sm font-bold text-gray-800">Fitting Labour</div>
+              </div>
+              <div className="w-24 md:w-32">
+                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Amount (₹)</label>
+                <input 
+                  type="number" 
+                  value={fittingLabour} 
+                  onChange={(e) => setFittingLabour(e.target.value)}
+                  className="input-field text-sm" 
+                />
+              </div>
+              <div className="w-10"></div>
+            </div>
+
+            {hasCarving && (
+              <div className="flex gap-2 md:gap-4 items-center bg-blue-50 p-3 rounded-xl border border-blue-200">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[10px] font-bold text-blue-500 mb-1 uppercase tracking-wide">Description</label>
+                  <div className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                    Finishing Labour 
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full hidden md:inline-block">30% of Carving</span>
+                  </div>
+                </div>
+                <div className="w-24 md:w-32">
+                  <label className="block text-[10px] font-bold text-blue-500 mb-1 uppercase tracking-wide">Amount (₹)</label>
+                  <div className="text-sm font-bold text-blue-900 px-2 py-1.5">{finishingLabour.toFixed(2)}</div>
+                </div>
+                <div className="w-10"></div>
+              </div>
+            )}
+
             {labourItems.map((item, index) => (
               <div key={item.id} className="flex gap-2 md:gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <div className="flex-1 min-w-0">
@@ -846,18 +759,19 @@ export default function WoodEstimator() {
           </div>
 
           <div className="mt-5 flex justify-end items-center text-sm text-gray-600 font-bold px-2">
-            Total Labour Cost: <span className="ml-3 font-black text-xl text-gray-900">₹{totalLabour.toFixed(2)}</span>
+            Total Lumpsum: <span className="ml-3 font-black text-xl text-gray-900">₹{totalLabour.toFixed(2)}</span>
           </div>
         </section>
 
-        {/* 5. Carving Details */}
         <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900 last:border-b-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider flex items-center gap-4">
               5. Carving Area
               <button 
-                onClick={() => setHasCarving(!hasCarving)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${hasCarving ? 'bg-gray-900' : 'bg-gray-300'}`}
+                onClick={() => {
+                  if (!hasBorder) setHasCarving(!hasCarving);
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${hasBorder ? 'opacity-50 cursor-not-allowed ' : ''}${hasCarving ? 'bg-gray-900' : 'bg-gray-300'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasCarving ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -895,47 +809,70 @@ export default function WoodEstimator() {
               </div>
 
               <div className="space-y-4">
-                {carvings.map((carving, index) => (
-                  <div key={carving.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-bold text-gray-700">Area {index + 1}</span>
-                      <button onClick={() => removeCarving(carving.id)} className="text-gray-400 hover:text-red-600 p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                {activeTemplate === 'door_frame' ? (
+                  <div className="bg-gray-50 p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 className="font-bold text-gray-900 text-sm mb-3">Computed Carving Blocks</h3>
+                    <div className="space-y-2">
+                      {computedCarvingBlocks.map((block, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                          <span className="text-gray-700 font-bold">{block.name}</span>
+                          <div className="text-right">
+                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">{block.l.toFixed(1)}" L × {block.w.toFixed(1)}" W</div>
+                            <div className="font-black text-gray-900">{block.area.toFixed(0)} sq.in</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <UnitInput 
-                        label="Length" 
-                        value={carving.l} 
-                        onChange={(v) => updateCarving(carving.id, 'l', v)} 
-                        unit={carving.lu} 
-                        onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
-                      />
-                      <UnitInput 
-                        label="Width" 
-                        value={carving.w} 
-                        onChange={(v) => updateCarving(carving.id, 'w', v)} 
-                        unit={carving.wu} 
-                        onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
-                      />
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                      <span className="font-bold text-gray-600">Total Calculated Area</span>
+                      <span className="font-black text-gray-900 text-lg">{totalCarvingArea.toFixed(0)} sq.in</span>
                     </div>
                   </div>
-                ))}
+                ) : (
+                  <>
+                    {carvings.map((carving, index) => (
+                      <div key={carving.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-bold text-gray-700">Area {index + 1}</span>
+                          <button onClick={() => removeCarving(carving.id)} className="text-gray-400 hover:text-red-600 p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <UnitInput 
+                            label="Length" 
+                            value={carving.l} 
+                            onChange={(v) => updateCarving(carving.id, 'l', v)} 
+                            unit={carving.lu} 
+                            onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
+                          />
+                          <UnitInput 
+                            label="Width" 
+                            value={carving.w} 
+                            onChange={(v) => updateCarving(carving.id, 'w', v)} 
+                            unit={carving.wu} 
+                            onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button 
+                      onClick={addCarving}
+                      className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Area
+                    </button>
+                  </>
+                )}
               </div>
-              
-              <button 
-                onClick={addCarving}
-                className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
-              >
-                <Plus className="w-4 h-4" />
-                Add Area
-              </button>
 
-              {carvings.length > 0 && (
+              {(activeTemplate === 'door_frame' || carvings.length > 0) && (
                 <div className="mt-5 bg-gray-100 p-4 rounded-xl flex flex-col gap-2 border border-gray-200">
                   <div className="flex justify-between items-center text-gray-600 font-medium text-sm">
-                    <span>Total Area:</span>
-                    <span className="font-bold text-gray-900">{totalCarvingArea.toFixed(2)} sq.in</span>
+                    <span>Total Carving Area:</span>
+                    <span className="text-gray-900 font-bold">{totalCarvingArea.toFixed(0)} sq.in</span>
                   </div>
                   {totalCarvingCost > 0 && (
                     <div className="flex justify-between items-center text-gray-900 font-bold pt-2 border-t border-gray-200">
@@ -950,7 +887,6 @@ export default function WoodEstimator() {
         </section>
       </div>
 
-      {/* Footer Breakdown */}
       <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-gray-900 border-t-2 border-black p-2.5 shadow-[0_-4px_10px_rgba(0,0,0,0.2)] z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 px-2 sm:px-4 md:px-0">
           <div className="flex gap-3 overflow-x-auto text-[10px] text-gray-400 font-medium uppercase tracking-wider">
@@ -980,7 +916,6 @@ export default function WoodEstimator() {
         </div>
       </div>
 
-      {/* Wood Types Modal */}
       {isWoodModalVisible && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border-4 border-gray-900">
@@ -1014,15 +949,10 @@ export default function WoodEstimator() {
                       value={wood.price}
                       onChange={(e) => updateWoodTypeLocal(wood.id, 'price', e.target.value)}
                       onBlur={() => saveWoodType(wood.id)}
-                      placeholder="Rate"
+                      placeholder="Price"
                     />
-                    <button 
-                      onClick={() => removeWoodType(wood.id)}
-                      disabled={wood.isSeeded}
-                      className={`w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-lg shadow-sm ${wood.isSeeded ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600'}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="w-10 flex items-center justify-center">
+                    </div>
                   </div>
                 ))}
               </div>
