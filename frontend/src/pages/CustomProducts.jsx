@@ -357,25 +357,38 @@ export default function CustomProducts() {
                             </button>
                           </div>
                           
-                          {data.hasBorder && (
-                            <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-200">
-                              <span className="text-gray-600">Border Thickness:</span>
-                              <div className="flex items-center gap-2">
-                                {data.borderThicknessOption === 'custom' && (
-                                  <div className="flex items-center gap-1">
-                                    <input type="number" value={data.borderCustomW || ''} onChange={e => updateDetailField('borderCustomW', e.target.value)} className="w-10 text-center border-gray-300 rounded text-sm py-0.5 font-bold" />
-                                    <span className="text-gray-400">x</span>
-                                    <input type="number" value={data.borderCustomT || ''} onChange={e => updateDetailField('borderCustomT', e.target.value)} className="w-10 text-center border-gray-300 rounded text-sm py-0.5 font-bold" />
-                                  </div>
-                                )}
-                                <select value={data.borderThicknessOption || '3x1.5'} onChange={e => updateDetailField('borderThicknessOption', e.target.value)} className="bg-white border border-gray-300 rounded text-sm font-bold text-gray-900 py-0.5 outline-none">
-                                  <option value="4x1.5">4x1.5</option>
-                                  <option value="3x1.5">3x1.5</option>
-                                  <option value="custom">Custom</option>
-                                </select>
-                              </div>
+                          <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-200">
+                            <span className="text-gray-600">Border Frame:</span>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  const newVal = !data.hasBorder;
+                                  updateDetailField('hasBorder', newVal);
+                                  if (newVal) updateDetailField('hasCarving', true);
+                                }}
+                                className={`px-3 py-0.5 rounded text-xs font-bold transition-colors ${data.hasBorder ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700'}`}
+                              >
+                                {data.hasBorder ? 'Yes' : 'No'}
+                              </button>
+                              
+                              {data.hasBorder && (
+                                <>
+                                  {data.borderThicknessOption === 'custom' && (
+                                    <div className="flex items-center gap-1">
+                                      <input type="number" value={data.borderCustomW || ''} onChange={e => updateDetailField('borderCustomW', e.target.value)} className="w-10 text-center border-gray-300 rounded text-sm py-0.5 font-bold" />
+                                      <span className="text-gray-400">x</span>
+                                      <input type="number" value={data.borderCustomT || ''} onChange={e => updateDetailField('borderCustomT', e.target.value)} className="w-10 text-center border-gray-300 rounded text-sm py-0.5 font-bold" />
+                                    </div>
+                                  )}
+                                  <select value={data.borderThicknessOption || '3x1.5'} onChange={e => updateDetailField('borderThicknessOption', e.target.value)} className="bg-white border border-gray-300 rounded text-sm font-bold text-gray-900 py-0.5 outline-none">
+                                    <option value="4x1.5">4x1.5</option>
+                                    <option value="3x1.5">3x1.5</option>
+                                    <option value="custom">Custom</option>
+                                  </select>
+                                </>
+                              )}
                             </div>
-                          )}
+                          </div>
 
                           {estimate.innerDimensions && (
                             <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 text-blue-800">
