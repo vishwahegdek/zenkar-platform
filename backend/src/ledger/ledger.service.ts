@@ -520,7 +520,11 @@ export class LedgerService implements OnModuleInit {
         
         const isOutOfSync = Math.abs(expectedRealBalance - actualRealBalance) > 0.01;
         
-        const periodMeta = { totalAccrued: labourerAccruedWage, totalPaid: periodPaid, isOutOfSync };
+        const periodMeta = { 
+          isOutOfSync,
+          expectedBalance: expectedRealBalance + labourerAccruedWage,
+          actualBalance: actualRealBalance + labourerAccruedWage
+        };
         
         if (existingL) {
           existingL.balance += labourerAccruedWage;

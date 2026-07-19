@@ -42,10 +42,14 @@ export default function BalanceSheet() {
             </span>
           )}
         </div>
-        {item.meta && item.meta.totalAccrued !== undefined && (
-          <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-0.5 font-medium">
-            <span className="text-blue-600/80">Accrued: {formatCurrency(item.meta.totalAccrued)}</span>
-            <span className="text-green-600/80">Paid: {formatCurrency(item.meta.totalPaid)}</span>
+        {isOutOfSync && item.meta && (
+          <div className="flex flex-col gap-1 mt-1 border-l-2 border-red-400 pl-2">
+            <span className="text-[10px] text-red-600 font-medium">
+              Calculated Balance: {formatCurrency(item.meta.expectedBalance)}
+            </span>
+            <span className="text-[10px] text-gray-500 font-medium line-through">
+              Ledger Account: {formatCurrency(item.meta.actualBalance)}
+            </span>
           </div>
         )}
       </div>
