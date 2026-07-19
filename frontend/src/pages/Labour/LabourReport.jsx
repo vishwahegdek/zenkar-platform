@@ -171,25 +171,18 @@ export default function LabourReport() {
                        
                        <div className="flex">
                            <button 
+                             onClick={() => initiateSettle('CARRY_FORWARD')}
+                             className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-l text-[10px] font-bold uppercase border-r border-blue-800"
+                             title="Close Period and Carry Forward Balance"
+                           >
+                               Close Report
+                           </button>
+                           <button 
                                onClick={() => setPaymentModal({ ...paymentModal, open: true })}
-                               className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded-l text-[10px] font-bold uppercase border-r border-green-800"
+                               className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded-r text-[10px] font-bold uppercase"
                                title="Record a Payment"
                            >
                                Record Payment
-                           </button>
-                           <button 
-                               onClick={() => initiateSettle('CLEAR')}
-                               className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-[10px] font-bold uppercase border-r border-red-800"
-                               title="Settle and Clear Balance to Zero"
-                           >
-                               Settle (Clear)
-                           </button>
-                           <button 
-                             onClick={() => initiateSettle('CARRY_FORWARD')}
-                             className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-r text-[10px] font-bold uppercase"
-                             title="Settle and Carry Forward Balance"
-                           >
-                               Carry Fwd
                            </button>
                        </div>
                     </div>
@@ -210,10 +203,19 @@ export default function LabourReport() {
                     <tbody className="text-gray-300 text-sm">
                         {/* Opening Balance Row */}
                         {employeeData.openingBalance !== 0 && (
-                            <tr className="bg-gray-800/80 border-b border-gray-700 font-bold text-yellow-500">
-                                <td className="p-2 italic border-r border-gray-700/50">OPENING BAL</td>
+                            <tr className={`bg-gray-800/80 border-b border-gray-700 font-bold ${employeeData.openingBalance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                <td className="p-2 italic border-r border-gray-700/50 align-top">
+                                    OPENING BAL
+                                    {employeeData.lastSettlementDate && (
+                                        <div className="text-xs font-mono font-normal opacity-70 mt-1">
+                                            {format(new Date(employeeData.lastSettlementDate), 'yyyy-MM-dd')}
+                                        </div>
+                                    )}
+                                </td>
                                 <td className="p-2 border-r border-gray-700/50"></td>
-                                <td className="p-2 text-right">₹{employeeData.openingBalance.toFixed(0)}</td>
+                                <td className="p-2 text-right">
+                                    {employeeData.openingBalance < 0 ? '-' : '+'}₹{Math.abs(employeeData.openingBalance).toFixed(0)}
+                                </td>
                             </tr>
                         )}
                         {employeeData.records.length === 0 ? (
@@ -265,20 +267,33 @@ export default function LabourReport() {
                  <div className="grid grid-cols-3 divide-x divide-gray-700">
                     <div className="p-2 flex flex-col justify-center items-center">
                          <span className="text-gray-500 text-[10px] uppercase tracking-wide">Work</span>
-                         <span className="text-lg font-bold text-green-400">₹{employeeData.totalSalary.toFixed(0)}</span>
+                         <span className="text-lg font-bold text-green-400">
+                             ₹{employeeData.totalSalary.toFixed(0)}
+                         </span>
                          <span className="text-[10px] text-gray-400">{employeeData.totalDays} days</span>
                     </div>
 
                     <div className="p-2 flex flex-col justify-center items-center bg-gray-800/50">
                          <span className="text-gray-500 text-[10px] uppercase tracking-wide">Paid</span>
-                         <span className="text-lg font-bold text-yellow-400">₹{employeeData.totalPaid.toFixed(0)}</span>
+                         {employeeData.openingBalance !== 0 ? (
+                             <>
+                                 <span className="text-lg font-bold text-yellow-400">
+                                     {employeeData.totalPaid - employeeData.openingBalance < 0 ? '-' : ''}₹{Math.abs(employeeData.totalPaid - employeeData.openingBalance).toFixed(0)}
+                                 </span>
+                                 <span className="text-[9px] text-gray-400 whitespace-nowrap">
+                                     (₹{employeeData.totalPaid.toFixed(0)} {employeeData.openingBalance < 0 ? '+' : '-'} ₹{Math.abs(employeeData.openingBalance).toFixed(0)} OB)
+                                 </span>
+                             </>
+                         ) : (
+                             <span className="text-lg font-bold text-yellow-400">₹{employeeData.totalPaid.toFixed(0)}</span>
+                         )}
                     </div>
 
                     <div className={`p-2 flex flex-col justify-center items-center relative overflow-hidden ${employeeData.balance < 0 ? 'bg-red-900/20' : 'bg-green-900/20'}`}>
                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${employeeData.balance < 0 ? 'bg-red-500' : 'bg-green-500'}`}></div>
                          <span className="text-gray-500 text-[10px] uppercase tracking-wide">Balance</span>
                          <span className={`text-xl font-bold ${employeeData.balance < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                            ₹{Math.abs(employeeData.balance).toFixed(0)}
+                            {employeeData.balance < 0 ? '-' : '+'}₹{Math.abs(employeeData.balance).toFixed(0)}
                          </span>
                     </div>
                  </div>
@@ -325,7 +340,7 @@ export default function LabourReport() {
                             confirmModal.type === 'CARRY_FORWARD' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-red-600 hover:bg-red-500'
                         }`}
                      >
-                         Confirm {confirmModal.type === 'CARRY_FORWARD' ? 'Carry Forward' : 'Clear'}
+                         Confirm {confirmModal.type === 'CARRY_FORWARD' ? 'Close Report' : 'Clear'}
                      </button>
                  </div>
              </div>
