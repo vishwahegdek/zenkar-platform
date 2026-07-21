@@ -14,7 +14,7 @@ import ExpensesBook from './pages/ExpensesBook';
 import ExpenseForm from './pages/ExpenseForm';
 import ManageExpenses from './pages/ManageExpenses';
 import ContactsManager from './pages/ContactsManager';
-
+import Home from './pages/Home';
 
 import ProductionPage from './pages/ProductionPage';
 import LabourLayout from './pages/Labour/LabourLayout';
@@ -68,7 +68,7 @@ function App() {
                 <Layout />
               </RequireAuth>
             }>
-              <Route index element={<OrdersList />} />
+              <Route index element={<Home />} />
               <Route path="dashboard" element={<CashflowDashboard />} />
               <Route path="sales" element={<SalesDashboard />} />
 

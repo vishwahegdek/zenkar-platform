@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { toast } from 'react-hot-toast';
-import { Settings as SettingsIcon, Check, Plus, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, Check, Plus, Trash2, Home as HomeIcon, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+
+const AVAILABLE_WIDGETS = [
+  { id: 'quick_sale', title: 'Quick Sale', desc: 'Jump straight into a new sale' },
+  { id: 'new_order', title: 'New Order', desc: 'Create a new customer order' },
+  { id: 'add_expense', title: 'Add Expense', desc: 'Record a quick expense' },
+  { id: 'bank_balances', title: 'Bank Balances', desc: 'View cash and bank account balances' },
+  { id: 'labour', title: 'Labour Dashboard', desc: 'Quick link to labour entry' }
+];
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -109,8 +117,112 @@ export default function Settings() {
         >
           Payment Methods
         </button>
-        {/* Future tabs can go here */}
+        <button 
+          className={`pb-2 px-1 font-medium text-sm border-b-2 transition-colors ${activeTab === 'homepage' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          onClick={() => setActiveTab('homepage')}
+        >
+          Homepage Widgets
+        </button>
       </div>
+
+      {activeTab === 'homepage' && (
+        <div className="space-y-6">
+          <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm">
+            <h3 className="font-bold mb-1">Customize Your Homepage</h3>
+            <p>Select the widgets you want to see on your dashboard and arrange them in your preferred order.</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
+            <h3 className="font-semibold text-gray-900 border-b pb-2">Active Widgets (in order)</h3>
+            <div className="space-y-2">
+              {(settings?.homepage?.widgets || AVAILABLE_WIDGETS.map(w => w.id)).map((widgetId, index, arr) => {
+                const widgetDef = AVAILABLE_WIDGETS.find(w => w.id === widgetId);
+                if (!widgetDef) return null;
+
+                return (
+                  <div key={widgetId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => {
+                          const newWidgets = arr.filter(id => id !== widgetId);
+                          mutation.mutate({
+                            ...settings,
+                            homepage: { ...(settings.homepage || {}), widgets: newWidgets }
+                          });
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{widgetDef.title}</p>
+                        <p className="text-xs text-gray-500">{widgetDef.desc}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        disabled={index === 0}
+                        onClick={() => {
+                          const newWidgets = [...arr];
+                          [newWidgets[index - 1], newWidgets[index]] = [newWidgets[index], newWidgets[index - 1]];
+                          mutation.mutate({
+                            ...settings,
+                            homepage: { ...(settings.homepage || {}), widgets: newWidgets }
+                          });
+                        }}
+                        className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:hover:text-gray-400"
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </button>
+                      <button 
+                        disabled={index === arr.length - 1}
+                        onClick={() => {
+                          const newWidgets = [...arr];
+                          [newWidgets[index + 1], newWidgets[index]] = [newWidgets[index], newWidgets[index + 1]];
+                          mutation.mutate({
+                            ...settings,
+                            homepage: { ...(settings.homepage || {}), widgets: newWidgets }
+                          });
+                        }}
+                        className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:hover:text-gray-400"
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <h3 className="font-semibold text-gray-900 border-b pb-2 pt-4">Available Widgets</h3>
+            <div className="space-y-2 opacity-70">
+              {AVAILABLE_WIDGETS.filter(w => !(settings?.homepage?.widgets || AVAILABLE_WIDGETS.map(wa => wa.id)).includes(w.id)).map(widgetDef => (
+                <div key={widgetDef.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-dashed">
+                  <input 
+                    type="checkbox"
+                    checked={false}
+                    onChange={() => {
+                      const currentWidgets = settings?.homepage?.widgets || AVAILABLE_WIDGETS.map(w => w.id);
+                      mutation.mutate({
+                        ...settings,
+                        homepage: { ...(settings.homepage || {}), widgets: [...currentWidgets, widgetDef.id] }
+                      });
+                    }}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{widgetDef.title}</p>
+                    <p className="text-xs text-gray-500">{widgetDef.desc}</p>
+                  </div>
+                </div>
+              ))}
+              {AVAILABLE_WIDGETS.filter(w => !(settings?.homepage?.widgets || AVAILABLE_WIDGETS.map(wa => wa.id)).includes(w.id)).length === 0 && (
+                <p className="text-sm text-gray-500 italic py-2">All widgets are active on your homepage.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'payments' && (
         <div className="space-y-6">
