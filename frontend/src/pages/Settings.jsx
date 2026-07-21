@@ -5,10 +5,11 @@ import { toast } from 'react-hot-toast';
 import { Settings as SettingsIcon, Check, Plus, Trash2, Home as HomeIcon, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 
 const AVAILABLE_WIDGETS = [
+  { id: 'overall_balance', title: 'Overall Balance', desc: 'Summary of all cash and bank accounts' },
   { id: 'quick_sale', title: 'Quick Sale', desc: 'Jump straight into a new sale' },
   { id: 'new_order', title: 'New Order', desc: 'Create a new customer order' },
   { id: 'add_expense', title: 'Add Expense', desc: 'Record a quick expense' },
-  { id: 'bank_balances', title: 'Bank Balances', desc: 'View cash and bank account balances' },
+  { id: 'bank_balances', title: 'Your Balance', desc: 'View cash and bank account balances' },
   { id: 'labour', title: 'Labour Dashboard', desc: 'Quick link to labour entry' }
 ];
 
