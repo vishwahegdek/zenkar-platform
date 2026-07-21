@@ -28,35 +28,35 @@ const ActionWidget = ({ title, icon: Icon, to, colorClass }) => (
 );
 
 const OverallBalanceWidget = () => {
-  const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['treasuryAccounts'],
-    queryFn: () => api.get('/ledger/treasury-accounts')
+  const { data: balanceSheet, isLoading } = useQuery({
+    queryKey: ['balanceSheet'],
+    queryFn: () => api.get('/ledger/balance-sheet')
   });
 
-  if (isLoading) return <div className="p-6 bg-white rounded-2xl shadow-sm border animate-pulse h-40 md:col-span-2 lg:col-span-2"></div>;
+  if (isLoading) return <div className="p-6 bg-white rounded-2xl shadow-sm border animate-pulse h-40 col-span-full"></div>;
 
-  const assets = accounts.filter(a => a.type === 'ASSET');
+  const assets = balanceSheet?.assets?.items || [];
   const bankAccounts = assets.filter(a => a.subType?.toUpperCase() === 'BANK' || a.subType?.toUpperCase() === 'BANK_ACCOUNT');
   const cashAccounts = assets.filter(a => a.subType?.toUpperCase() === 'CASH' || (!a.subType && a.name.toLowerCase().includes('cash')));
   
   const totalBank = bankAccounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
   const totalCash = cashAccounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
-  const totalOverall = assets.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  const totalOverall = totalBank + totalCash;
 
   return (
-    <div className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-2xl shadow-lg p-6 flex flex-col h-full text-white md:col-span-2 lg:col-span-2">
-      <div className="mb-6">
+    <div className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-2xl shadow-lg p-6 flex flex-col md:flex-row md:items-center justify-between col-span-full text-white">
+      <div className="mb-6 md:mb-0">
         <h3 className="font-medium text-blue-200 mb-1">Total Balance</h3>
-        <div className="text-3xl font-bold">₹{totalOverall.toLocaleString('en-IN')}</div>
+        <div className="text-4xl font-bold">₹{totalOverall.toLocaleString('en-IN')}</div>
       </div>
-      <div className="flex gap-8 mt-auto">
+      <div className="flex gap-8 md:gap-12">
         <div>
           <h4 className="text-xs text-blue-300 uppercase tracking-wider mb-1">Bank Accounts</h4>
-          <div className="text-lg font-semibold">₹{totalBank.toLocaleString('en-IN')}</div>
+          <div className="text-xl font-semibold">₹{totalBank.toLocaleString('en-IN')}</div>
         </div>
         <div>
-          <h4 className="text-xs text-blue-300 uppercase tracking-wider mb-1">Cashbook</h4>
-          <div className="text-lg font-semibold">₹{totalCash.toLocaleString('en-IN')}</div>
+          <h4 className="text-xs text-blue-300 uppercase tracking-wider mb-1">Main Cashbook</h4>
+          <div className="text-xl font-semibold">₹{totalCash.toLocaleString('en-IN')}</div>
         </div>
       </div>
     </div>
@@ -64,17 +64,25 @@ const OverallBalanceWidget = () => {
 };
 
 const BankBalancesWidget = ({ settings }) => {
-  const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['treasuryAccounts'],
-    queryFn: () => api.get('/ledger/treasury-accounts')
+  const { data: balanceSheet, isLoading } = useQuery({
+    queryKey: ['balanceSheet'],
+    queryFn: () => api.get('/ledger/balance-sheet')
   });
 
   if (isLoading) return <div className="p-6 bg-white rounded-2xl shadow-sm border animate-pulse h-40"></div>;
 
+  const allAccounts = [
+    ...(balanceSheet?.assets?.items || []),
+    ...(balanceSheet?.liabilities?.items || []),
+  ];
+
   const quickAccessIds = settings?.paymentMethods?.quickAccessIds || [];
   const nicknames = settings?.paymentMethods?.nicknames || {};
 
-  const displayAccounts = accounts.filter(a => quickAccessIds.includes(a.id));
+  const displayAccounts = allAccounts.filter(a => 
+    quickAccessIds.includes(a.id) && 
+    a.subType?.toUpperCase() !== 'CASH'
+  );
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border p-6 flex flex-col h-full">
