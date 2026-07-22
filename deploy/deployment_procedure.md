@@ -24,7 +24,7 @@ git commit -m "feat: your descriptive commit message"
 ```
 
 **2. Build & Push Images to Docker Hub**
-Run the automated build script. This will compile the React and NestJS apps using your local machine's CPU, tag them with your exact Git commit hash, and push them to Docker Hub with the `:staging` tag.
+Run the automated build jsudo script. This will compile the React and NestJS apps using your local machine's CPU, tag them with your exact Git commit hash, and push them to Docker Hub with the `:staging` tag.
 ```bash
 sudo ./deploy/build_and_push.sh
 ```
