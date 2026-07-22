@@ -10,6 +10,7 @@ import ProductForm from './ProductForm';
 import CustomerForm from './CustomerForm';
 import ContactForm from '../components/ContactForm';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import OrderItemsTable from '../components/OrderItemsTable';
 
 export default function QuickSale() {
   const navigate = useNavigate();
@@ -309,114 +310,26 @@ export default function QuickSale() {
          </div>
 
         {/* Items Section */}
-        <div className="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
-           {/* Items Table Header */}
-           <div className="bg-gray-50 rounded-t-xl border-b border-gray-200 grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase">
-              <div className="col-span-5 md:col-span-5">Item</div>
-              <div className="col-span-2 md:col-span-1 text-center">Qty</div>
-              <div className="col-span-3 md:col-span-2 text-right">Price</div>
-              <div className="col-span-2 md:col-span-4 text-right">Total</div>
-           </div>
-           
-           <div className="divide-y divide-gray-100">
-              {items.map((item, idx) => (
-                  <div 
-                        key={idx} 
-                        ref={el => itemRefs.current[idx] = el}
-                        className={`grid grid-cols-12 gap-2 items-start px-3 py-3 transition-colors ${
-                            invalidItems.includes(idx) ? 'bg-red-50' 
-                            : idx % 2 === 0 ? 'bg-white' : 'bg-gray-100'
-                        }`}
-                    >
-                      {/* Item Column */}
-                      <div className="col-span-5 md:col-span-5 space-y-1">
-                         {item.productId ? (
-                             <div className="group relative">
-                                <div className="font-medium text-sm text-gray-900 truncate">{item.productName}</div>
-                                <button 
-                                    onClick={() => handleChangeProduct(idx)}
-                                    className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
-                                >
-                                    Change
-                                </button>
-                            </div>
-                         ) : (
-                            <Autocomplete 
-                                value={item.productName}
-                                autoFocus={idx === items.length - 1} // Auto focus only on new row
-                                placeholder="Item"
-                                endpoint="/products"
-                                displayKey="name"
-                                subDisplayKey="defaultUnitPrice"
-                                onChange={(val) => handleItemChange(idx, 'productName', val)}
-                                onCreate={(name) => {
-                                   setTempProductName(name);
-                                   setActiveProductRowIndex(idx);
-                                   window.location.hash = 'new-product';
-                                   setIsProductModalOpen(true);
-                                }}
-                                onSelect={(p) => handleProductSelect(idx, p)}
-                                className="text-sm"
-                            />
-                         )}
-                         <input 
-                            type="text" 
-                            className="w-full text-xs text-gray-500 placeholder-gray-300 border-none p-0 focus:ring-0 bg-transparent" 
-                            placeholder="Add description..."
-                            value={item.description || ''}
-                            onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                         />
-                      </div>
-
-                      {/* Quantity Column */}
-                      <div className="col-span-2 md:col-span-1">
-                         <input type="number" 
-                            className="w-full text-center text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                         />
-                      </div>
-
-                      {/* Price Column */}
-                      <div className="col-span-3 md:col-span-2">
-                         <input type="number" 
-                            className="w-full text-right text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            value={item.unitPrice}
-                            onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                         />
-                      </div>
-
-                      {/* Total Column + Remove */}
-                      <div className="col-span-2 md:col-span-4 flex flex-col md:flex-row items-end md:items-center justify-between gap-1">
-                         <div className="font-medium text-sm text-gray-900 text-right w-full md:w-auto">
-                            ₹{item.lineTotal.toLocaleString()}
-                         </div>
-                         <button 
-                            onClick={() => removeItem(idx)} 
-                            className="text-gray-400 hover:text-red-500 p-1 -mr-2"
-                         >
-                            <span className="text-lg font-bold">×</span>
-                         </button>
-                      </div>
-                  </div>
-              ))}
-           </div>
-           
-           <button onClick={addItem} className="w-full py-3 text-center text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border-t border-blue-100 transition-colors uppercase tracking-wide">
-              + Add Item
-           </button>
-
-           <div className="flex justify-between items-center px-4 py-3 bg-gray-50 rounded-b-xl border-t border-gray-200">
-               <span className="text-sm font-medium text-gray-600">Total</span>
-               <span className="text-xl font-bold text-gray-900">₹{calculateTotal().toLocaleString()}</span>
-           </div>
-        </div>
+        <OrderItemsTable 
+            items={items}
+            handleItemChange={handleItemChange}
+            handleChangeProduct={handleChangeProduct}
+            handleProductSelect={handleProductSelect}
+            removeItem={removeItem}
+            addItem={addItem}
+            calculateTotal={calculateTotal}
+            setTempProductName={setTempProductName}
+            setActiveProductRowIndex={setActiveProductRowIndex}
+            setIsProductModalOpen={setIsProductModalOpen}
+            isItemInvalid={(item, idx) => invalidItems.includes(idx)}
+            itemRefs={itemRefs}
+        />
         
         <div className="md:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div>
-                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Method</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Status</label>
+                    <div className="grid grid-cols-3 gap-2">
                         {['Paid', 'Due', 'Custom'].map(method => (
                             <button
                                 key={method}
@@ -439,11 +352,11 @@ export default function QuickSale() {
                     )}
 
                     {paymentMethod === 'Custom' && (
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
-                            <h4 className="text-xs font-bold text-gray-500 uppercase">Split Payments</h4>
+                        <div className="mt-4 space-y-4">
                             {customPayments.map((p, idx) => (
-                                <div key={idx} className="flex flex-col gap-2 p-2 bg-white rounded border border-gray-200">
+                                <div key={idx} className="flex flex-col gap-2 pb-4 border-b-2 border-gray-900">
                                     <PaymentMethodSelector 
+                                        label={`Payment ${idx + 1}`}
                                         value={p.accountId} 
                                         onChange={(val) => {
                                             const newP = [...customPayments];
@@ -454,7 +367,7 @@ export default function QuickSale() {
                                     <div className="flex gap-2">
                                         <input 
                                             type="number" 
-                                            className="input-field w-full text-sm py-1" 
+                                            className="input-field w-full text-sm font-bold" 
                                             placeholder="Amount"
                                             value={p.amount}
                                             onChange={e => {
@@ -466,7 +379,8 @@ export default function QuickSale() {
                                     {idx > 0 && (
                                         <button 
                                             onClick={() => setCustomPayments(customPayments.filter((_, i) => i !== idx))}
-                                            className="text-red-500 hover:text-red-700 px-2"
+                                            className="text-red-500 hover:text-red-700 px-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-bold"
+                                            title="Remove Split"
                                         >
                                             ×
                                         </button>
@@ -474,19 +388,21 @@ export default function QuickSale() {
                                     </div>
                                 </div>
                             ))}
-                            <div className="flex justify-between items-center text-xs">
+                            <div className="flex flex-col gap-3 pt-2">
+                                <div className="flex justify-end text-sm">
+                                    <span className={
+                                        calculateTotal() - customPayments.reduce((s, p) => s + Number(p.amount), 0) !== 0 
+                                        ? "text-red-600 font-bold bg-red-50 px-3 py-1.5 rounded-lg border border-red-100" : "text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"
+                                    }>
+                                        Remaining: {(calculateTotal() - customPayments.reduce((s, p) => s + Number(p.amount), 0)).toLocaleString()}
+                                    </span>
+                                </div>
                                 <button 
                                     onClick={() => setCustomPayments([...customPayments, { accountId: null, amount: '' }])}
-                                    className="text-blue-600 font-medium hover:underline"
+                                    className="w-full py-3 text-center text-sm font-bold text-blue-700 bg-blue-50/50 hover:bg-blue-100 border-2 border-dashed border-blue-200 rounded-xl transition-colors uppercase tracking-wide"
                                 >
-                                    + Add Split
+                                    + Add Another Split
                                 </button>
-                                <span className={
-                                    calculateTotal() - customPayments.reduce((s, p) => s + Number(p.amount), 0) !== 0 
-                                    ? "text-red-600 font-bold" : "text-green-600 font-bold"
-                                }>
-                                    Rem: {(calculateTotal() - customPayments.reduce((s, p) => s + Number(p.amount), 0)).toLocaleString()}
-                                </span>
                             </div>
                         </div>
                     )}

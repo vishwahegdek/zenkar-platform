@@ -8,6 +8,7 @@ import SmartSelector from '../components/SmartSelector';
 import CustomerForm from './CustomerForm';
 import ContactForm from '../components/ContactForm';
 import ProductForm from './ProductForm';
+import OrderItemsTable from '../components/OrderItemsTable';
 import { format } from 'date-fns';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { toast } from 'react-hot-toast';
@@ -179,6 +180,12 @@ export default function OrderForm() {
     saveOrder(formData); // Manual save
   };
 
+  const handleItemBlur = (index) => {
+    const newItems = [...formData.items];
+    newItems[index] = { ...newItems[index], touched: true };
+    setFormData({ ...formData, items: newItems });
+  };
+
   const handleItemChange = (index, field, val) => {
     const newItems = [...formData.items];
     const item = { ...newItems[index], [field]: val };
@@ -239,16 +246,13 @@ export default function OrderForm() {
   return (
     <div className="max-w-5xl mx-auto pb-24 md:pb-6">
       <form onSubmit={handleSubmit} className="space-y-0 md:space-y-6">
-      <div className="flex justify-between items-center p-4 md:p-6 bg-white md:bg-transparent">
-        <div className="flex items-center gap-3">
-           <h1 className="text-2xl font-bold">{isEdit ? 'Edit Order' : 'New Order'}</h1>
-            {/* Auto Save Status Removed */}
-        </div>
+      <div className="hidden md:flex justify-end items-center pt-4 pb-2">
+        {/* Page title removed, handled by Layout header */}
         
         <button 
           type="button" 
           onClick={() => saveOrder(formData)}
-          className="hidden md:block bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
+          className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
         >
           Save Order
         </button>
@@ -324,25 +328,25 @@ export default function OrderForm() {
         </div>
 
         {/* Order Meta Card */}
-        <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 space-y-4 h-fit">
-          <h2 className="font-semibold text-gray-900">Order Details</h2>
-           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
-              <input type="date" className="input-field" 
+        <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 space-y-1.5 h-fit">
+          <h2 className="font-semibold text-gray-900 border-b-2 border-gray-900 pb-1.5 mb-1.5 text-sm uppercase tracking-wider">Order Details</h2>
+           <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700 min-w-[80px]">Order Date</label>
+              <input type="date" className="input-field flex-1 !py-1 h-8" 
                  value={formData.orderDate} 
                  onChange={e => setFormData({...formData, orderDate: e.target.value})}
               />
             </div>
-             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <input type="date" className="input-field" 
+             <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700 min-w-[80px]">Due Date</label>
+              <input type="date" className="input-field flex-1 !py-1 h-8" 
                  value={formData.dueDate} 
                  onChange={e => setFormData({...formData, dueDate: e.target.value})}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select className="input-field"
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700 min-w-[80px]">Status</label>
+              <select className="input-field flex-1 !py-1 h-8"
                  value={formData.status} 
                  onChange={e => setFormData({...formData, status: e.target.value})}
               >
@@ -358,138 +362,49 @@ export default function OrderForm() {
         </div>
       </div>
 
-       {/* Items Card */}
-       <div className="bg-white md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0 overflow-hidden">
-          <div className="p-4 md:p-6 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Order Items</h2>
-          </div>
-
-         <div className="space-y-4">
-
-            <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-bold text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-               <div className="col-span-5 md:col-span-5">Product</div>
-               <div className="col-span-2 md:col-span-1 text-center">Qty</div>
-               <div className="col-span-3 md:col-span-2 text-right">Price</div>
-               <div className="col-span-2 md:col-span-4 text-right">Total</div>
-            </div>
-
-             {formData.items.map((item, idx) => (
-               <div key={idx} className={`grid grid-cols-12 gap-2 items-start px-3 py-3 transition-colors ${
-                    idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-               }`}>
-                  {/* Product Column */}
-                  <div className="col-span-5 md:col-span-5 space-y-1">
-                     {item.productId ? (
-                        <div className="group relative">
-                           <div className="font-medium text-sm text-gray-900 truncate">{item.productName}</div>
-                           <button 
-                               type="button"
-                               onClick={() => handleChangeProduct(idx)}
-                               className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
-                           >
-                               Change
-                           </button>
-                       </div>
-                     ) : (
-                        <Autocomplete 
-                           value={item.productName}
-                           placeholder="Product Name"
-                           endpoint="/products"
-                           displayKey="name"
-                           subDisplayKey="defaultUnitPrice"
-                           onChange={(val) => handleItemChange(idx, 'productName', val)}
-                           onCreate={(name) => {
-                               setTempProductName(name);
-                               activeProductRowIndexRef.current = idx;
-                               window.location.hash = 'new-product';
-                           }}
-                           onSelect={(p) => {
-                               handleProductSelect(idx, p);
-                           }}
-                           className="text-sm"
-                        />
-                     )}
-                     <input type="text" placeholder="Description/Size" className="w-full text-xs text-gray-500 placeholder-gray-300 border-none p-0 focus:ring-0 bg-transparent"
-                        value={item.description || ''}
-                        onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+       <OrderItemsTable 
+           items={formData.items}
+           handleItemChange={handleItemChange}
+           handleChangeProduct={handleChangeProduct}
+           handleProductSelect={handleProductSelect}
+           removeItem={removeItem}
+           addItem={addItem}
+           calculateTotal={calculateTotal}
+           setTempProductName={setTempProductName}
+           setActiveProductRowIndex={(idx) => { activeProductRowIndexRef.current = idx; }}
+           handleItemBlur={handleItemBlur}
+           isItemInvalid={(item) => item.touched && !item.productId && (item.productName || '').trim() !== ''}
+           footerChildren={
+             !isEdit ? (
+               <>
+                 <div className="space-y-3 pt-2">
+                   <div className="flex items-center justify-between gap-4">
+                     <span className="text-sm font-medium text-gray-700">Advance</span>
+                     <input type="number" className="input-field w-32 text-right border-gray-400"
+                         value={formData.advanceAmount}
+                         onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
+                         placeholder="0"
                      />
-                  </div>
-
-                  {/* Quantity Column */}
-                  <div className="col-span-2 md:col-span-1">
-                     <input type="number" 
-                        className="w-full text-center text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                     />
-                  </div>
-
-                  {/* Price Column */}
-                  <div className="col-span-3 md:col-span-2">
-                     <input type="number" 
-                        className="w-full text-right text-sm border border-gray-200 rounded p-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                     />
-                  </div>
-
-                  {/* Total Column + Remove */}
-                  <div className="col-span-2 md:col-span-4 flex flex-col md:flex-row items-end md:items-center justify-between gap-1">
-                     <div className="font-medium text-sm text-gray-900 text-right w-full md:w-auto">
-                        ₹{item.lineTotal.toLocaleString()}
-                     </div>
-                     <button 
-                        onClick={() => removeItem(idx)} 
-                        type="button" 
-                        className="text-gray-400 hover:text-red-500 p-1 -mr-2"
-                     >
-                        <span className="text-lg font-bold">×</span>
-                     </button>
-                  </div>
-               </div>
-             ))}
-          </div>
-
-          <div className="p-4 md:p-6">
-            <button onClick={addItem} type="button" className="w-full md:w-auto text-sm text-primary font-medium hover:underline border border-dashed border-primary/30 p-2 rounded-lg bg-blue-50/50">+ Add Another Item</button>
-          </div>
-
-          <div className="border-t border-gray-100 p-4 md:p-6 flex justify-end">
-           <div className="w-full md:w-64 space-y-3">
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>₹{calculateTotal().toLocaleString()}</span>
-              </div>
-
-               {!isEdit && (
-               <div className="flex items-center justify-between gap-4">
-                 <span className="text-sm text-gray-600">Advance</span>
-                 <div className="flex gap-2">
-                    <div className="w-32">
-                        <PaymentMethodSelector 
-                            value={formData.paymentAccountId} 
-                            onChange={val => setFormData({...formData, paymentAccountId: val})}
-                        />
-                    </div>
-                    <input type="number" className="input-field w-24 text-right"
-                        value={formData.advanceAmount}
-                        onChange={e => setFormData({...formData, advanceAmount: e.target.value})}
-                        placeholder="0"
-                    />
+                   </div>
+                   {Number(formData.advanceAmount) > 0 && (
+                   <div className="animate-in fade-in slide-in-from-top-1 pt-3 border-t border-gray-100 mt-3">
+                       <PaymentMethodSelector 
+                           value={formData.paymentAccountId} 
+                           onChange={val => setFormData({...formData, paymentAccountId: val})}
+                       />
+                   </div>
+                   )}
                  </div>
-               </div>
-               )}
-               {!isEdit && (
-               <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
-                 <span>Balance Due</span>
-                 <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
-               </div>
-               )}
-           </div>
-         </div>
-       </div>
+                 <div className="flex justify-between text-sm font-medium text-red-600 pt-2 border-t border-gray-100">
+                   <span>Balance Due</span>
+                   <span>₹{(calculateTotal() - formData.advanceAmount).toLocaleString()}</span>
+                 </div>
+               </>
+             ) : null
+           }
+       />
        
-       <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-0">
+       <div className="bg-white p-4 md:p-6 md:rounded-xl shadow-sm border-b md:border border-gray-200 mt-0 md:mt-4">
           <label htmlFor="internalNotes" className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
            <textarea id="internalNotes" className="input-field" rows="3"
              placeholder="Delivery instructions, special requests..."

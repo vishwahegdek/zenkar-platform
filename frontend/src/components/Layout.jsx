@@ -12,6 +12,7 @@ const PAGE_TITLES = {
   '/sales': 'Sales Analytics',
 
   '/quick-sale': 'Quick Sale',
+  '/orders/new': 'New Order',
   '/orders': 'Orders',
   '/customers': 'Customer Directory',
   '/production': 'Production Floor',
@@ -20,7 +21,7 @@ const PAGE_TITLES = {
   '/expenses': 'Expense Book',
   '/labour': 'Labour Management',
   '/contacts': 'Global Contacts',
-  '/': 'Orders',
+  '/': 'Home',
 };
 
 export default function Layout() {

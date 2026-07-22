@@ -7,6 +7,8 @@ export default function Autocomplete({
   value, 
   onChange, 
   onSelect, 
+  onBlur,
+  error,
   endpoint, 
   placeholder, 
   displayKey = 'name',
@@ -75,11 +77,16 @@ export default function Autocomplete({
         ref={inputRef}
         type="text"
         // autoFocus={autoFocus} // Handled via useEffect for mobile reliability
-        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+        className={`w-full px-4 py-2 rounded-lg border transition-all text-sm ${
+           error 
+             ? 'border-red-600 bg-red-100 text-red-900 focus:ring-2 focus:ring-red-500/20'
+             : 'border-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+        }`}
         placeholder={placeholder}
         value={query}
         onChange={handleChange}
         onFocus={() => setIsOpen(true)}
+        onBlur={onBlur}
       />
       
       {showDropdown && (

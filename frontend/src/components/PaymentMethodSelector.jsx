@@ -4,7 +4,7 @@ import { api } from '../api';
 import { Banknote, Landmark, CreditCard, Wallet, MoreHorizontal } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 
-export default function PaymentMethodSelector({ value, onChange }) {
+export default function PaymentMethodSelector({ value, onChange, label = "Payment Method" }) {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const { data: accounts = [], isLoading: isLoadingAccounts } = useQuery({
@@ -73,7 +73,7 @@ export default function PaymentMethodSelector({ value, onChange }) {
 
   return (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+      {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
       
       {/* Horizontally scrollable container */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
