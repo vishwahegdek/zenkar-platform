@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Delete, Req } from '@nestjs/common';
 import { SavedEstimatesService } from './saved-estimates.service';
 
 @Controller('saved-estimates')
@@ -19,6 +19,18 @@ export class SavedEstimatesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.savedEstimatesService.findOne(+id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+    const userId = req.user?.id;
+    return this.savedEstimatesService.update(+id, updateDto, userId);
+  }
+
+  @Patch(':id')
+  patch(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+    const userId = req.user?.id;
+    return this.savedEstimatesService.update(+id, updateDto, userId);
   }
 
   @Delete(':id')

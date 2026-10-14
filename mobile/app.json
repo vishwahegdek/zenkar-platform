@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Zenkar Wood Estimator",
+    "slug": "zenkar-wood-estimator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#090d16"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.zenkar.woodestimator"
+    },
+    "android": {
+      "package": "in.zenkar.woodestimator",
+      "adaptiveIcon": {
+        "backgroundColor": "#090d16",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

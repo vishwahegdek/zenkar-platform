@@ -33,4 +33,17 @@ export class SavedEstimatesService {
       where: { id },
     });
   }
+
+  async update(id: number, data: any, userId?: number) {
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.data !== undefined) updateData.data = data.data;
+    if (data.totalCost !== undefined) updateData.totalCost = data.totalCost;
+    if (userId) updateData.createdById = userId;
+
+    return this.prisma.savedEstimate.update({
+      where: { id },
+      data: updateData,
+    });
+  }
 }

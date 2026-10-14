@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { Loader2, Plus, Box, Trash2, ArrowRight, Eye, X } from 'lucide-react';
+import { Loader2, Plus, Box, Trash2, ArrowRight, Eye, X, Pencil } from 'lucide-react';
 import { calculateEstimate } from '../utils/estimationEngine';
 
 export default function CustomProducts() {
@@ -164,13 +164,24 @@ export default function CustomProducts() {
                 <div className="p-5 flex-1">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors line-clamp-2 pr-2">{product.name}</h3>
-                    <button 
-                      onClick={() => deleteProduct(product.id)}
-                      className="text-gray-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors shrink-0"
-                      title="Delete Product"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button 
+                        onClick={() => navigate('/wood-estimator', { state: { loadEstimate: product } })}
+                        className="text-gray-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                        title="Edit in Wood Estimator"
+                        aria-label="Edit in Wood Estimator"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => deleteProduct(product.id)}
+                        className="text-gray-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors shrink-0"
+                        title="Delete Product"
+                        aria-label="Delete Product"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -237,18 +248,29 @@ export default function CustomProducts() {
                   </div>
 
                 </div>
-                <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Base Estimate</span>
-                    <span className="text-xl font-black text-gray-900">₹{totalCostNum.toLocaleString()}</span>
+                <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-between items-center gap-2">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate">Base Estimate</span>
+                    <span className="text-xl font-black text-gray-900 truncate">₹{totalCostNum.toLocaleString()}</span>
                   </div>
-                  <button 
-                    onClick={() => setSelectedDetailsProduct(product)}
-                    className="flex items-center gap-1.5 text-sm font-bold text-gray-900 bg-white border-2 border-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors"
-                  >
-                    Estimate
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button 
+                      onClick={() => navigate('/wood-estimator', { state: { loadEstimate: product } })}
+                      className="flex items-center gap-1.5 text-sm font-bold text-blue-700 bg-blue-50 border-2 border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
+                      title="Edit in Wood Estimator"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      <span>Edit</span>
+                    </button>
+                    <button 
+                      onClick={() => setSelectedDetailsProduct(product)}
+                      className="flex items-center gap-1.5 text-sm font-bold text-gray-900 bg-white border-2 border-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors"
+                      title="View Breakdown"
+                    >
+                      <span>Estimate</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -479,7 +501,19 @@ export default function CustomProducts() {
               })()}
             </div>
             
-            <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-end items-center">
+            <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-between items-center gap-3">
+               <button
+                 onClick={() => {
+                   const currentProduct = selectedDetailsProduct;
+                   setSelectedDetailsProduct(null);
+                   navigate('/wood-estimator', { state: { loadEstimate: currentProduct } });
+                 }}
+                 className="flex items-center gap-1.5 text-sm font-bold text-blue-700 bg-blue-50 border-2 border-blue-200 px-3.5 py-2 rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors shadow-sm"
+                 title="Open in Wood Estimator for full configuration"
+               >
+                 <Pencil className="w-4 h-4" />
+                 <span>Edit in Estimator</span>
+               </button>
                <div className="flex flex-col text-right">
                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Estimate</span>
                  <span className="text-xl font-black text-gray-900">

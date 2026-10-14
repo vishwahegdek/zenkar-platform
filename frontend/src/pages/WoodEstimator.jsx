@@ -156,35 +156,56 @@ export default function WoodEstimator() {
 
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [saveEstimateName, setSaveEstimateName] = useState('');
+  const [editingEstimateId, setEditingEstimateId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const [loadModalVisible, setLoadModalVisible] = useState(false);
   const [savedEstimates, setSavedEstimates] = useState([]);
   const [isLoadingEstimates, setIsLoadingEstimates] = useState(false);
 
+  const getEstimatePayload = () => ({
+    activeTemplate,
+    selectedWoodId: selectedWood?.id,
+    blocks,
+    dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit,
+    dfHeight, dfHeightUnit, dfWidth, dfWidthUnit, excludeBottomPiece,
+    hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit,
+    hasArch, archHeight, archHeightUnit,
+    labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour,
+    version: ESTIMATION_ENGINE_VERSION
+  });
+
   const saveEstimate = async () => {
     if (!saveEstimateName.trim()) return;
     setIsSaving(true);
     try {
-      const data = {
-        activeTemplate,
-        selectedWoodId: selectedWood?.id,
-        blocks,
-        dfThicknessOption, dfCustomW, dfCustomWUnit, dfCustomT, dfCustomTUnit,
-        dfHeight, dfHeightUnit, dfWidth, dfWidthUnit, excludeBottomPiece,
-        hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit,
-        hasArch, archHeight, archHeightUnit,
-        labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour,
-        version: ESTIMATION_ENGINE_VERSION
-      };
-      await api.post('/saved-estimates', {
+      const data = getEstimatePayload();
+      const res = await api.post('/saved-estimates', {
         name: saveEstimateName,
         data,
         totalCost: estimateData.finalCost,
         createdBy: user?.name || user?.username || 'admin'
       });
+      if (res?.id) setEditingEstimateId(res.id);
       setSaveModalVisible(false);
-      setSaveEstimateName('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateExistingEstimate = async () => {
+    if (!editingEstimateId || !saveEstimateName.trim()) return;
+    setIsSaving(true);
+    try {
+      const data = getEstimatePayload();
+      await api.put(`/saved-estimates/${editingEstimateId}`, {
+        name: saveEstimateName,
+        data,
+        totalCost: estimateData.finalCost
+      });
+      setSaveModalVisible(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -204,6 +225,8 @@ export default function WoodEstimator() {
 
   const loadEstimate = (estimate) => {
     const { data } = estimate;
+    setEditingEstimateId(estimate.id || null);
+    setSaveEstimateName(estimate.name || '');
     setActiveTemplate(data.activeTemplate || 'door_frame');
     if (data.selectedWoodId) {
       const wood = woodTypes.find(w => w.id === data.selectedWoodId);
@@ -333,9 +356,27 @@ export default function WoodEstimator() {
 
   return (
     <div className="flex flex-col min-h-full bg-white pb-24">
-      <div className="p-4 md:p-6 bg-white border-b-8 border-gray-900 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Product Estimation</h1>
-        <div className="flex gap-2">
+      <div className="p-4 md:p-6 bg-white border-b-8 border-gray-900 flex justify-between items-center gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Product Estimation</h1>
+          {editingEstimateId && (
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg shrink-0">
+              <Pencil className="w-3 h-3" />
+              <span className="truncate max-w-[150px]">Editing: {saveEstimateName}</span>
+              <button
+                onClick={() => {
+                  setEditingEstimateId(null);
+                  setSaveEstimateName('');
+                }}
+                className="ml-1 text-blue-400 hover:text-blue-900"
+                title="Create as new"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 shrink-0">
           <button 
             onClick={() => setLoadModalVisible(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-900 border-2 border-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -348,7 +389,7 @@ export default function WoodEstimator() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-lg shadow-sm transition-colors"
           >
             <Save className="w-4 h-4" />
-            <span className="hidden sm:inline">Save</span>
+            <span className="hidden sm:inline">{editingEstimateId ? 'Save / Update' : 'Save'}</span>
           </button>
         </div>
       </div>
@@ -991,14 +1032,34 @@ export default function WoodEstimator() {
                   autoFocus
                 />
               </div>
-              <button 
-                onClick={saveEstimate}
-                disabled={!saveEstimateName.trim() || isSaving}
-                className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                {isSaving ? 'Saving...' : 'Save Configuration'}
-              </button>
+              {editingEstimateId ? (
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={updateExistingEstimate}
+                    disabled={!saveEstimateName.trim() || isSaving}
+                    className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                    {isSaving ? 'Updating...' : 'Update Existing Product'}
+                  </button>
+                  <button 
+                    onClick={saveEstimate}
+                    disabled={!saveEstimateName.trim() || isSaving}
+                    className="w-full py-2.5 bg-gray-100 text-gray-800 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    Save as New Copy
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={saveEstimate}
+                  disabled={!saveEstimateName.trim() || isSaving}
+                  className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  {isSaving ? 'Saving...' : 'Save Configuration'}
+                </button>
+              )}
             </div>
           </div>
         </div>
