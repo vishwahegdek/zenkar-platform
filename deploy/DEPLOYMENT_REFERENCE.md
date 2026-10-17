@@ -10,8 +10,8 @@ This document serves as the **Single Source of Truth** for the deployment archit
 | Feature | 🟡 Staging (Demo) | 🟢 Production (Live) |
 | :--- | :--- | :--- |
 | **URL** | [orderdemo.zenkar.in](https://orderdemo.zenkar.in) | [order.zenkar.in](https://order.zenkar.in) |
-| **Server Path** | `~/zenkar-staging` | `~/zenkar-platform-production` |
-| **Data Volume** | `~/zenkar-staging/pgdata_demo` | `~/zenkar-platform-production/pgdata` (**REAL DATA**) |
+| **Server Path** | `~/zenkar_platform_staging` | `~/zenkar_platform_production` |
+| **Data Volume** | `~/zenkar_platform_staging/pgdata_demo` | `~/zenkar_platform_production/pgdata` (**REAL DATA**) |
 | **Compose File** | `deploy/staging/docker-compose.yml` | `deploy/production/docker-compose.yml` |
 | **Git Branch** | `master` | `master` |
 
@@ -57,13 +57,13 @@ SSH into the server and run the deployment script. usage of `sudo -E` is recomme
 # SSH into Server
 ssh vishwa@160.250.204.219
 
-# For Staging (in ~/zenkar-staging)
-cd ~/zenkar-staging
+# For Staging (in ~/zenkar_platform_staging)
+cd ~/zenkar_platform_staging
 git pull origin master
 sudo -E ./deploy/deploy_remote.sh staging
 
-# For Production (in ~/zenkar-platform-production)
-cd ~/zenkar-platform-production
+# For Production (in ~/zenkar_platform_production)
+cd ~/zenkar_platform_production
 git pull origin master
 sudo -E ./deploy/deploy_remote.sh production
 
