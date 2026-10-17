@@ -41,6 +41,15 @@ class OrderItemDto {
   @IsOptional()
   @IsNumber()
   lineTotal: number = 0;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  estimateData?: any;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  savedEstimateId?: number;
 }
 
 class PaymentDto {

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2, Check, Ruler } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { calculateEstimate, ESTIMATION_ENGINE_VERSION } from '../utils/estimationEngine';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
@@ -13,32 +14,32 @@ const PRODUCT_TEMPLATES = [
 ];
 
 const STANDARD_BLOCKS = {
-  custom: [{ id: 'b1', l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }],
-  standard_door: [{ id: 'b1', l: '7', lu: 'ft', w: '3', wu: 'ft', t: '1.5', tu: 'in' }],
+  custom: [{ id: 'b1', pcs: '1', l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }],
+  standard_door: [{ id: 'b1', pcs: '1', l: '7', lu: 'ft', w: '3', wu: 'ft', t: '1.5', tu: 'in' }],
   window_frame: [
-     { id: 'b1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' }, 
-     { id: 'b2', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' }, 
-     { id: 'b3', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
-     { id: 'b4', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+     { id: 'b1', pcs: '1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' }, 
+     { id: 'b2', pcs: '1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' }, 
+     { id: 'b3', pcs: '1', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+     { id: 'b4', pcs: '1', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
   ]
 };
 
 const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, className = '' }) => {
   return (
-    <div className={`flex-1 ${className}`}>
-      {label && <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>}
+    <div className={`flex-1 min-w-0 ${className}`}>
+      {label && <label className="block text-xs font-medium text-gray-500 mb-1 truncate">{label}</label>}
       <div className="relative">
         <input 
           type="number" 
           value={value} 
           onChange={e => onChange(e.target.value)}
-          className="input-field pr-10" 
+          className="input-field pr-7 sm:pr-9 text-xs sm:text-sm px-1.5 sm:px-3 font-semibold focus:bg-blue-50/90 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/30" 
           placeholder={placeholder}
         />
         <button 
           type="button"
           onClick={() => onUnitChange(unit === 'ft' ? 'in' : 'ft')}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] uppercase font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-1.5 py-1 rounded transition-colors select-none"
+          className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] sm:text-[10px] uppercase font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-1 sm:px-1.5 py-0.5 rounded transition-colors select-none"
         >
           {unit}
         </button>
@@ -48,8 +49,8 @@ const UnitInput = ({ label, value, onChange, unit, onUnitChange, placeholder, cl
 };
 
 const TEMPLATES = [
-  { id: 'door_frame', name: 'Door Frame (Smart Form)' },
   { id: 'custom', name: 'Custom Blocks (Blank)' },
+  { id: 'door_frame', name: 'Door Frame (Smart Form)' },
   { id: 'standard_door', name: 'Standard Door' },
   { id: 'window_frame', name: 'Window Frame' },
 ];
@@ -57,7 +58,9 @@ const TEMPLATES = [
 export default function WoodEstimator() {
   const { user } = useAuth();
   const location = useLocation();
-  const [activeTemplate, setActiveTemplate] = useState('door_frame');
+  const navigate = useNavigate();
+  const returnToOrder = location.state?.returnToOrder || null;
+  const [activeTemplate, setActiveTemplate] = useState('custom');
 
   const [woodTypes, setWoodTypes] = useState([]);
   const [selectedWood, setSelectedWood] = useState(null);
@@ -127,7 +130,7 @@ export default function WoodEstimator() {
   // Labour and Carving State
   const [labourItems, setLabourItems] = useState([]);
   const [hasCarving, setHasCarving] = useState(false);
-  const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
+  const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in', pcs: 1 }]);
   const [carvingRateOption, setCarvingRateOption] = useState('3.5');
   const [carvingRate, setCarvingRate] = useState('');
   const [mainCarvingFace, setMainCarvingFace] = useState('w');
@@ -213,6 +216,29 @@ export default function WoodEstimator() {
     }
   };
 
+  const applyToOrder = async () => {
+    if (!returnToOrder) return;
+    setIsSaving(true);
+    try {
+      const data = getEstimatePayload();
+      const payload = {
+        estimateData: {
+          ...data,
+          finalCost: Math.round(estimateData.finalCost)
+        },
+        updateLinePrice: true
+      };
+      await api.patch(`/orders/items/${returnToOrder.itemId}/estimate`, payload);
+      toast.success(`Estimate applied to Order #${returnToOrder.orderId}!`);
+      navigate(`/orders/${returnToOrder.orderId}`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to apply estimate to order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (loadModalVisible) {
       setIsLoadingEstimates(true);
@@ -227,12 +253,15 @@ export default function WoodEstimator() {
     const { data } = estimate;
     setEditingEstimateId(estimate.id || null);
     setSaveEstimateName(estimate.name || '');
-    setActiveTemplate(data.activeTemplate || 'door_frame');
+    setActiveTemplate(data.activeTemplate || 'custom');
     if (data.selectedWoodId) {
       const wood = woodTypes.find(w => w.id === data.selectedWoodId);
       if (wood) setSelectedWood(wood);
     }
-    setBlocks(data.blocks || STANDARD_BLOCKS.custom);
+    setBlocks((data.blocks || STANDARD_BLOCKS.custom).map(b => ({
+      ...b,
+      pcs: b.pcs !== undefined && b.pcs !== '' ? String(b.pcs) : '1'
+    })));
     
     setDfThicknessOption(data.dfThicknessOption || '5x3');
     setDfCustomW(data.dfCustomW || ''); setDfCustomWUnit(data.dfCustomWUnit || 'in');
@@ -252,7 +281,7 @@ export default function WoodEstimator() {
     
     setLabourItems(data.labourItems || []);
     setHasCarving(!!data.hasCarving);
-    setCarvings(data.carvings || [{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in' }]);
+    setCarvings((data.carvings || [{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in', pcs: 1 }]).map(c => ({ ...c, pcs: c.pcs !== undefined ? c.pcs : 1 })));
     setCarvingRateOption(data.carvingRateOption || '3.5');
     setCarvingRate(data.carvingRate || '');
     setMainCarvingFace(data.mainCarvingFace || 'w');
@@ -295,7 +324,7 @@ export default function WoodEstimator() {
   const applyTemplate = (templateId) => {
     setActiveTemplate(templateId);
     if (STANDARD_BLOCKS[templateId]) {
-      setBlocks(STANDARD_BLOCKS[templateId].map(b => ({ ...b, id: Date.now().toString() + Math.random() })));
+      setBlocks(STANDARD_BLOCKS[templateId].map(b => ({ ...b, pcs: b.pcs || '1', id: Date.now().toString() + Math.random() })));
     }
     
     if (templateId === 'door_frame') {
@@ -308,7 +337,7 @@ export default function WoodEstimator() {
     }
   };
 
-  const addBlock = () => setBlocks([...blocks, { id: Date.now().toString(), l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }]);
+  const addBlock = () => setBlocks([...blocks, { id: Date.now().toString(), pcs: '1', l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }]);
   const removeBlock = (id) => setBlocks(blocks.filter(b => b.id !== id));
   const updateBlock = (id, field, value) => {
     setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
@@ -320,7 +349,7 @@ export default function WoodEstimator() {
     setLabourItems(labourItems.map(l => l.id === id ? { ...l, [field]: value } : l));
   };
 
-  const addCarving = () => setCarvings([...carvings, { id: Date.now().toString(), l: '', lu: 'in', w: '', wu: 'in' }]);
+  const addCarving = () => setCarvings([...carvings, { id: Date.now().toString(), l: '', lu: 'in', w: '', wu: 'in', pcs: 1 }]);
   const removeCarving = (id) => setCarvings(carvings.filter(c => c.id !== id));
   const updateCarving = (id, field, value) => {
     setCarvings(carvings.map(c => c.id === id ? { ...c, [field]: value } : c));
@@ -356,6 +385,33 @@ export default function WoodEstimator() {
 
   return (
     <div className="flex flex-col min-h-full bg-white pb-24">
+      {returnToOrder && (
+        <div className="bg-amber-400 text-gray-950 px-4 py-2.5 font-bold flex flex-wrap items-center justify-between gap-2 border-b-2 border-amber-500 shadow-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <Ruler className="w-4 h-4 shrink-0 text-gray-900" />
+            <span className="text-xs sm:text-sm truncate">
+              Configuring estimate for <strong>{returnToOrder.productName || 'Item'}</strong> (Order #{returnToOrder.orderId})
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate(`/orders/${returnToOrder.orderId}`)}
+              className="px-2.5 py-1 bg-white hover:bg-gray-100 text-gray-900 rounded-lg text-xs font-bold transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={applyToOrder}
+              disabled={isSaving}
+              className="px-3.5 py-1 bg-gray-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
+              <span>Apply to Order</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 md:p-6 bg-white border-b-8 border-gray-900 flex justify-between items-center gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Product Estimation</h1>
@@ -668,44 +724,76 @@ export default function WoodEstimator() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {blocks.map((block, index) => (
-                <div key={block.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-bold text-gray-700">Block {index + 1}</span>
-                    <button onClick={() => removeBlock(block.id)} className="text-gray-400 hover:text-red-600 p-1 bg-white rounded-md border border-gray-200 shadow-sm">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+            <div className="space-y-3">
+              {/* Column Headers */}
+              <div className="flex items-center gap-1.5 sm:gap-3 px-1 text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <div className="flex-1 min-w-0">Length</div>
+                <div className="flex-1 min-w-0">Width</div>
+                <div className="flex-1 min-w-0">Thickness</div>
+                <div className="w-14 sm:w-16 shrink-0 text-center">Pcs</div>
+                <div className="w-7 sm:w-8 shrink-0"></div>
+              </div>
+
+              {/* Clean Rows (no block headers, no borders, highlighted in color on focus) */}
+              <div className="space-y-1.5">
+                {blocks.map((block) => (
+                  <div key={block.id} className="flex items-center gap-1.5 sm:gap-3 py-1 px-1 rounded-xl transition-colors focus-within:bg-blue-50/40">
+                    <div className="flex-1 min-w-0">
+                      <UnitInput 
+                        value={block.l} 
+                        onChange={(v) => updateBlock(block.id, 'l', v)} 
+                        unit={block.lu} 
+                        onUnitChange={(u) => updateBlock(block.id, 'lu', u)} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <UnitInput 
+                        value={block.w} 
+                        onChange={(v) => updateBlock(block.id, 'w', v)} 
+                        unit={block.wu} 
+                        onUnitChange={(u) => updateBlock(block.id, 'wu', u)} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <UnitInput 
+                        value={block.t} 
+                        onChange={(v) => updateBlock(block.id, 't', v)} 
+                        unit={block.tu} 
+                        onUnitChange={(u) => updateBlock(block.id, 'tu', u)} 
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="w-14 sm:w-16 shrink-0">
+                      <input 
+                        type="number" 
+                        min="1"
+                        step="1"
+                        value={block.pcs !== undefined ? block.pcs : '1'} 
+                        onChange={(e) => updateBlock(block.id, 'pcs', e.target.value)} 
+                        className="input-field text-center font-bold text-xs sm:text-sm px-1 sm:px-2 focus:bg-blue-50/90 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/30" 
+                        placeholder="1" 
+                      />
+                    </div>
+                    <div className="w-7 sm:w-8 shrink-0 flex justify-center">
+                      <button 
+                        type="button"
+                        onClick={() => removeBlock(block.id)} 
+                        className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove Piece"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 md:gap-4">
-                    <UnitInput 
-                      label="Length" 
-                      value={block.l} 
-                      onChange={(v) => updateBlock(block.id, 'l', v)} 
-                      unit={block.lu} 
-                      onUnitChange={(u) => updateBlock(block.id, 'lu', u)} 
-                    />
-                    <UnitInput 
-                      label="Width" 
-                      value={block.w} 
-                      onChange={(v) => updateBlock(block.id, 'w', v)} 
-                      unit={block.wu} 
-                      onUnitChange={(u) => updateBlock(block.id, 'wu', u)} 
-                    />
-                    <UnitInput 
-                      label="Thickness" 
-                      value={block.t} 
-                      onChange={(v) => updateBlock(block.id, 't', v)} 
-                      unit={block.tu} 
-                      onUnitChange={(u) => updateBlock(block.id, 'tu', u)} 
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               
               <button 
+                type="button"
                 onClick={addBlock}
-                className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
+                className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm font-bold text-gray-600 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest bg-gray-50/50 hover:bg-gray-100/50"
               >
                 <Plus className="w-4 h-4" />
                 Add Block
@@ -714,7 +802,14 @@ export default function WoodEstimator() {
           )}
           
           <div className="mt-5 bg-gray-900 text-white p-4 rounded-xl flex justify-between items-center shadow-md">
-            <span className="font-medium text-gray-300">Total Volume:</span>
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-300 text-xs sm:text-sm">Total Volume:</span>
+              {activeTemplate !== 'door_frame' && (
+                <span className="text-[11px] text-gray-400 font-normal">
+                  {blocks.reduce((acc, b) => acc + (parseFloat(b.pcs) || 1), 0)} total pieces
+                </span>
+              )}
+            </div>
             <span className="font-black text-xl">{totalCft.toFixed(2)} CFT</span>
           </div>
         </section>
@@ -731,55 +826,59 @@ export default function WoodEstimator() {
             </button>
           </div>
           
-          <div className="space-y-3">
-            <div className="flex gap-2 md:gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+          {/* Column Headers */}
+          <div className="flex items-center gap-2 md:gap-4 px-2 mb-1 text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <div className="flex-1 min-w-0">Description</div>
+            <div className="w-24 md:w-32">Amount (₹)</div>
+            <div className="w-8 md:w-10 shrink-0"></div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex gap-2 md:gap-4 items-center py-1 px-2 rounded-xl transition-colors focus-within:bg-blue-50/40">
               <div className="flex-1 min-w-0">
-                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Description</label>
                 <div className="text-sm font-bold text-gray-800">Fitting Labour</div>
               </div>
               <div className="w-24 md:w-32">
-                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Amount (₹)</label>
                 <input 
                   type="number" 
                   value={fittingLabour} 
                   onChange={(e) => setFittingLabour(e.target.value)}
                   className="input-field text-sm" 
+                  placeholder="0"
                 />
               </div>
-              <div className="w-10"></div>
+              <div className="w-8 md:w-10 shrink-0"></div>
             </div>
 
             {hasCarving && (
-              <div className="flex gap-2 md:gap-4 items-center bg-blue-50 p-3 rounded-xl border border-blue-200">
+              <div className="flex gap-2 md:gap-4 items-center py-1 px-2 rounded-xl transition-colors">
                 <div className="flex-1 min-w-0">
-                  <label className="block text-[10px] font-bold text-blue-500 mb-1 uppercase tracking-wide">Description</label>
                   <div className="text-sm font-bold text-blue-800 flex items-center gap-2">
                     Finishing Labour 
                     <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full hidden md:inline-block">30% of Carving</span>
                   </div>
                 </div>
                 <div className="w-24 md:w-32">
-                  <label className="block text-[10px] font-bold text-blue-500 mb-1 uppercase tracking-wide">Amount (₹)</label>
-                  <div className="text-sm font-bold text-blue-900 px-2 py-1.5">{finishingLabour.toFixed(2)}</div>
+                  <div className="text-sm font-bold text-blue-900 px-3 py-1.5">
+                    ₹{finishingLabour.toFixed(2)}
+                  </div>
                 </div>
-                <div className="w-10"></div>
+                <div className="w-8 md:w-10 shrink-0"></div>
               </div>
             )}
 
-            {labourItems.map((item, index) => (
-              <div key={item.id} className="flex gap-2 md:gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+            {labourItems.map((item) => (
+              <div key={item.id} className="flex gap-2 md:gap-4 items-center py-1 px-2 rounded-xl transition-colors focus-within:bg-blue-50/40">
                 <div className="flex-1 min-w-0">
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Description</label>
                   <input 
                     type="text" 
                     value={item.desc} 
                     onChange={(e) => updateLabourItem(item.id, 'desc', e.target.value)}
                     className="input-field text-sm" 
-                    placeholder="e.g. Making..."
+                    placeholder="e.g. Making / Polishing..."
                   />
                 </div>
                 <div className="w-24 md:w-32">
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Amount (₹)</label>
                   <input 
                     type="number" 
                     value={item.amount} 
@@ -788,13 +887,15 @@ export default function WoodEstimator() {
                     placeholder="0"
                   />
                 </div>
-                <button 
-                  onClick={() => removeLabourItem(item.id)} 
-                  className="mt-5 text-gray-400 hover:text-red-600 p-2 bg-white rounded-md border border-gray-200 shadow-sm"
-                  title="Remove Split"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="w-8 md:w-10 shrink-0 flex justify-center">
+                  <button 
+                    onClick={() => removeLabourItem(item.id)} 
+                    className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Remove Item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -851,61 +952,87 @@ export default function WoodEstimator() {
 
               <div className="space-y-4">
                 {activeTemplate === 'door_frame' ? (
-                  <div className="bg-gray-50 p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 className="font-bold text-gray-900 text-sm mb-3">Computed Carving Blocks</h3>
-                    <div className="space-y-2">
+                  <div className="border-2 border-gray-900 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-gray-900 px-4 py-2.5 text-xs font-bold text-white uppercase tracking-wide border-b-2 border-gray-900 flex justify-between items-center">
+                      <span>Computed Carving Blocks</span>
+                      <span className="text-xs font-black text-white">{totalCarvingArea.toFixed(0)} sq.in</span>
+                    </div>
+                    <div className="divide-y divide-gray-100 bg-white">
                       {computedCarvingBlocks.map((block, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-sm p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-                          <span className="text-gray-700 font-bold">{block.name}</span>
-                          <div className="text-right">
-                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">{block.l.toFixed(1)}" L × {block.w.toFixed(1)}" W</div>
-                            <div className="font-black text-gray-900">{block.area.toFixed(0)} sq.in</div>
+                        <div key={idx} className="px-4 py-3 flex justify-between items-center text-sm">
+                          <span className="text-gray-700 font-medium">{block.name}</span>
+                          <div className="text-right flex items-center gap-3">
+                            <span className="text-xs text-gray-500 font-medium">{block.l.toFixed(1)}" L × {block.w.toFixed(1)}" W</span>
+                            <span className="text-gray-900 font-bold bg-gray-50 px-2 py-0.5 rounded">{block.area.toFixed(0)} sq.in</span>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                      <span className="font-bold text-gray-600">Total Calculated Area</span>
-                      <span className="font-black text-gray-900 text-lg">{totalCarvingArea.toFixed(0)} sq.in</span>
-                    </div>
                   </div>
                 ) : (
-                  <>
-                    {carvings.map((carving, index) => (
-                      <div key={carving.id} className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="font-bold text-gray-700">Area {index + 1}</span>
-                          <button onClick={() => removeCarving(carving.id)} className="text-gray-400 hover:text-red-600 p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                  <div className="space-y-3">
+                    {/* Column Headers */}
+                    <div className="flex items-center gap-1.5 sm:gap-3 px-1 text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <div className="flex-1 min-w-0">Length</div>
+                      <div className="flex-1 min-w-0">Width</div>
+                      <div className="w-14 sm:w-16 shrink-0 text-center">Pcs</div>
+                      <div className="w-7 sm:w-8 shrink-0"></div>
+                    </div>
+
+                    {/* Clean Rows (no block headers, no borders, highlighted in color on focus) */}
+                    <div className="space-y-1.5">
+                      {carvings.map((carving) => (
+                        <div key={carving.id} className="flex items-center gap-1.5 sm:gap-3 py-1 px-1 rounded-xl transition-colors focus-within:bg-blue-50/40">
+                          <div className="flex-1 min-w-0">
+                            <UnitInput 
+                              value={carving.l} 
+                              onChange={(v) => updateCarving(carving.id, 'l', v)} 
+                              unit={carving.lu} 
+                              onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <UnitInput 
+                              value={carving.w} 
+                              onChange={(v) => updateCarving(carving.id, 'w', v)} 
+                              unit={carving.wu} 
+                              onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="w-14 sm:w-16 shrink-0">
+                            <input 
+                              type="number" 
+                              value={carving.pcs !== undefined ? carving.pcs : 1} 
+                              onChange={(e) => updateCarving(carving.id, 'pcs', e.target.value)} 
+                              className="input-field text-center py-2 px-1 text-sm font-semibold"
+                              placeholder="1"
+                              min="1"
+                            />
+                          </div>
+                          <div className="w-7 sm:w-8 shrink-0 flex justify-center">
+                            <button 
+                              onClick={() => removeCarving(carving.id)} 
+                              disabled={carvings.length <= 1}
+                              className={`text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg transition-colors ${carvings.length <= 1 ? 'opacity-30 cursor-not-allowed hover:bg-transparent hover:text-gray-400' : ''}`}
+                              title="Remove Area"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <UnitInput 
-                            label="Length" 
-                            value={carving.l} 
-                            onChange={(v) => updateCarving(carving.id, 'l', v)} 
-                            unit={carving.lu} 
-                            onUnitChange={(u) => updateCarving(carving.id, 'lu', u)} 
-                          />
-                          <UnitInput 
-                            label="Width" 
-                            value={carving.w} 
-                            onChange={(v) => updateCarving(carving.id, 'w', v)} 
-                            unit={carving.wu} 
-                            onUnitChange={(u) => updateCarving(carving.id, 'wu', u)} 
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    
+                      ))}
+                    </div>
+
                     <button 
                       onClick={addCarving}
-                      className="mt-4 w-full flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-bold text-gray-500 border-2 border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-widest"
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-600 border border-dashed border-gray-300 hover:border-gray-900 hover:text-gray-900 rounded-xl transition-colors uppercase tracking-wider bg-gray-50/50 hover:bg-gray-50"
                     >
                       <Plus className="w-4 h-4" />
-                      Add Area
+                      Add Carving Area
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
 

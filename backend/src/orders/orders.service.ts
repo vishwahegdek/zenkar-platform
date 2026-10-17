@@ -215,10 +215,21 @@ export class OrdersService implements OnModuleInit {
               unitPrice: item.unitPrice,
               lineTotal: item.lineTotal,
               status: ItemStatus.CONFIRMED,
+              estimateData: item.estimateData ?? null,
+              savedEstimateId: item.savedEstimateId ?? null,
             })),
           },
         },
-        include: { items: true, customer: true },
+        include: {
+          items: {
+            include: {
+              images: true,
+              savedEstimate: true,
+              product: { include: { category: true } },
+            },
+          },
+          customer: true,
+        },
       });
 
       // 4. Handle Payments (Strict Payment Method usage)
@@ -347,7 +358,12 @@ export class OrdersService implements OnModuleInit {
           productId = newProduct.id;
         }
       }
-      processed.push({ ...item, productId });
+      processed.push({
+        ...item,
+        productId,
+        estimateData: item.estimateData,
+        savedEstimateId: item.savedEstimateId,
+      });
     }
     return processed;
   }
@@ -385,7 +401,11 @@ export class OrdersService implements OnModuleInit {
             select: { id: true, username: true }
           },
           items: {
-            include: { images: true },
+            include: {
+              images: true,
+              savedEstimate: true,
+              product: { include: { category: true } },
+            },
           },
           payments: true,
         },
@@ -503,7 +523,13 @@ export class OrdersService implements OnModuleInit {
       where: whereClause,
       include: {
         customer: true,
-        items: { include: { images: true } },
+        items: {
+          include: {
+            images: true,
+            savedEstimate: true,
+            product: { include: { category: true } },
+          },
+        },
         payments: { orderBy: { date: 'desc' } },
       },
     });
@@ -686,7 +712,9 @@ export class OrdersService implements OnModuleInit {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               lineTotal: item.lineTotal,
-              status: ItemStatus.CONFIRMED
+              status: ItemStatus.CONFIRMED,
+              estimateData: item.estimateData ?? null,
+              savedEstimateId: item.savedEstimateId ?? null,
             })),
           });
         }
@@ -695,7 +723,13 @@ export class OrdersService implements OnModuleInit {
       const updated = await tx.order.findUnique({
         where: { id },
         include: {
-          items: { include: { images: true } },
+          items: {
+            include: {
+              images: true,
+              savedEstimate: true,
+              product: { include: { category: true } },
+            },
+          },
           customer: true,
           payments: true,
         },
@@ -1156,5 +1190,108 @@ export class OrdersService implements OnModuleInit {
         });
     }
     return item;
+  }
+
+  async attachItemEstimate(
+    itemId: number,
+    estimateData: any,
+    savedEstimateId?: number,
+    updateLinePrice?: boolean,
+    userId?: number,
+  ) {
+    const item = await this.prisma.orderItem.findUnique({
+      where: { id: itemId },
+      include: { order: true },
+    });
+
+    if (!item) throw new BadRequestException(`Order item #${itemId} not found`);
+
+    let unitPrice = Number(item.unitPrice);
+    let lineTotal = Number(item.lineTotal);
+
+    if (updateLinePrice && estimateData) {
+      let cost = 0;
+      if (estimateData.finalCost !== undefined) {
+        cost = Number(estimateData.finalCost);
+      } else if (estimateData.totalCost !== undefined) {
+        cost = Number(estimateData.totalCost);
+      }
+      if (cost > 0) {
+        unitPrice = cost;
+        lineTotal = cost * Number(item.quantity || 1);
+      }
+    }
+
+    const updatedItem = await this.prisma.orderItem.update({
+      where: { id: itemId },
+      data: {
+        estimateData: estimateData ?? null,
+        savedEstimateId: savedEstimateId ?? null,
+        unitPrice,
+        lineTotal,
+      },
+      include: {
+        product: { include: { category: true } },
+        savedEstimate: true,
+      },
+    });
+
+    if (item.orderId) {
+      const allItems = await this.prisma.orderItem.findMany({
+        where: { orderId: item.orderId },
+      });
+      const newItemsTotal = allItems.reduce(
+        (sum, it) => sum + Number(it.lineTotal),
+        0,
+      );
+      await this.prisma.order.update({
+        where: { id: item.orderId },
+        data: {
+          totalAmount: Math.max(0, newItemsTotal),
+        },
+      });
+
+      try {
+        await this.ledgerService.deleteEntriesForSource('ORDER', item.orderId);
+        const order = await this.prisma.order.findUnique({
+          where: { id: item.orderId },
+          include: { customer: true },
+        });
+        if (order && order.customerId) {
+          const customerAccount = await this.ledgerService.getOrCreateAccountForEntity(
+            'CUSTOMER',
+            order.customerId,
+            order.customer?.name || 'Walk-In',
+            order.customer?.contactId,
+          );
+          const salesRevenueAccount = await this.ledgerService.getSystemAccount('SALES_REVENUE');
+          const isConfirmedOrHigher = order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.DELIVERED || order.status === OrderStatus.CLOSED;
+          if (isConfirmedOrHigher) {
+            await this.ledgerService.recordDoubleEntry({
+              transactionId: `ORDER-${order.id}`,
+              sourceType: 'ORDER',
+              sourceId: order.id,
+              date: order.orderDate,
+              debitAccountId: customerAccount.id,
+              creditAccountId: salesRevenueAccount.id,
+              amount: Number(order.totalAmount) - Number(order.discount || 0),
+              note: `Order #${order.id} estimate updated for customer ${order.customer?.name || 'Walk-In'}`,
+            });
+          }
+        }
+      } catch (err) {
+        this.logger.error('Failed to sync ledger on estimate price update', err);
+      }
+    }
+
+    if (userId) {
+      await this.auditService.log(userId, 'UPDATE', 'OrderItem', itemId, {
+        action: 'ATTACH_ESTIMATE',
+        savedEstimateId,
+        updateLinePrice,
+      });
+    }
+
+    return updatedItem;
   }
 }

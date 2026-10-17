@@ -80,6 +80,27 @@ export class OrdersController {
       return this.ordersService.updateItemStatus(+itemId, status, req.user?.userId);
   }
 
+  @Patch('items/:itemId/estimate')
+  @ApiOperation({ summary: 'Attach or update order item estimate' })
+  attachItemEstimate(
+    @Param('itemId') itemId: string,
+    @Body()
+    body: {
+      estimateData: any;
+      savedEstimateId?: number;
+      updateLinePrice?: boolean;
+    },
+    @Req() req,
+  ) {
+    return this.ordersService.attachItemEstimate(
+      +itemId,
+      body.estimateData,
+      body.savedEstimateId,
+      body.updateLinePrice,
+      req.user?.userId,
+    );
+  }
+
   @Get(':idOrOrderNo')
   @ApiOperation({ summary: 'Retrieve a specific order by ID or Order Number' })
   @ApiResponse({ status: 200, description: 'The order details.' })

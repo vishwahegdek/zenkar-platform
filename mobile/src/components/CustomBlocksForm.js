@@ -7,6 +7,7 @@ export default function CustomBlocksForm({ blocks = [], onChangeBlocks }) {
   const addBlock = () => {
     const newBlock = {
       id: `b-${Date.now()}`,
+      pcs: '1',
       l: '',
       lu: 'ft',
       w: '',
@@ -36,7 +37,8 @@ export default function CustomBlocksForm({ blocks = [], onChangeBlocks }) {
     if (b.wu === 'in') w /= 12;
     let t = parseFloat(b.t) || 0;
     if (b.tu === 'in') t /= 12;
-    return (l * w * t).toFixed(3);
+    const pcs = b.pcs !== undefined && b.pcs !== '' ? (parseFloat(b.pcs) || 0) : 1;
+    return (l * w * t * pcs).toFixed(3);
   };
 
   return (
@@ -53,64 +55,64 @@ export default function CustomBlocksForm({ blocks = [], onChangeBlocks }) {
         </TouchableOpacity>
       </View>
 
-      {blocks.map((block, index) => {
-        const cft = getBlockCft(block);
-        return (
-          <View key={block.id || index} style={styles.blockCard}>
-            <View style={styles.blockHeader}>
-              <View style={styles.blockBadge}>
-                <Text style={styles.blockBadgeText}>Piece #{index + 1}</Text>
-              </View>
+      {/* Column Headers */}
+      <View style={styles.columnHeaders}>
+        <Text style={[styles.columnHeaderText, { flex: 1.1 }]}>Length</Text>
+        <Text style={[styles.columnHeaderText, { flex: 1.1 }]}>Width</Text>
+        <Text style={[styles.columnHeaderText, { flex: 1.1 }]}>Thick</Text>
+        <Text style={[styles.columnHeaderText, { flex: 0.8, textAlign: 'center' }]}>Pcs</Text>
+        {blocks.length > 1 && <View style={{ width: 28 }} />}
+      </View>
 
-              <View style={styles.blockHeaderRight}>
-                <Text style={styles.cftBadge}>{cft} CFT</Text>
-                {blocks.length > 1 && (
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => removeBlock(index)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.inputsRow}>
-              <UnitInput
-                label="Length"
-                value={block.l}
-                onChangeText={(val) => updateBlock(index, { l: val })}
-                unit={block.lu}
-                onUnitToggle={() =>
-                  updateBlock(index, { lu: block.lu === 'ft' ? 'in' : 'ft' })
-                }
-                placeholder="0"
-              />
-              <UnitInput
-                label="Width"
-                value={block.w}
-                onChangeText={(val) => updateBlock(index, { w: val })}
-                unit={block.wu}
-                onUnitToggle={() =>
-                  updateBlock(index, { wu: block.wu === 'in' ? 'ft' : 'in' })
-                }
-                placeholder="0"
-              />
-              <UnitInput
-                label="Thick"
-                value={block.t}
-                onChangeText={(val) => updateBlock(index, { t: val })}
-                unit={block.tu}
-                onUnitToggle={() =>
-                  updateBlock(index, { tu: block.tu === 'in' ? 'ft' : 'in' })
-                }
-                placeholder="0"
-              />
-            </View>
-          </View>
-        );
-      })}
+      {blocks.map((block, index) => (
+        <View key={block.id || index} style={styles.inputsRow}>
+          <UnitInput
+            value={block.l}
+            onChangeText={(val) => updateBlock(index, { l: val })}
+            unit={block.lu}
+            onUnitToggle={() =>
+              updateBlock(index, { lu: block.lu === 'ft' ? 'in' : 'ft' })
+            }
+            placeholder="0"
+            containerStyle={{ flex: 1.1 }}
+          />
+          <UnitInput
+            value={block.w}
+            onChangeText={(val) => updateBlock(index, { w: val })}
+            unit={block.wu}
+            onUnitToggle={() =>
+              updateBlock(index, { wu: block.wu === 'in' ? 'ft' : 'in' })
+            }
+            placeholder="0"
+            containerStyle={{ flex: 1.1 }}
+          />
+          <UnitInput
+            value={block.t}
+            onChangeText={(val) => updateBlock(index, { t: val })}
+            unit={block.tu}
+            onUnitToggle={() =>
+              updateBlock(index, { tu: block.tu === 'in' ? 'ft' : 'in' })
+            }
+            placeholder="0"
+            containerStyle={{ flex: 1.1 }}
+          />
+          <UnitInput
+            value={block.pcs !== undefined ? block.pcs : '1'}
+            onChangeText={(val) => updateBlock(index, { pcs: val })}
+            placeholder="1"
+            containerStyle={{ flex: 0.8 }}
+          />
+          {blocks.length > 1 && (
+            <TouchableOpacity
+              style={styles.deleteBtnInline}
+              onPress={() => removeBlock(index)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
 
       <TouchableOpacity
         style={styles.addBigBtn}
@@ -157,46 +159,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  blockCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  blockHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  blockBadge: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  blockBadgeText: {
-    color: '#f8fafc',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  blockHeaderRight: {
+  columnHeaders: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 2,
+    marginBottom: 4,
   },
-  cftBadge: {
-    color: '#34d399',
-    fontSize: 12,
+  columnHeaderText: {
+    fontSize: 11,
     fontWeight: '700',
-  },
-  deleteBtn: {
-    padding: 4,
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    marginBottom: 8,
+  },
+  deleteBtnInline: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBigBtn: {
     flexDirection: 'row',

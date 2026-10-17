@@ -34,18 +34,18 @@ import { Storage, DEFAULT_WOOD_TYPES } from './src/utils/storage';
 import { shareEstimate } from './src/utils/shareUtils';
 
 const STANDARD_BLOCKS = {
-  custom: [{ id: 'b1', l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }],
-  standard_door: [{ id: 'b1', l: '7', lu: 'ft', w: '3', wu: 'ft', t: '1.5', tu: 'in' }],
+  custom: [{ id: 'b1', pcs: '1', l: '', lu: 'ft', w: '', wu: 'in', t: '', tu: 'in' }],
+  standard_door: [{ id: 'b1', pcs: '1', l: '7', lu: 'ft', w: '3', wu: 'ft', t: '1.5', tu: 'in' }],
   window_frame: [
-    { id: 'b1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
-    { id: 'b2', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
-    { id: 'b3', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
-    { id: 'b4', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+    { id: 'b1', pcs: '1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+    { id: 'b2', pcs: '1', l: '4', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+    { id: 'b3', pcs: '1', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
+    { id: 'b4', pcs: '1', l: '5', lu: 'ft', w: '4', wu: 'in', t: '2.5', tu: 'in' },
   ],
 };
 
 const INITIAL_FORM_DATA = {
-  activeTemplate: 'door_frame',
+  activeTemplate: 'custom',
   // Door Frame
   dfThicknessOption: '5x3',
   dfCustomW: '',

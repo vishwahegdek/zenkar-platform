@@ -28,6 +28,6 @@ body {
 
 @layer components {
   .input-field {
-    @apply w-full px-3 py-2 rounded-lg border border-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm;
+    @apply w-full px-3 py-2 rounded-lg border border-gray-400 bg-white focus:bg-blue-50/80 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition-all text-sm outline-none;
   }
 }

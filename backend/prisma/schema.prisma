@@ -267,6 +267,10 @@ model OrderItem {
   unitPrice   Decimal    @default(0) @map("unit_price") @db.Decimal(10, 2)
   lineTotal   Decimal    @default(0) @map("line_total") @db.Decimal(12, 2)
 
+  estimateData    Json?          @map("estimate_data")
+  savedEstimateId Int?           @map("saved_estimate_id")
+  savedEstimate   SavedEstimate? @relation(fields: [savedEstimateId], references: [id], onDelete: SetNull)
+
   order   Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
 
@@ -614,6 +618,8 @@ model SavedEstimate {
   createdById Int?     @map("created_by_id")
   createdBy   User?    @relation("SavedEstimateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now()) @map("created_at")
+
+  orderItems  OrderItem[]
 
   @@map("saved_estimates")
 }

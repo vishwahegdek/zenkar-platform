@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const TEMPLATES = [
-  { id: 'door_frame', name: 'Smart Frame', icon: 'door' },
   { id: 'custom', name: 'Custom Blocks', icon: 'view-grid-plus' },
+  { id: 'door_frame', name: 'Smart Frame', icon: 'door' },
   { id: 'standard_door', name: 'Standard Door', icon: 'door-closed' },
   { id: 'window_frame', name: 'Window Frame', icon: 'window-closed-variant' },
 ];

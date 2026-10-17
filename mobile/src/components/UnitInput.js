@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function UnitInput({
@@ -11,14 +11,18 @@ export default function UnitInput({
   keyboardType = 'numeric',
   containerStyle
 }) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.inputWrapper}>
+      {label ? <Text style={[styles.label, isFocused && styles.labelFocused]}>{label}</Text> : null}
+      <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, isFocused && styles.inputFocused]}
           value={value !== undefined && value !== null ? String(value) : ''}
           onChangeText={onChangeText}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           placeholderTextColor="#64748b"
           keyboardType={keyboardType}
@@ -26,11 +30,11 @@ export default function UnitInput({
         />
         {unit && onUnitToggle ? (
           <TouchableOpacity
-            style={styles.unitBadge}
+            style={[styles.unitBadge, isFocused && styles.unitBadgeFocused]}
             onPress={onUnitToggle}
             activeOpacity={0.7}
           >
-            <Text style={styles.unitText}>{unit.toUpperCase()}</Text>
+            <Text style={[styles.unitText, isFocused && styles.unitTextFocused]}>{unit.toUpperCase()}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -50,6 +54,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  labelFocused: {
+    color: '#38bdf8',
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,12 +67,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 48,
   },
+  inputWrapperFocused: {
+    borderColor: '#38bdf8',
+    borderWidth: 1.5,
+    backgroundColor: '#0c4a6e40',
+  },
   input: {
     flex: 1,
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '600',
     paddingVertical: 0,
+  },
+  inputFocused: {
+    color: '#ffffff',
   },
   unitBadge: {
     backgroundColor: '#0284c7',
@@ -74,9 +89,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginLeft: 6,
   },
+  unitBadgeFocused: {
+    backgroundColor: '#38bdf8',
+  },
   unitText: {
     color: '#ffffff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  unitTextFocused: {
+    color: '#0f172a',
   },
 });

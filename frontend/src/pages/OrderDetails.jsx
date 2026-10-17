@@ -3,10 +3,11 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Edit, Printer, ChevronDown, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Edit, Printer, ChevronDown, MoreVertical, Ruler, Plus } from 'lucide-react';
 import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
 import BillView from '../components/BillView';
+import OrderItemEstimateModal from '../components/OrderItemEstimateModal';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
@@ -31,6 +32,36 @@ export default function OrderDetails() {
   const [isManagePaymentsModalOpen, setIsManagePaymentsModalOpen] = useState(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [estimateModalItem, setEstimateModalItem] = useState(null);
+
+  const isEligibleForEstimate = (item) => {
+    if (item.estimateData) return true;
+    const categoryName = item.product?.category?.name || '';
+    const normalized = categoryName.trim().toLowerCase();
+    return (
+      !categoryName ||
+      normalized === 'door - door frames' ||
+      normalized === 'furniture' ||
+      normalized.includes('door') ||
+      normalized.includes('furniture')
+    );
+  };
+
+  const formatEstimateBadge = (estimateData) => {
+    if (!estimateData) return '';
+    const parts = [];
+    if (estimateData.activeTemplate === 'door_frame') {
+      parts.push('Door Frame');
+    } else if (estimateData.activeTemplate) {
+      parts.push('Custom');
+    }
+    if (estimateData.totalVolumeCft) {
+      parts.push(`${Number(estimateData.totalVolumeCft).toFixed(1)} CFT`);
+    } else if (estimateData.finalCost) {
+      parts.push(`₹${Math.round(Number(estimateData.finalCost)).toLocaleString()}`);
+    }
+    return parts.join(' · ') || 'Configured';
+  };
   
   // Print State
   const [printConfig, setPrintConfig] = useState({ mode: 'ESTIMATE', data: null });
@@ -261,9 +292,39 @@ export default function OrderDetails() {
                       <tbody className="divide-y divide-gray-100">
                          {order.items.map((item, i) => (
                             <tr key={i}>
-                               <td className="px-3 md:px-4 py-2">
+                               <td className="px-3 md:px-4 py-2.5">
                                   <div className="font-medium text-gray-900">{item.productName}</div>
-                                  <div className="text-xs text-gray-500">{item.description}</div>
+                                  {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+
+                                  {/* Estimate Action or Badge */}
+                                  {isEligibleForEstimate(item) && (
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                      {item.estimateData ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setEstimateModalItem(item)}
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-all shadow-2xs group cursor-pointer"
+                                          title="Click to view or edit estimate details"
+                                        >
+                                          <Ruler className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-45 transition-transform" />
+                                          <span>Estimate Attached</span>
+                                          <span className="text-[10px] font-normal text-amber-700 bg-amber-100/90 px-1.5 py-0.2 rounded-full">
+                                            {formatEstimateBadge(item.estimateData)}
+                                          </span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => setEstimateModalItem(item)}
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-2xs cursor-pointer"
+                                          title="Attach a wood / manufacturing estimate to this item"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                          <span>Attach Estimate</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                </td>
                                <td className="px-2 md:px-4 py-2">
                                    <ItemStatusSelect item={item} onChange={handleItemStatusChange} />
@@ -351,6 +412,19 @@ export default function OrderDetails() {
             onClose={() => setIsDiscountModalOpen(false)}
             onSubmit={discountMutation.mutate}
             isLoading={discountMutation.isPending}
+        />
+      )}
+
+      {estimateModalItem && (
+        <OrderItemEstimateModal
+          isOpen={!!estimateModalItem}
+          onClose={() => setEstimateModalItem(null)}
+          item={estimateModalItem}
+          orderId={order?.id}
+          onEstimateUpdated={() => {
+            queryClient.invalidateQueries(['orders', id]);
+            queryClient.invalidateQueries(['orders']);
+          }}
         />
       )}
 

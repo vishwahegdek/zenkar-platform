@@ -40,8 +40,8 @@ export const generateComputedBlocks = (data) => {
     if (bwu === 'in') borderLegWidthFt /= 12;
 
     const INVENTORY = {
-      mainLegs: [6.0, 6.5, 7.0],
-      mainHeadBottom: [3.5, 4.0, 4.5],
+      mainLegs: [6.0, 7.0, 8.0, 9.0],
+      mainHeadBottom: [3.5, 4.0, 5.0, 6.0],
       borderPieces: [4.0, 5.0, 6.0, 7.0, 7.5]
     };
 
@@ -105,7 +105,9 @@ export const calculateWoodVolume = (blocks) => {
     let t = parseFloat(block.t) || 0;
     if (block.tu === 'in') t /= 12;
 
-    return sum + (l * w * t);
+    const pcs = block.pcs !== undefined && block.pcs !== '' ? (parseFloat(block.pcs) || 0) : 1;
+
+    return sum + (l * w * t * pcs);
   }, 0);
 };
 
@@ -131,7 +133,9 @@ export const calculateCarving = (data) => {
       if (c.lu === 'ft') l *= 12;
       let cw = parseFloat(c.w) || 0;
       if (c.wu === 'ft') cw *= 12;
-      return sum + (l * cw);
+      let pcs = parseFloat(c.pcs);
+      if (isNaN(pcs) || pcs <= 0) pcs = 1;
+      return sum + (l * cw * pcs);
     }, 0);
   } else {
     // Door frame carving logic
@@ -242,7 +246,8 @@ export const calculateEstimate = (data, woodTypes = []) => {
     let t = parseFloat(block.t) || 0;
     if (block.tu === 'in') t /= 12;
     
-    const cft = l * w * t;
+    const pcs = block.pcs !== undefined && block.pcs !== '' ? (parseFloat(block.pcs) || 0) : 1;
+    const cft = l * w * t * pcs;
     
     // Local tradition: If Halasu is selected, the bottom piece (df4) uses Kindal pricing
     if (isHalasu && block.id === 'df4') {
