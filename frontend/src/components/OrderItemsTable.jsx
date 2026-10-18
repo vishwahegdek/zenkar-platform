@@ -68,10 +68,10 @@ export default function OrderItemsTable({
                                 <button
                                   type="button"
                                   onClick={() => onOpenEstimateModal && onOpenEstimateModal(idx)}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors shadow-2xs"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors shadow-2xs max-w-full text-left"
                                   title="Edit estimate"
                                 >
-                                  <span>📐 {formatEstimateBadge(item.estimateData)}</span>
+                                  <span className="truncate">📐 {formatEstimateBadge(item.estimateData)}</span>
                                 </button>
                               </div>
                            ) : isEstItem ? (

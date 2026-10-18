@@ -71,7 +71,7 @@ const INITIAL_FORM_DATA = {
   blocks: STANDARD_BLOCKS.custom,
   // Carving & Labour
   hasCarving: false,
-  carvingRateOption: '3.5',
+  carvingRateOption: '5',
   carvingRate: '',
   mainCarvingFace: 'w',
   fittingLabour: '1200',

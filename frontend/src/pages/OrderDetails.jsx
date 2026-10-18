@@ -58,10 +58,17 @@ export default function OrderDetails() {
     } else if (estimateData.activeTemplate) {
       parts.push('Custom');
     }
-    if (estimateData.totalVolumeCft) {
-      parts.push(`${Number(estimateData.totalVolumeCft).toFixed(1)} CFT`);
-    } else if (estimateData.finalCost) {
-      parts.push(`₹${Math.round(Number(estimateData.finalCost)).toLocaleString()}`);
+    const cost = estimateData.finalCost ?? estimateData.totalCost;
+    const quote = estimateData.quotedAmount;
+    if (cost !== undefined && cost !== null && Number(cost) > 0) {
+      if (quote !== undefined && quote !== null && Number(quote) > 0 && Math.round(Number(quote)) !== Math.round(Number(cost))) {
+        parts.push(`Est: ₹${Math.round(Number(cost)).toLocaleString()}`);
+        parts.push(`Quote: ₹${Math.round(Number(quote)).toLocaleString()}`);
+      } else {
+        parts.push(`₹${Math.round(Number(cost)).toLocaleString()}`);
+      }
+    } else if (quote !== undefined && quote !== null && Number(quote) > 0) {
+      parts.push(`Quote: ₹${Math.round(Number(quote)).toLocaleString()}`);
     }
     return parts.join(' · ') || 'Configured';
   };
@@ -286,7 +293,6 @@ export default function OrderDetails() {
                       <thead className="bg-gray-50 text-gray-500 font-medium">
                          <tr>
                             <th className="px-3 md:px-4 py-2 text-left">Item</th>
-                            <th className="px-2 md:px-4 py-2 text-left w-24">Status</th>
                             <th className="px-2 md:px-4 py-2 text-center w-12 md:w-20 whitespace-nowrap">Qty</th>
                             <th className="px-2 md:px-4 py-2 text-right w-16 md:w-24 whitespace-nowrap">Price</th>
                             <th className="px-3 md:px-4 py-2 text-right w-16 md:w-24 whitespace-nowrap">Total</th>
@@ -328,9 +334,6 @@ export default function OrderDetails() {
                                       )}
                                     </div>
                                   )}
-                               </td>
-                               <td className="px-2 md:px-4 py-2">
-                                   <ItemStatusSelect item={item} onChange={handleItemStatusChange} />
                                </td>
                                <td className="px-2 md:px-4 py-2 text-center text-gray-600">{Number(item.quantity)}</td>
                                <td className="px-2 md:px-4 py-2 text-right text-gray-600">₹{Number(item.unitPrice).toLocaleString()}</td>
@@ -424,6 +427,7 @@ export default function OrderDetails() {
           onClose={() => setEstimateModalItem(null)}
           item={estimateModalItem}
           orderId={order?.id}
+          returnUrl={`/orders/${id}`}
           initialTemplate={isDoorFrameProduct(estimateModalItem) ? 'door_frame' : undefined}
           onEstimateUpdated={() => {
             queryClient.invalidateQueries(['orders', id]);

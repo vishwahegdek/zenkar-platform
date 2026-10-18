@@ -5,8 +5,8 @@ import { formatCurrency } from '../utils/shareUtils';
 import UnitInput from './UnitInput';
 
 const CARVING_RATES = [
-  { id: '3.5', label: '₹3.5', desc: 'Standard / Floral' },
-  { id: '5', label: '₹5.0', desc: 'Intricate / Heavy' },
+  { id: '5', label: '₹5.0', desc: 'Standard / Heavy' },
+  { id: '3.5', label: '₹3.5', desc: 'Floral / Light' },
   { id: 'custom', label: 'Custom', desc: 'Manual Rate' },
 ];
 
@@ -25,7 +25,7 @@ export default function LabourCarvingSection({
 }) {
   const {
     hasCarving = false,
-    carvingRateOption = '3.5',
+    carvingRateOption = '5',
     carvingRate = '',
     fittingLabour = '1200',
     labourItems = [],

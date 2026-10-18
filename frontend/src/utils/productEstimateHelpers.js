@@ -61,8 +61,16 @@ export const formatEstimateBadge = (estimateData) => {
   }
 
   const cost = estimateData.finalCost ?? estimateData.totalCost;
+  const quote = estimateData.quotedAmount;
   if (cost !== undefined && cost !== null && Number(cost) > 0) {
-    parts.push(`₹${Math.round(Number(cost)).toLocaleString()}`);
+    if (quote !== undefined && quote !== null && Number(quote) > 0 && Math.round(Number(quote)) !== Math.round(Number(cost))) {
+      parts.push(`Est: ₹${Math.round(Number(cost)).toLocaleString()}`);
+      parts.push(`Quote: ₹${Math.round(Number(quote)).toLocaleString()}`);
+    } else {
+      parts.push(`₹${Math.round(Number(cost)).toLocaleString()}`);
+    }
+  } else if (quote !== undefined && quote !== null && Number(quote) > 0) {
+    parts.push(`Quote: ₹${Math.round(Number(quote)).toLocaleString()}`);
   }
 
   return parts.join(' · ') || 'Estimate Attached';

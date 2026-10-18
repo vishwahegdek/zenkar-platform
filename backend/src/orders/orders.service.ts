@@ -1215,7 +1215,9 @@ export class OrdersService implements OnModuleInit {
 
     if (updateLinePrice && estimateData) {
       let cost = 0;
-      if (estimateData.finalCost !== undefined) {
+      if (estimateData.quotedAmount !== undefined && Number(estimateData.quotedAmount) > 0) {
+        cost = Number(estimateData.quotedAmount);
+      } else if (estimateData.finalCost !== undefined) {
         cost = Number(estimateData.finalCost);
       } else if (estimateData.totalCost !== undefined) {
         cost = Number(estimateData.totalCost);

@@ -56,21 +56,46 @@ export default function OrderForm() {
   }, []);
   
   // Ref to track if we have performed initial load from server
-  const initialLoadDone = useRef(false);
+  const initialLoadDone = useRef(Boolean(location.state?.savedFormData));
 
-  const [formData, setFormData] = useState({
-    customerId: null,
-    contactId: null, // Add contactId for linking
-    customerName: '',
-    customerPhone: '',
-    customerAddress: '',
-    orderDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
-    status: 'confirmed',
-    items: [],
-    notes: '',
-    advanceAmount: 0,
-    paymentAccountId: null,
+  const [formData, setFormData] = useState(() => {
+    if (location.state?.savedFormData) {
+      const saved = { ...location.state.savedFormData };
+      if (location.state?.appliedEstimate) {
+        const { rowIndex, estimateData, finalCost, quotedAmount, productId, productName, product } = location.state.appliedEstimate;
+        const targetIdx = (rowIndex !== undefined && saved.items?.[rowIndex]) ? rowIndex : 0;
+        if (saved.items && saved.items[targetIdx]) {
+          const qty = Number(saved.items[targetIdx].quantity) || 1;
+          const unitPrice = Number(quotedAmount ?? finalCost) || 0;
+          const updatedItems = [...saved.items];
+          updatedItems[targetIdx] = {
+            ...updatedItems[targetIdx],
+            productId: productId || updatedItems[targetIdx].productId,
+            productName: productName || updatedItems[targetIdx].productName,
+            product: product || updatedItems[targetIdx].product,
+            estimateData,
+            unitPrice,
+            lineTotal: qty * unitPrice,
+          };
+          saved.items = updatedItems;
+        }
+      }
+      return saved;
+    }
+    return {
+      customerId: null,
+      contactId: null, // Add contactId for linking
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
+      orderDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      status: 'confirmed',
+      items: [],
+      notes: '',
+      advanceAmount: 0,
+      paymentAccountId: null,
+    };
   });
 
   // Fetch Order Data if Edit
@@ -108,8 +133,11 @@ export default function OrderForm() {
       });
       initialLoadDone.current = true;
     } else if (!isEdit && !initialLoadDone.current) {
-      // Initialize with one empty row for new order
-      setFormData(prev => ({ ...prev, items: [{ productName: '', description: '', quantity: 1, unitPrice: 0, lineTotal: 0 }]}));
+      // Initialize with one empty row for new order if not already loaded with items
+      setFormData(prev => ({ 
+        ...prev, 
+        items: prev.items && prev.items.length > 0 ? prev.items : [{ productName: '', description: '', quantity: 1, unitPrice: 0, lineTotal: 0 }]
+      }));
       initialLoadDone.current = true;
     }
   }, [order, isEdit, paramId]);
@@ -117,23 +145,30 @@ export default function OrderForm() {
   // Handle estimate applied from WoodEstimator return
   useEffect(() => {
     if (location.state?.appliedEstimate) {
-      const { rowIndex, estimateData, finalCost } = location.state.appliedEstimate;
+      const { rowIndex, estimateData, finalCost, quotedAmount, productId, productName, product } = location.state.appliedEstimate;
       setFormData(prev => {
-        const newItems = [...prev.items];
+        const baseForm = location.state.savedFormData || prev;
+        const newItems = [...(baseForm.items || [])];
         const targetIdx = (rowIndex !== undefined && newItems[rowIndex]) ? rowIndex : 0;
         if (newItems[targetIdx]) {
           const qty = Number(newItems[targetIdx].quantity) || 1;
-          const unitPrice = Number(finalCost) || 0;
+          const unitPrice = Number(quotedAmount ?? finalCost) || 0;
           newItems[targetIdx] = {
             ...newItems[targetIdx],
+            productId: productId || newItems[targetIdx].productId,
+            productName: productName || newItems[targetIdx].productName,
+            product: product || newItems[targetIdx].product,
             estimateData,
             unitPrice,
             lineTotal: qty * unitPrice
           };
         }
-        return { ...prev, items: newItems };
+        return { ...baseForm, items: newItems };
       });
       // Clear navigation state so it doesn't re-trigger
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.savedFormData) {
+      setFormData(location.state.savedFormData);
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -285,6 +320,9 @@ export default function OrderForm() {
 
     newItems[activeEstimateRowIndex] = {
       ...currentItem,
+      productId: payload?.productId || currentItem.productId,
+      productName: payload?.productName || currentItem.productName,
+      product: payload?.product || currentItem.product,
       estimateData: payload?.estimateData ?? null,
       savedEstimateId: payload?.savedEstimateId ?? null,
       unitPrice: newUnitPrice,
@@ -588,6 +626,8 @@ export default function OrderForm() {
              ...formData.items[activeEstimateRowIndex],
              rowIndex: activeEstimateRowIndex
            }}
+           orderFormData={formData}
+           returnUrl={isEdit ? `/orders/${activeId}/edit` : '/orders/new'}
            orderId={activeId}
            initialTemplate={isDoorFrameProduct(formData.items[activeEstimateRowIndex]) ? 'door_frame' : undefined}
            onEstimateUpdated={handleEstimateUpdated}

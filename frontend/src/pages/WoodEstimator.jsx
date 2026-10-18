@@ -59,7 +59,16 @@ export default function WoodEstimator() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const returnToOrder = location.state?.returnToOrder || null;
+  const [returnToOrder] = useState(() => location.state?.returnToOrder || null);
+  const [quoteAmount, setQuoteAmount] = useState(() => {
+    if (location.state?.returnToOrder?.quotedAmount) {
+      return String(location.state.returnToOrder.quotedAmount);
+    }
+    if (location.state?.loadEstimate?.data?.quotedAmount) {
+      return String(location.state.loadEstimate.data.quotedAmount);
+    }
+    return '';
+  });
   const [activeTemplate, setActiveTemplate] = useState('custom');
 
   const [woodTypes, setWoodTypes] = useState([]);
@@ -131,7 +140,7 @@ export default function WoodEstimator() {
   const [labourItems, setLabourItems] = useState([]);
   const [hasCarving, setHasCarving] = useState(false);
   const [carvings, setCarvings] = useState([{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in', pcs: 1 }]);
-  const [carvingRateOption, setCarvingRateOption] = useState('3.5');
+  const [carvingRateOption, setCarvingRateOption] = useState('5');
   const [carvingRate, setCarvingRate] = useState('');
   const [mainCarvingFace, setMainCarvingFace] = useState('w');
   const [fittingLabour, setFittingLabour] = useState('1200');
@@ -175,6 +184,7 @@ export default function WoodEstimator() {
     hasBorder, borderThicknessOption, borderCustomW, borderCustomWUnit, borderCustomT, borderCustomTUnit,
     hasArch, archHeight, archHeightUnit,
     labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour,
+    quotedAmount: (quoteAmount !== '' && !isNaN(Number(quoteAmount))) ? Math.round(Number(quoteAmount)) : undefined,
     version: ESTIMATION_ENGINE_VERSION
   });
 
@@ -222,28 +232,39 @@ export default function WoodEstimator() {
     try {
       const data = getEstimatePayload();
       const finalCost = Math.round(estimateData.finalCost);
+      const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount))) 
+        ? Math.round(Number(quoteAmount)) 
+        : finalCost;
+
       const payload = {
         estimateData: {
           ...data,
-          finalCost
+          finalCost,
+          quotedAmount: effectiveQuote
         },
-        updateLinePrice: true
+        updateLinePrice: true,
+        unitPrice: effectiveQuote
       };
 
       const hasValidItemId = returnToOrder.itemId && typeof returnToOrder.itemId === 'number' && !isNaN(returnToOrder.itemId);
       if (hasValidItemId) {
         await api.patch(`/orders/items/${returnToOrder.itemId}/estimate`, payload);
-        toast.success(`Estimate applied to Order #${returnToOrder.orderId || ''}!`);
+        toast.success(`Estimate applied to Order #${returnToOrder.orderId || ''}! (Quote: ₹${effectiveQuote.toLocaleString()})`);
         navigate(returnToOrder.returnUrl || `/orders/${returnToOrder.orderId}`);
       } else {
-        toast.success(`Estimate configured for ${returnToOrder.productName || 'item'}!`);
+        toast.success(`Estimate configured for ${returnToOrder.productName || 'item'}! (Quote: ₹${effectiveQuote.toLocaleString()})`);
         navigate(returnToOrder.returnUrl || '/orders/new', {
           state: {
             appliedEstimate: {
               rowIndex: returnToOrder.rowIndex,
+              productId: returnToOrder.productId,
+              productName: returnToOrder.productName,
+              product: returnToOrder.product,
               estimateData: payload.estimateData,
-              finalCost
-            }
+              finalCost,
+              quotedAmount: effectiveQuote
+            },
+            savedFormData: returnToOrder.formData
           }
         });
       }
@@ -298,10 +319,13 @@ export default function WoodEstimator() {
     setLabourItems(data.labourItems || []);
     setHasCarving(!!data.hasCarving);
     setCarvings((data.carvings || [{ id: 'c1', l: '', lu: 'in', w: '', wu: 'in', pcs: 1 }]).map(c => ({ ...c, pcs: c.pcs !== undefined ? c.pcs : 1 })));
-    setCarvingRateOption(data.carvingRateOption || '3.5');
+    setCarvingRateOption(data.carvingRateOption || '5');
     setCarvingRate(data.carvingRate || '');
     setMainCarvingFace(data.mainCarvingFace || 'w');
     setFittingLabour(data.fittingLabour || '1200');
+    if (data.quotedAmount !== undefined && data.quotedAmount !== null) {
+      setQuoteAmount(String(Math.round(Number(data.quotedAmount))));
+    }
     
     setLoadModalVisible(false);
   };
@@ -402,24 +426,46 @@ export default function WoodEstimator() {
   return (
     <div className="flex flex-col min-h-full bg-white pb-24">
       {returnToOrder && (
-        <div className="bg-amber-400 text-gray-950 px-4 py-2.5 font-bold flex flex-wrap items-center justify-between gap-2 border-b-2 border-amber-500 shadow-sm">
+        <div className="bg-amber-400 text-gray-950 px-3 sm:px-4 py-2 sm:py-2.5 font-bold flex flex-wrap items-center justify-between gap-2 border-b-2 border-amber-500 shadow-md sticky top-0 z-40">
           <div className="flex items-center gap-2 min-w-0">
             <Ruler className="w-4 h-4 shrink-0 text-gray-900" />
             <span className="text-xs sm:text-sm truncate">
-              Configuring estimate for <strong>{returnToOrder.productName || 'Item'}</strong> (Order #{returnToOrder.orderId})
+              Estimate for <strong>{returnToOrder.productName || 'Item'}</strong> {returnToOrder.orderId ? `(Order #${returnToOrder.orderId})` : '(New Order)'}
             </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Calculated estimate badge */}
+            <div className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-xs font-black text-gray-900 bg-amber-300/80 border border-amber-500/40" title="Calculated Estimate Cost">
+              Est: ₹{finalCost.toFixed(0)}
+            </div>
+
+            {/* Quote amount field */}
+            <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border-2 border-gray-900 shadow-2xs">
+              <span className="text-[10px] sm:text-xs font-bold text-gray-600 uppercase">Quote: ₹</span>
+              <input
+                type="number"
+                value={quoteAmount}
+                onChange={(e) => setQuoteAmount(e.target.value)}
+                placeholder={Math.round(finalCost).toString()}
+                className="w-20 sm:w-24 text-right font-black text-xs sm:text-sm text-gray-900 focus:outline-none bg-transparent"
+                title="Customer Quote (Price to quote customer)"
+              />
+            </div>
+
             <button
-              onClick={() => navigate(`/orders/${returnToOrder.orderId}`)}
-              className="px-2.5 py-1 bg-white hover:bg-gray-100 text-gray-900 rounded-lg text-xs font-bold transition-colors"
+              onClick={() => {
+                navigate(returnToOrder.returnUrl || (returnToOrder.orderId ? `/orders/${returnToOrder.orderId}` : '/orders/new'), {
+                  state: { savedFormData: returnToOrder.formData }
+                });
+              }}
+              className="px-2 sm:px-2.5 py-1 bg-white hover:bg-gray-100 text-gray-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={applyToOrder}
               disabled={isSaving}
-              className="px-3.5 py-1 bg-gray-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+              className="px-3 sm:px-3.5 py-1 bg-gray-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
               <span>Apply to Order</span>
@@ -941,7 +987,7 @@ export default function WoodEstimator() {
               <div className="mb-6 bg-gray-50 p-4 md:p-5 rounded-xl border-2 border-gray-900 shadow-sm">
                 <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Carving Rate per sq.in</label>
                 <div className="flex gap-2 flex-wrap">
-                  {['3.5', '5', 'custom'].map(opt => (
+                  {['5', '3.5', 'custom'].map(opt => (
                     <button
                       key={opt}
                       onClick={() => setCarvingRateOption(opt)}
@@ -1093,9 +1139,24 @@ export default function WoodEstimator() {
               <span className="font-bold text-amber-400 text-xs">₹{profitMargin.toFixed(0)}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Estimate</span>
-            <span className="text-xl md:text-2xl font-black text-white leading-none">₹{finalCost.toFixed(0)}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-col text-right">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Calculated Est.</span>
+              <span className="text-lg md:text-2xl font-black text-white leading-none">₹{finalCost.toFixed(0)}</span>
+            </div>
+            {returnToOrder && (
+              <div className="flex items-center gap-1 bg-gray-800 border border-gray-700 px-2 py-1 rounded-lg">
+                <span className="text-[10px] text-amber-400 font-bold uppercase">Quote: ₹</span>
+                <input
+                  type="number"
+                  value={quoteAmount}
+                  onChange={(e) => setQuoteAmount(e.target.value)}
+                  placeholder={Math.round(finalCost).toString()}
+                  className="w-16 sm:w-20 text-right font-black text-xs text-white focus:outline-none bg-transparent"
+                  title="Customer Quote (Price quoted to customer)"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

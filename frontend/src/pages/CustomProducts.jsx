@@ -482,12 +482,12 @@ export default function CustomProducts() {
                                 </div>
                               )}
                               <select 
-                                value={data.carvingRateOption || '3.5'} 
+                                value={data.carvingRateOption === '3.5' ? '5' : (data.carvingRateOption || '5')} 
                                 onChange={e => updateDetailField('carvingRateOption', e.target.value)} 
                                 className="bg-white border border-amber-200 rounded text-sm font-bold text-amber-900 py-0.5 outline-none"
                               >
-                                <option value="3.5">₹3.5</option>
                                 <option value="5">₹5.0</option>
+                                <option value="3.5">₹3.5</option>
                                 <option value="custom">Custom</option>
                               </select>
                             </div>

@@ -26,6 +26,8 @@ export default function OrderItemEstimateModal({
   onClose, 
   item, 
   orderId, 
+  orderFormData,
+  returnUrl,
   initialTemplate,
   onEstimateUpdated 
 }) {
@@ -37,6 +39,7 @@ export default function OrderItemEstimateModal({
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [updateUnitPrice, setUpdateUnitPrice] = useState(true);
+  const [quoteAmount, setQuoteAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -53,7 +56,7 @@ export default function OrderItemEstimateModal({
     selectedWoodId: firstWoodId,
     fittingLabour: '1200',
     hasCarving: false,
-    carvingRateOption: '3.5',
+    carvingRateOption: '5',
     mainCarvingFace: 'w',
     labourItems: []
   });
@@ -62,6 +65,10 @@ export default function OrderItemEstimateModal({
     if (!isOpen || !item) return;
     
     const isDf = initialTemplate === 'door_frame' || isDoorFrameProduct(item);
+
+    // Initialize quote amount
+    const existingQuote = item.estimateData?.quotedAmount ?? (item.unitPrice ? Math.round(Number(item.unitPrice)) : '');
+    setQuoteAmount(existingQuote ? String(existingQuote) : '');
 
     // Default to view mode if estimateData exists
     if (item.estimateData) {
@@ -168,26 +175,30 @@ export default function OrderItemEstimateModal({
     try {
       const computed = calculateEstimate(editingData, woodTypes);
       const finalCost = Math.round(computed?.finalCost || 0);
+      const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount)))
+        ? Math.round(Number(quoteAmount))
+        : finalCost;
 
       const payload = {
+        productId: item.productId || item.product?.id || null,
+        productName: item.productName || item.product?.name || '',
+        product: item.product || null,
         estimateData: {
           ...editingData,
           finalCost,
+          quotedAmount: effectiveQuote,
           totalVolumeCft: computed?.totalVolumeCft || 0,
         },
         savedEstimateId: selectedEstimate?.id || item.savedEstimateId || null,
-        updateLinePrice: updateUnitPrice,
-        unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
+        updateLinePrice: true,
+        unitPrice: effectiveQuote
       };
 
       const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
       if (hasValidItemId) {
         await api.patch(`/orders/items/${item.id}/estimate`, payload);
       }
-      toast.success(updateUnitPrice 
-        ? `Door Frame estimate saved & price updated to ₹${finalCost.toLocaleString()}`
-        : 'Door Frame estimate saved successfully'
-      );
+      toast.success(`Door Frame estimate saved (Quote: ₹${effectiveQuote.toLocaleString()})`);
       if (onEstimateUpdated) onEstimateUpdated(payload);
       onClose();
     } catch (e) {
@@ -211,15 +222,22 @@ export default function OrderItemEstimateModal({
       const payloadData = estimateToAttach.data || estimateToAttach;
       const computed = getComputedDetails(payloadData);
       const finalCost = Math.round(computed?.finalCost || estimateToAttach.totalCost || 0);
+      const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount)))
+        ? Math.round(Number(quoteAmount))
+        : (payloadData.quotedAmount ? Math.round(Number(payloadData.quotedAmount)) : finalCost);
 
       const payload = {
+        productId: item.productId || item.product?.id || null,
+        productName: item.productName || item.product?.name || '',
+        product: item.product || null,
         estimateData: {
           ...payloadData,
-          finalCost
+          finalCost,
+          quotedAmount: effectiveQuote,
         },
         savedEstimateId: estimateToAttach.id || null,
         updateLinePrice: updateUnitPrice,
-        unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
+        unitPrice: updateUnitPrice ? effectiveQuote : (item.unitPrice || 0)
       };
 
       const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
@@ -227,7 +245,7 @@ export default function OrderItemEstimateModal({
         await api.patch(`/orders/items/${item.id}/estimate`, payload);
       }
       toast.success(updateUnitPrice 
-        ? `Estimate attached & price updated to ₹${finalCost.toLocaleString()}`
+        ? `Estimate attached & price updated to ₹${effectiveQuote.toLocaleString()}`
         : 'Estimate attached successfully'
       );
       if (onEstimateUpdated) onEstimateUpdated(payload);
@@ -235,6 +253,46 @@ export default function OrderItemEstimateModal({
     } catch (e) {
       console.error(e);
       toast.error('Failed to attach estimate: ' + (e.response?.data?.message || e.message));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveCustomQuote = async () => {
+    if (!editingData && !item.estimateData) return;
+    setIsSubmitting(true);
+    try {
+      const currentData = editingData || item.estimateData;
+      const computed = currentComputed || getComputedDetails(currentData);
+      const finalCost = Math.round(computed?.finalCost || currentData.finalCost || 0);
+      const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount)))
+        ? Math.round(Number(quoteAmount))
+        : finalCost;
+
+      const payload = {
+        productId: item.productId || item.product?.id || null,
+        productName: item.productName || item.product?.name || '',
+        product: item.product || null,
+        estimateData: {
+          ...currentData,
+          finalCost,
+          quotedAmount: effectiveQuote,
+        },
+        savedEstimateId: item.savedEstimateId || null,
+        updateLinePrice: true,
+        unitPrice: effectiveQuote
+      };
+
+      const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
+      if (hasValidItemId) {
+        await api.patch(`/orders/items/${item.id}/estimate`, payload);
+      }
+      toast.success(`Quote updated & price set to ₹${effectiveQuote.toLocaleString()}`);
+      if (onEstimateUpdated) onEstimateUpdated(payload);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to update quote: ' + (e.response?.data?.message || e.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -254,6 +312,9 @@ export default function OrderItemEstimateModal({
       }
       toast.success('Estimate detached from item');
       if (onEstimateUpdated) onEstimateUpdated({ 
+        productId: item.productId || item.product?.id || null,
+        productName: item.productName || item.product?.name || '',
+        product: item.product || null,
         estimateData: null, 
         savedEstimateId: null, 
         updateLinePrice: false,
@@ -270,19 +331,45 @@ export default function OrderItemEstimateModal({
 
   const handleOpenInEstimator = (prefillEstimate = null) => {
     onClose();
+    const baseFormData = orderFormData ? {
+      ...orderFormData,
+      items: orderFormData.items ? orderFormData.items.map((it, idx) => {
+        if (idx === item.rowIndex) {
+          return {
+            ...it,
+            productId: item.productId || item.product?.id || it.productId,
+            productName: item.productName || item.product?.name || it.productName,
+            product: item.product || it.product,
+          };
+        }
+        return it;
+      }) : []
+    } : null;
+
+    const currentQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount)))
+      ? Math.round(Number(quoteAmount))
+      : (item.estimateData?.quotedAmount || item.unitPrice || null);
+
     navigate('/wood-estimator', {
       state: {
         returnToOrder: {
           orderId: orderId || null,
           itemId: item.id || null,
-          rowIndex: item.rowIndex !== undefined ? item.rowIndex : undefined,
-          productName: item.productName,
+          rowIndex: item.rowIndex !== undefined ? item.rowIndex : 0,
+          productId: item.productId || item.product?.id || null,
+          productName: item.productName || item.product?.name || '',
+          product: item.product || null,
+          quotedAmount: currentQuote,
+          formData: baseFormData,
           isOrderForm: !orderId || !item.id,
-          returnUrl: orderId ? `/orders/${orderId}` : '/orders/new'
+          returnUrl: returnUrl || (orderId ? `/orders/${orderId}` : '/orders/new')
         },
         loadEstimate: prefillEstimate ? {
           name: item.productName,
-          data: prefillEstimate.data || prefillEstimate,
+          data: {
+            ...(prefillEstimate.data || prefillEstimate),
+            quotedAmount: currentQuote
+          },
           id: prefillEstimate.id || null
         } : null
       }
@@ -294,7 +381,7 @@ export default function OrderItemEstimateModal({
   );
 
   const currentComputed = editingData ? getComputedDetails(editingData) : (item.estimateData ? getComputedDetails(item.estimateData) : null);
-  const isDoorFrame = editingData?.activeTemplate === 'door_frame';
+  const isDoorFrame = editingData?.activeTemplate === 'door_frame' || isDoorFrameProduct(item) || initialTemplate === 'door_frame';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
@@ -321,8 +408,8 @@ export default function OrderItemEstimateModal({
           </button>
         </div>
 
-        {/* Mode Switcher if item already has estimate */}
-        {item.estimateData && (
+        {/* Mode Switcher for non-Door-Frame items that already have estimate */}
+        {!isDoorFrame && item.estimateData && (
           <div className="flex border-b border-gray-200 bg-gray-50 px-4 pt-2">
             <button
               onClick={() => setMode('view')}
@@ -580,12 +667,12 @@ export default function OrderItemEstimateModal({
                                   </div>
                                 )}
                                 <select 
-                                  value={data.carvingRateOption || '3.5'} 
+                                  value={data.carvingRateOption === '3.5' ? '5' : (data.carvingRateOption || '5')} 
                                   onChange={e => updateDetailField('carvingRateOption', e.target.value)} 
                                   className="bg-white border border-amber-200 rounded text-sm font-bold text-amber-900 py-1 px-2 outline-none"
                                 >
-                                  <option value="3.5">₹3.5</option>
                                   <option value="5">₹5.0</option>
+                                  <option value="3.5">₹3.5</option>
                                   <option value="custom">Custom</option>
                                 </select>
                               </div>
@@ -606,58 +693,38 @@ export default function OrderItemEstimateModal({
                         )}
                       </section>
 
-                      {/* Door Frame Estimate Total & Direct Order Save Action */}
-                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                        <div className="flex justify-between items-center">
-                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Door Frame Estimate</div>
-                          <div className="text-2xl font-black text-gray-900">₹{Math.round(estimate.finalCost).toLocaleString()}</div>
+                      {/* Door Frame Estimate Total & Customer Quote */}
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
+                        <div className="flex justify-between items-center text-gray-500 py-0.5">
+                          <span className="text-xs sm:text-sm font-semibold">Total Estimate :</span>
+                          <span className="text-sm sm:text-base font-bold text-gray-600">₹{Math.round(estimate.finalCost).toLocaleString()}</span>
                         </div>
 
-                        <label className="flex items-center gap-2 cursor-pointer pt-2 border-t border-gray-200">
-                          <input
-                            type="checkbox"
-                            checked={updateUnitPrice}
-                            onChange={(e) => setUpdateUnitPrice(e.target.checked)}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
-                          />
-                          <span className="text-xs font-bold text-gray-800">
-                            Update item unit price to estimate total (₹{Math.round(estimate.finalCost).toLocaleString()})
-                          </span>
-                        </label>
-
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200">
-                          {item.estimateData && (
-                            <button
-                              type="button"
-                              onClick={handleDetachEstimate}
-                              disabled={isSubmitting}
-                              className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors flex items-center gap-1.5"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Detach</span>
-                            </button>
-                          )}
-                          
-                          <div className="flex items-center gap-2 ml-auto">
-                            <button
-                              type="button"
-                              onClick={() => setMode('select')}
-                              className="px-3.5 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl transition-colors flex items-center gap-1.5"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                              <span>Templates</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={handleSaveDoorFrameEstimate}
-                              className="px-4 py-2 text-xs font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                            >
-                              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                              <span>{item.estimateData ? 'Save Changes to Item' : 'Attach to Item'}</span>
-                            </button>
+                        <div className="flex justify-between items-center pt-1.5 border-t border-gray-200">
+                          <span className="text-base sm:text-lg font-black text-gray-900">Customer Quote :</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-lg sm:text-xl font-black text-gray-900">₹</span>
+                            <input
+                              type="number"
+                              value={quoteAmount}
+                              onChange={(e) => setQuoteAmount(e.target.value)}
+                              placeholder={Math.round(estimate.finalCost).toString()}
+                              className="w-36 sm:w-44 px-3 py-1.5 text-right font-black text-xl sm:text-2xl border-2 border-gray-900 rounded-xl focus:border-blue-600 focus:outline-none bg-white text-gray-950 shadow-2xs"
+                              title="Customer Quote"
+                            />
                           </div>
+                        </div>
+
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={handleSaveDoorFrameEstimate}
+                            className="w-full sm:w-auto px-6 py-2.5 text-sm font-black text-white bg-gray-900 hover:bg-black rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                          >
+                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-amber-400" />}
+                            <span>Save changes to item</span>
+                          </button>
                         </div>
                       </div>
                     </>
@@ -675,22 +742,22 @@ export default function OrderItemEstimateModal({
                       ₹{Math.round(currentComputed?.finalCost || editingData.finalCost || 0).toLocaleString()}
                     </span>
                   </div>
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Customer Quote</span>
+                    <span className="text-lg sm:text-xl font-black text-emerald-950">
+                      ₹{Math.round(editingData.quotedAmount ?? item.unitPrice ?? currentComputed?.finalCost ?? editingData.finalCost ?? 0).toLocaleString()}
+                    </span>
+                  </div>
                   <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">Total Volume</span>
                     <span className="text-lg sm:text-xl font-black text-blue-950">
                       {(currentComputed?.totalVolumeCft || 0).toFixed(2)} <span className="text-xs font-semibold">CFT</span>
                     </span>
                   </div>
-                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Wood Type</span>
-                    <span className="text-sm sm:text-base font-black text-emerald-950 truncate block">
-                      {currentComputed?.woodName || 'Standard'}
-                    </span>
-                  </div>
                   <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Template</span>
-                    <span className="text-sm sm:text-base font-black text-purple-950 capitalize truncate block">
-                      {editingData.activeTemplate === 'door_frame' ? 'Door Frame' : 'Custom'}
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Wood Type</span>
+                    <span className="text-sm sm:text-base font-black text-purple-950 truncate block">
+                      {currentComputed?.woodName || 'Standard'}
                     </span>
                   </div>
                 </div>
@@ -723,6 +790,37 @@ export default function OrderItemEstimateModal({
                         ₹{Math.round(currentComputed?.totalLabour || 0).toLocaleString()}
                       </strong>
                     </div>
+                  </div>
+                </div>
+
+                {/* Customer Quote Field for Custom Items */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 block">Customer Quote Amount</span>
+                    <span className="text-[11px] text-gray-500">Price quoted to customer on order</span>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-gray-500">₹</span>
+                      <input
+                        type="number"
+                        value={quoteAmount}
+                        onChange={(e) => setQuoteAmount(e.target.value)}
+                        placeholder={Math.round(currentComputed?.finalCost || editingData.finalCost || 0).toString()}
+                        className="w-28 px-2.5 py-1 text-right font-black text-sm border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none bg-white text-gray-900"
+                        title="Customer Quote"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleSaveCustomQuote}
+                      className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-2xs disabled:opacity-50"
+                      title="Update Quote on Order Item"
+                    >
+                      {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
+                      <span>Save Quote</span>
+                    </button>
                   </div>
                 </div>
 
@@ -829,7 +927,12 @@ export default function OrderItemEstimateModal({
                     return (
                       <div
                         key={est.id}
-                        onClick={() => setSelectedEstimate(est)}
+                        onClick={() => {
+                          setSelectedEstimate(est);
+                          if (est.data?.quotedAmount) {
+                            setQuoteAmount(String(Math.round(Number(est.data.quotedAmount))));
+                          }
+                        }}
                         className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
                           isSelected
                             ? 'border-blue-600 bg-blue-50/70 shadow-sm'
@@ -863,53 +966,80 @@ export default function OrderItemEstimateModal({
               )}
 
               {/* Price Update Option & Confirm Button */}
-              {selectedEstimate && (
-                <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={updateUnitPrice}
-                      onChange={(e) => setUpdateUnitPrice(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
-                    />
-                    <span className="text-xs font-bold text-gray-800">
-                      Update item unit price to estimate total (₹{Math.round(getComputedDetails(selectedEstimate.data)?.finalCost || selectedEstimate.totalCost || 0).toLocaleString()})
-                    </span>
-                  </label>
+              {selectedEstimate && (() => {
+                const computed = getComputedDetails(selectedEstimate.data);
+                const estCost = Math.round(computed?.finalCost || selectedEstimate.totalCost || 0);
+                const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount)))
+                  ? Number(quoteAmount)
+                  : (selectedEstimate.data?.quotedAmount ? Math.round(Number(selectedEstimate.data.quotedAmount)) : estCost);
 
-                  <div className="flex flex-wrap items-center gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEstimate(null)}
-                      className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900"
-                    >
-                      Clear
-                    </button>
-                    {selectedEstimate.data?.activeTemplate === 'door_frame' && (
+                return (
+                  <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-3">
+                    {/* Customer Quote Field */}
+                    <div className="bg-white p-3 rounded-xl border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                      <div>
+                        <span className="text-xs font-bold text-gray-800 block">Customer Quote Amount</span>
+                        <span className="text-[11px] text-gray-500">Price quoted to customer (estimate total: ₹{estCost.toLocaleString()})</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                        <span className="text-sm font-bold text-gray-500">₹</span>
+                        <input
+                          type="number"
+                          value={quoteAmount}
+                          onChange={(e) => setQuoteAmount(e.target.value)}
+                          placeholder={estCost.toString()}
+                          className="w-32 px-3 py-1.5 text-right font-black text-sm border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none bg-white text-gray-900"
+                          title="Customer Quote Amount"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={updateUnitPrice}
+                        onChange={(e) => setUpdateUnitPrice(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="text-xs font-bold text-gray-800">
+                        Update item unit price to customer quote (₹{effectiveQuote.toLocaleString()})
+                      </span>
+                    </label>
+
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditingData({ ...selectedEstimate.data });
-                          setMode('view');
-                        }}
-                        className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-xl transition-colors shadow-2xs flex items-center gap-1.5"
+                        onClick={() => setSelectedEstimate(null)}
+                        className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900"
                       >
-                        <Ruler className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Customize in Door Frame UI</span>
+                        Clear
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={() => handleAttachEstimate(selectedEstimate)}
-                      className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                      <span>Attach to Item</span>
-                    </button>
+                      {selectedEstimate.data?.activeTemplate === 'door_frame' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingData({ ...selectedEstimate.data });
+                            setMode('view');
+                          }}
+                          className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-xl transition-colors shadow-2xs flex items-center gap-1.5"
+                        >
+                          <Ruler className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Customize in Door Frame UI</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => handleAttachEstimate(selectedEstimate)}
+                        className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        <span>Attach to Item</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>
