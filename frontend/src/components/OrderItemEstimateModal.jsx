@@ -19,8 +19,16 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateEstimate } from '../utils/estimationEngine';
+import { isDoorFrameProduct } from '../utils/productEstimateHelpers';
 
-export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId, onEstimateUpdated }) {
+export default function OrderItemEstimateModal({ 
+  isOpen, 
+  onClose, 
+  item, 
+  orderId, 
+  initialTemplate,
+  onEstimateUpdated 
+}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState('view'); // 'view' or 'select'
   const [savedEstimates, setSavedEstimates] = useState([]);
@@ -32,22 +40,46 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const getDefaultDoorFrameData = (firstWoodId = '') => ({
+    activeTemplate: 'door_frame',
+    dfThicknessOption: '5x3',
+    dfWidth: '3.5',
+    dfWidthUnit: 'ft',
+    dfHeight: '7',
+    dfHeightUnit: 'ft',
+    excludeBottomPiece: false,
+    hasBorder: false,
+    borderThicknessOption: '4x1.5',
+    selectedWoodId: firstWoodId,
+    fittingLabour: '1200',
+    hasCarving: false,
+    carvingRateOption: '3.5',
+    mainCarvingFace: 'w',
+    labourItems: []
+  });
+
   useEffect(() => {
     if (!isOpen || !item) return;
     
-    // Default to view mode if estimateData exists, otherwise selection mode
+    const isDf = initialTemplate === 'door_frame' || isDoorFrameProduct(item);
+
+    // Default to view mode if estimateData exists
     if (item.estimateData) {
       setMode('view');
       setEditingData({ ...item.estimateData });
+    } else if (isDf) {
+      // Direct fixed Door Frame template - no custom estimation required!
+      setMode('view');
+      setEditingData(getDefaultDoorFrameData(woodTypes[0]?.id || ''));
     } else {
       setMode('select');
       setEditingData(null);
     }
     
-    fetchEstimatesAndWoods();
+    fetchEstimatesAndWoods(isDf);
   }, [isOpen, item]);
 
-  const fetchEstimatesAndWoods = async () => {
+  const fetchEstimatesAndWoods = async (isDf = false) => {
     setIsLoadingEstimates(true);
     try {
       const [estimatesData, woodsData] = await Promise.all([
@@ -56,6 +88,14 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
       ]);
       setSavedEstimates(estimatesData || []);
       setWoodTypes(woodsData || []);
+
+      if (isDf && woodsData?.length > 0) {
+        setEditingData(prev => {
+          if (!prev) return getDefaultDoorFrameData(woodsData[0].id);
+          if (!prev.selectedWoodId) return { ...prev, selectedWoodId: woodsData[0].id };
+          return prev;
+        });
+      }
     } catch (e) {
       console.error('Failed to load estimates or wood types:', e);
     } finally {
@@ -136,15 +176,18 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
           totalVolumeCft: computed?.totalVolumeCft || 0,
         },
         savedEstimateId: selectedEstimate?.id || item.savedEstimateId || null,
-        updateLinePrice: updateUnitPrice
+        updateLinePrice: updateUnitPrice,
+        unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
       };
 
-      await api.patch(`/orders/items/${item.id}/estimate`, payload);
+      if (item.id) {
+        await api.patch(`/orders/items/${item.id}/estimate`, payload);
+      }
       toast.success(updateUnitPrice 
         ? `Door Frame estimate saved & price updated to ₹${finalCost.toLocaleString()}`
         : 'Door Frame estimate saved successfully'
       );
-      if (onEstimateUpdated) onEstimateUpdated();
+      if (onEstimateUpdated) onEstimateUpdated(payload);
       onClose();
     } catch (e) {
       console.error(e);
@@ -155,23 +198,7 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
   };
 
   const handleCreateNewDoorFrame = () => {
-    const defaultDoorFrameData = {
-      activeTemplate: 'door_frame',
-      dfThicknessOption: '5x3',
-      dfWidth: '3.5',
-      dfWidthUnit: 'ft',
-      dfHeight: '7',
-      dfHeightUnit: 'ft',
-      excludeBottomPiece: false,
-      hasBorder: false,
-      borderThicknessOption: '4x1.5',
-      selectedWoodId: woodTypes[0]?.id || '',
-      fittingLabour: '1200',
-      hasCarving: false,
-      carvingRateOption: '3.5',
-      mainCarvingFace: 'w',
-      labourItems: []
-    };
+    const defaultDoorFrameData = getDefaultDoorFrameData(woodTypes[0]?.id || '');
     setEditingData(defaultDoorFrameData);
     setMode('view');
   };
@@ -182,23 +209,26 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
     try {
       const payloadData = estimateToAttach.data || estimateToAttach;
       const computed = getComputedDetails(payloadData);
-      const finalCost = computed?.finalCost || estimateToAttach.totalCost || 0;
+      const finalCost = Math.round(computed?.finalCost || estimateToAttach.totalCost || 0);
 
       const payload = {
         estimateData: {
           ...payloadData,
-          finalCost: Math.round(finalCost)
+          finalCost
         },
         savedEstimateId: estimateToAttach.id || null,
-        updateLinePrice: updateUnitPrice
+        updateLinePrice: updateUnitPrice,
+        unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
       };
 
-      await api.patch(`/orders/items/${item.id}/estimate`, payload);
+      if (item.id) {
+        await api.patch(`/orders/items/${item.id}/estimate`, payload);
+      }
       toast.success(updateUnitPrice 
-        ? `Estimate attached & price updated to ₹${Math.round(finalCost).toLocaleString()}`
+        ? `Estimate attached & price updated to ₹${finalCost.toLocaleString()}`
         : 'Estimate attached successfully'
       );
-      if (onEstimateUpdated) onEstimateUpdated();
+      if (onEstimateUpdated) onEstimateUpdated(payload);
       onClose();
     } catch (e) {
       console.error(e);
@@ -212,13 +242,20 @@ export default function OrderItemEstimateModal({ isOpen, onClose, item, orderId,
     if (!window.confirm('Are you sure you want to remove the estimate from this item?')) return;
     setIsSubmitting(true);
     try {
-      await api.patch(`/orders/items/${item.id}/estimate`, {
-        estimateData: null,
-        savedEstimateId: null,
-        updateLinePrice: false
-      });
+      if (item.id) {
+        await api.patch(`/orders/items/${item.id}/estimate`, {
+          estimateData: null,
+          savedEstimateId: null,
+          updateLinePrice: false
+        });
+      }
       toast.success('Estimate detached from item');
-      if (onEstimateUpdated) onEstimateUpdated();
+      if (onEstimateUpdated) onEstimateUpdated({ 
+        estimateData: null, 
+        savedEstimateId: null, 
+        updateLinePrice: false,
+        unitPrice: item.unitPrice || 0
+      });
       onClose();
     } catch (e) {
       console.error(e);

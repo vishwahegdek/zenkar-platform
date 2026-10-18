@@ -1,5 +1,10 @@
 import React from 'react';
 import Autocomplete from './Autocomplete';
+import { 
+  formatEstimateBadge, 
+  isDoorFrameProduct, 
+  isEstimateCategoryOrProduct 
+} from '../utils/productEstimateHelpers';
 
 export default function OrderItemsTable({
   items,
@@ -15,6 +20,7 @@ export default function OrderItemsTable({
   handleItemBlur,
   isItemInvalid,
   itemRefs,
+  onOpenEstimateModal,
   footerChildren
 }) {
   return (
@@ -33,6 +39,9 @@ export default function OrderItemsTable({
 
              {items.map((item, idx) => {
                const invalid = isItemInvalid ? isItemInvalid(item, idx) : false;
+               const isEstItem = isEstimateCategoryOrProduct(item) || isEstimateCategoryOrProduct(item.product);
+               const isDf = isDoorFrameProduct(item) || isDoorFrameProduct(item.product);
+
                return (
                <div 
                   key={idx} 
@@ -42,16 +51,41 @@ export default function OrderItemsTable({
                   }`}>
                   <div className="col-span-5 md:col-span-5 space-y-1">
                      {item.productId ? (
-                        <div className="group relative">
-                           <div className="font-medium text-sm text-gray-900 truncate">{item.productName}</div>
-                           <button 
-                               type="button"
-                               onClick={() => handleChangeProduct(idx)}
-                               className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
-                           >
-                               Change
-                           </button>
-                       </div>
+                        <div className="space-y-1">
+                           <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-sm text-gray-900 truncate">{item.productName}</span>
+                              <button 
+                                  type="button" 
+                                  onClick={() => handleChangeProduct(idx)}
+                                  className="text-[10px] items-center text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                  Change
+                              </button>
+                           </div>
+
+                           {item.estimateData ? (
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenEstimateModal && onOpenEstimateModal(idx)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors shadow-2xs"
+                                  title="Edit estimate"
+                                >
+                                  <span>📐 {formatEstimateBadge(item.estimateData)}</span>
+                                </button>
+                              </div>
+                           ) : isEstItem ? (
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenEstimateModal && onOpenEstimateModal(idx)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-800 border border-dashed border-amber-400 hover:bg-amber-100 transition-colors"
+                                >
+                                  <span>+ {isDf ? 'Configure Door Frame' : 'Attach Estimate'}</span>
+                                </button>
+                              </div>
+                           ) : null}
+                        </div>
                      ) : (
                         <Autocomplete 
                            value={item.productName}

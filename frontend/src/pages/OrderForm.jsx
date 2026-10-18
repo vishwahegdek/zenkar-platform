@@ -9,9 +9,11 @@ import CustomerForm from './CustomerForm';
 import ContactForm from '../components/ContactForm';
 import ProductForm from './ProductForm';
 import OrderItemsTable from '../components/OrderItemsTable';
+import OrderItemEstimateModal from '../components/OrderItemEstimateModal';
 import { format } from 'date-fns';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { toast } from 'react-hot-toast';
+import { isDoorFrameProduct, isEstimateCategoryOrProduct } from '../utils/productEstimateHelpers';
 
 export default function OrderForm() {
   const { id: paramId } = useParams();
@@ -35,6 +37,10 @@ export default function OrderForm() {
   const [tempProductName, setTempProductName] = useState('');
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false); // New: Contact Edit
+
+  // Estimate Modal State for Order Items
+  const [activeEstimateRowIndex, setActiveEstimateRowIndex] = useState(null);
+  const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
 
   // Handle Hash Change for Modals
   useEffect(() => {
@@ -215,13 +221,49 @@ export default function OrderForm() {
   };
 
   const handleProductSelect = (index, product) => {
+    const isDf = isDoorFrameProduct(product);
+    const isEst = isEstimateCategoryOrProduct(product);
+
     const newItems = [...formData.items];
+    const qty = Number(newItems[index]?.quantity) || 1;
+    const price = Number(product.defaultUnitPrice || 0);
+
     newItems[index] = {
       ...newItems[index],
       productId: product.id,
       productName: product.name,
-      unitPrice: Number(product.defaultUnitPrice),
-      lineTotal: Number(newItems[index].quantity || 0) * Number(product.defaultUnitPrice),
+      product: product,
+      quantity: qty,
+      unitPrice: price,
+      lineTotal: qty * price,
+    };
+    setFormData({ ...formData, items: newItems });
+
+    // If product is from Doors & Frames or Furniture, launch estimate workflow
+    if (isDf || isEst) {
+      setActiveEstimateRowIndex(index);
+      setIsEstimateModalOpen(true);
+    }
+  };
+
+  const handleEstimateUpdated = (payload) => {
+    if (activeEstimateRowIndex === null) return;
+    const newItems = [...formData.items];
+    const currentItem = newItems[activeEstimateRowIndex];
+    if (!currentItem) return;
+
+    const newUnitPrice = payload?.updateLinePrice && payload?.unitPrice !== undefined
+      ? Number(payload.unitPrice)
+      : currentItem.unitPrice;
+
+    const qty = Number(currentItem.quantity) || 1;
+
+    newItems[activeEstimateRowIndex] = {
+      ...currentItem,
+      estimateData: payload?.estimateData ?? null,
+      savedEstimateId: payload?.savedEstimateId ?? null,
+      unitPrice: newUnitPrice,
+      lineTotal: qty * newUnitPrice,
     };
     setFormData({ ...formData, items: newItems });
   };
@@ -374,6 +416,10 @@ export default function OrderForm() {
            setActiveProductRowIndex={(idx) => { activeProductRowIndexRef.current = idx; }}
            handleItemBlur={handleItemBlur}
            isItemInvalid={(item) => item.touched && !item.productId && (item.productName || '').trim() !== ''}
+           onOpenEstimateModal={(idx) => {
+             setActiveEstimateRowIndex(idx);
+             setIsEstimateModalOpen(true);
+           }}
            footerChildren={
              !isEdit ? (
                <>
@@ -504,6 +550,21 @@ export default function OrderForm() {
               }}
           />
        </Modal>
+
+       {/* Item Estimate Modal */}
+       {isEstimateModalOpen && activeEstimateRowIndex !== null && formData.items[activeEstimateRowIndex] && (
+         <OrderItemEstimateModal
+           isOpen={isEstimateModalOpen}
+           onClose={() => {
+             setIsEstimateModalOpen(false);
+             setActiveEstimateRowIndex(null);
+           }}
+           item={formData.items[activeEstimateRowIndex]}
+           orderId={activeId}
+           initialTemplate={isDoorFrameProduct(formData.items[activeEstimateRowIndex]) ? 'door_frame' : undefined}
+           onEstimateUpdated={handleEstimateUpdated}
+         />
+       )}
 
         {/* Mobile FAB for Save Order */}
          <button 

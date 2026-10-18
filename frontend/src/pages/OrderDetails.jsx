@@ -11,6 +11,7 @@ import OrderItemEstimateModal from '../components/OrderItemEstimateModal';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import { isDoorFrameProduct } from '../utils/productEstimateHelpers';
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -40,9 +41,11 @@ export default function OrderDetails() {
     const normalized = categoryName.trim().toLowerCase();
     return (
       !categoryName ||
+      normalized === 'doors & frames' ||
       normalized === 'door - door frames' ||
       normalized === 'furniture' ||
       normalized.includes('door') ||
+      normalized.includes('frame') ||
       normalized.includes('furniture')
     );
   };
@@ -421,6 +424,7 @@ export default function OrderDetails() {
           onClose={() => setEstimateModalItem(null)}
           item={estimateModalItem}
           orderId={order?.id}
+          initialTemplate={isDoorFrameProduct(estimateModalItem) ? 'door_frame' : undefined}
           onEstimateUpdated={() => {
             queryClient.invalidateQueries(['orders', id]);
             queryClient.invalidateQueries(['orders']);

@@ -60,6 +60,64 @@ async function main() {
       console.log('Created product category: Bee boxes');
   }
 
+  // Seed "Furniture" (Essential)
+  let furniture = await (prisma as any).productCategory.findFirst({ where: { name: 'Furniture' } });
+  if (!furniture) {
+      furniture = await (prisma as any).productCategory.create({ data: { name: 'Furniture' } });
+      console.log('Created product category: Furniture');
+  }
+
+  // Seed "Doors & Frames" (Essential)
+  let doorsFrames = await (prisma as any).productCategory.findFirst({
+      where: { name: { in: ['Doors & Frames', 'Door - Door Frames', 'Door Frames'] } }
+  });
+  if (!doorsFrames) {
+      doorsFrames = await (prisma as any).productCategory.create({ data: { name: 'Doors & Frames' } });
+      console.log('Created product category: Doors & Frames');
+  } else if (doorsFrames.name !== 'Doors & Frames') {
+      doorsFrames = await (prisma as any).productCategory.update({
+          where: { id: doorsFrames.id },
+          data: { name: 'Doors & Frames' }
+      });
+      console.log('Updated product category to: Doors & Frames');
+  }
+
+  // Seed standard products for Doors & Frames (Estimate-based products with defaultUnitPrice: 0)
+  const doorsFramesSeedProducts = [
+      'Door Frame',
+      'Single Door',
+      'Double door',
+      'Window Frame',
+      'Window shutters',
+      'Door Frame with attached window'
+  ];
+
+  for (const prodName of doorsFramesSeedProducts) {
+      const existingProd = await (prisma as any).product.findFirst({
+          where: {
+              categoryId: doorsFrames.id,
+              name: { equals: prodName, mode: 'insensitive' }
+          }
+      });
+      if (!existingProd) {
+          await (prisma as any).product.create({
+              data: {
+                  name: prodName,
+                  defaultUnitPrice: 0,
+                  categoryId: doorsFrames.id,
+                  isDeleted: false
+              }
+          });
+          console.log(`Created seed product under Doors & Frames: ${prodName}`);
+      } else if (Number(existingProd.defaultUnitPrice) !== 0 || existingProd.name !== prodName) {
+          await (prisma as any).product.update({
+              where: { id: existingProd.id },
+              data: { name: prodName, defaultUnitPrice: 0, isDeleted: false }
+          });
+          console.log(`Updated seed product under Doors & Frames: ${prodName}`);
+      }
+  }
+
   // --- Sample Test Data (Development Only) ---
   if (process.env.NODE_ENV !== 'production') {
       // 1. Customers
