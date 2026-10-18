@@ -221,19 +221,35 @@ export default function WoodEstimator() {
     setIsSaving(true);
     try {
       const data = getEstimatePayload();
+      const finalCost = Math.round(estimateData.finalCost);
       const payload = {
         estimateData: {
           ...data,
-          finalCost: Math.round(estimateData.finalCost)
+          finalCost
         },
         updateLinePrice: true
       };
-      await api.patch(`/orders/items/${returnToOrder.itemId}/estimate`, payload);
-      toast.success(`Estimate applied to Order #${returnToOrder.orderId}!`);
-      navigate(`/orders/${returnToOrder.orderId}`);
+
+      const hasValidItemId = returnToOrder.itemId && typeof returnToOrder.itemId === 'number' && !isNaN(returnToOrder.itemId);
+      if (hasValidItemId) {
+        await api.patch(`/orders/items/${returnToOrder.itemId}/estimate`, payload);
+        toast.success(`Estimate applied to Order #${returnToOrder.orderId || ''}!`);
+        navigate(returnToOrder.returnUrl || `/orders/${returnToOrder.orderId}`);
+      } else {
+        toast.success(`Estimate configured for ${returnToOrder.productName || 'item'}!`);
+        navigate(returnToOrder.returnUrl || '/orders/new', {
+          state: {
+            appliedEstimate: {
+              rowIndex: returnToOrder.rowIndex,
+              estimateData: payload.estimateData,
+              finalCost
+            }
+          }
+        });
+      }
     } catch (e) {
       console.error(e);
-      toast.error('Failed to apply estimate to order');
+      toast.error('Failed to apply estimate to order: ' + (e.response?.data?.message || e.message));
     } finally {
       setIsSaving(false);
     }

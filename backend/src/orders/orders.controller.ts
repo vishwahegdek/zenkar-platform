@@ -14,7 +14,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { SyncPaymentsDto } from './dto/sync-payments.dto';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -92,8 +92,12 @@ export class OrdersController {
     },
     @Req() req,
   ) {
+    const id = Number(itemId);
+    if (!id || isNaN(id)) {
+      throw new BadRequestException(`Valid numeric order item ID is required (received: "${itemId}")`);
+    }
     return this.ordersService.attachItemEstimate(
-      +itemId,
+      id,
       body.estimateData,
       body.savedEstimateId,
       body.updateLinePrice,

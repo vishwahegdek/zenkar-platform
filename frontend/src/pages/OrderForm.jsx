@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import Modal from '../components/Modal';
@@ -18,6 +18,7 @@ import { isDoorFrameProduct, isEstimateCategoryOrProduct } from '../utils/produc
 export default function OrderForm() {
   const { id: paramId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   
   // Local ID state to support seamless "New -> Edit" transition without remounting
@@ -112,6 +113,30 @@ export default function OrderForm() {
       initialLoadDone.current = true;
     }
   }, [order, isEdit, paramId]);
+
+  // Handle estimate applied from WoodEstimator return
+  useEffect(() => {
+    if (location.state?.appliedEstimate) {
+      const { rowIndex, estimateData, finalCost } = location.state.appliedEstimate;
+      setFormData(prev => {
+        const newItems = [...prev.items];
+        const targetIdx = (rowIndex !== undefined && newItems[rowIndex]) ? rowIndex : 0;
+        if (newItems[targetIdx]) {
+          const qty = Number(newItems[targetIdx].quantity) || 1;
+          const unitPrice = Number(finalCost) || 0;
+          newItems[targetIdx] = {
+            ...newItems[targetIdx],
+            estimateData,
+            unitPrice,
+            lineTotal: qty * unitPrice
+          };
+        }
+        return { ...prev, items: newItems };
+      });
+      // Clear navigation state so it doesn't re-trigger
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const calculateTotal = () => {
     return formData.items.reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
@@ -559,7 +584,10 @@ export default function OrderForm() {
              setIsEstimateModalOpen(false);
              setActiveEstimateRowIndex(null);
            }}
-           item={formData.items[activeEstimateRowIndex]}
+           item={{
+             ...formData.items[activeEstimateRowIndex],
+             rowIndex: activeEstimateRowIndex
+           }}
            orderId={activeId}
            initialTemplate={isDoorFrameProduct(formData.items[activeEstimateRowIndex]) ? 'door_frame' : undefined}
            onEstimateUpdated={handleEstimateUpdated}

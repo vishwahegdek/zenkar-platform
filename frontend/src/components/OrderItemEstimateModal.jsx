@@ -180,7 +180,8 @@ export default function OrderItemEstimateModal({
         unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
       };
 
-      if (item.id) {
+      const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
+      if (hasValidItemId) {
         await api.patch(`/orders/items/${item.id}/estimate`, payload);
       }
       toast.success(updateUnitPrice 
@@ -221,7 +222,8 @@ export default function OrderItemEstimateModal({
         unitPrice: updateUnitPrice ? finalCost : (item.unitPrice || 0)
       };
 
-      if (item.id) {
+      const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
+      if (hasValidItemId) {
         await api.patch(`/orders/items/${item.id}/estimate`, payload);
       }
       toast.success(updateUnitPrice 
@@ -242,7 +244,8 @@ export default function OrderItemEstimateModal({
     if (!window.confirm('Are you sure you want to remove the estimate from this item?')) return;
     setIsSubmitting(true);
     try {
-      if (item.id) {
+      const hasValidItemId = item?.id && typeof item.id === 'number' && !isNaN(item.id);
+      if (hasValidItemId) {
         await api.patch(`/orders/items/${item.id}/estimate`, {
           estimateData: null,
           savedEstimateId: null,
@@ -270,9 +273,12 @@ export default function OrderItemEstimateModal({
     navigate('/wood-estimator', {
       state: {
         returnToOrder: {
-          orderId,
-          itemId: item.id,
-          productName: item.productName
+          orderId: orderId || null,
+          itemId: item.id || null,
+          rowIndex: item.rowIndex !== undefined ? item.rowIndex : undefined,
+          productName: item.productName,
+          isOrderForm: !orderId || !item.id,
+          returnUrl: orderId ? `/orders/${orderId}` : '/orders/new'
         },
         loadEstimate: prefillEstimate ? {
           name: item.productName,

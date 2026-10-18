@@ -1199,6 +1199,10 @@ export class OrdersService implements OnModuleInit {
     updateLinePrice?: boolean,
     userId?: number,
   ) {
+    if (!itemId || isNaN(itemId) || typeof itemId !== 'number') {
+      throw new BadRequestException('A valid numeric order item ID is required');
+    }
+
     const item = await this.prisma.orderItem.findUnique({
       where: { id: itemId },
       include: { order: true },
