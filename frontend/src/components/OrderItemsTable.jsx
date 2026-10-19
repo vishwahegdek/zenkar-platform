@@ -64,7 +64,7 @@ export default function OrderItemsTable({
                            </div>
 
                            {item.estimateData ? (
-                              <div>
+                              <div className="space-y-0.5">
                                 <button
                                   type="button"
                                   onClick={() => onOpenEstimateModal && onOpenEstimateModal(idx)}
@@ -73,6 +73,12 @@ export default function OrderItemsTable({
                                 >
                                   <span className="truncate">📐 {formatEstimateBadge(item.estimateData)}</span>
                                 </button>
+                                {item.estimateData.notes && (
+                                  <div className="text-[10px] text-gray-500 italic truncate max-w-xs flex items-center gap-1">
+                                    <span>📝</span>
+                                    <span className="truncate">{item.estimateData.notes}</span>
+                                  </div>
+                                )}
                               </div>
                            ) : isEstItem ? (
                               <div>

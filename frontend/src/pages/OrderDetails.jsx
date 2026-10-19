@@ -1,9 +1,9 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useRef } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Edit, Printer, ChevronDown, MoreVertical, Ruler, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, Printer, ChevronDown, MoreVertical, Ruler, Plus, FileText } from 'lucide-react';
 import Modal from '../components/Modal';
 import CustomerForm from './CustomerForm';
 import BillView from '../components/BillView';
@@ -28,12 +28,46 @@ export default function OrderDetails() {
   // The tool call before this one SUCCEEDED in removing the dropdown JSX.
   // Now I must clean up the state variables.
   
-  // Cleaned state:
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isManagePaymentsModalOpen, setIsManagePaymentsModalOpen] = useState(false);
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [estimateModalItem, setEstimateModalItem] = useState(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const estimateItemIdParam = searchParams.get('estimateItemId');
+
+  // Sync estimateModalItem with URL searchParams (persists state & handles browser Back button)
+  useEffect(() => {
+    if (estimateItemIdParam && order?.items) {
+      const found = order.items.find(it => String(it.id) === String(estimateItemIdParam));
+      if (found) {
+        setEstimateModalItem(found);
+      }
+    } else if (!estimateItemIdParam) {
+      setEstimateModalItem(null);
+    }
+  }, [estimateItemIdParam, order?.items]);
+
+  const handleOpenEstimateModal = (item) => {
+    setEstimateModalItem(item);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('estimateItemId', String(item.id));
+      return next;
+    });
+  };
+
+  const handleCloseEstimateModal = () => {
+    setEstimateModalItem(null);
+    if (searchParams.get('estimateItemId')) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('estimateItemId');
+        return next;
+      }, { replace: true });
+    }
+  };
 
   const isEligibleForEstimate = (item) => {
     if (item.estimateData) return true;
@@ -311,7 +345,7 @@ export default function OrderDetails() {
                                       {item.estimateData ? (
                                         <button
                                           type="button"
-                                          onClick={() => setEstimateModalItem(item)}
+                                          onClick={() => handleOpenEstimateModal(item)}
                                           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-all shadow-2xs group cursor-pointer"
                                           title="Click to view or edit estimate details"
                                         >
@@ -324,7 +358,7 @@ export default function OrderDetails() {
                                       ) : (
                                         <button
                                           type="button"
-                                          onClick={() => setEstimateModalItem(item)}
+                                          onClick={() => handleOpenEstimateModal(item)}
                                           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-2xs cursor-pointer"
                                           title="Attach a wood / manufacturing estimate to this item"
                                         >
@@ -332,6 +366,14 @@ export default function OrderDetails() {
                                           <span>Attach Estimate</span>
                                         </button>
                                       )}
+                                    </div>
+                                  )}
+
+                                  {/* Note Preview if present in estimate copy */}
+                                  {item.estimateData?.notes && (
+                                    <div className="mt-1 text-[11px] text-gray-600 flex items-start gap-1 bg-amber-50/70 rounded px-1.5 py-0.5 border border-amber-200/60 max-w-sm">
+                                      <FileText className="w-3 h-3 text-amber-700 shrink-0 mt-0.5" />
+                                      <span className="line-clamp-2 italic">{item.estimateData.notes}</span>
                                     </div>
                                   )}
                                </td>
@@ -424,7 +466,7 @@ export default function OrderDetails() {
       {estimateModalItem && (
         <OrderItemEstimateModal
           isOpen={!!estimateModalItem}
-          onClose={() => setEstimateModalItem(null)}
+          onClose={handleCloseEstimateModal}
           item={estimateModalItem}
           orderId={order?.id}
           returnUrl={`/orders/${id}`}

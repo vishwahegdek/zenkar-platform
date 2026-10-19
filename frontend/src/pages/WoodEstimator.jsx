@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2, Check, Ruler } from 'lucide-react';
+import { Pencil, Plus, Trash2, X, Settings2, Save, Download, Loader2, Check, Ruler, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateEstimate, ESTIMATION_ENGINE_VERSION } from '../utils/estimationEngine';
 import { useAuth } from '../context/AuthContext';
@@ -144,6 +144,7 @@ export default function WoodEstimator() {
   const [carvingRate, setCarvingRate] = useState('');
   const [mainCarvingFace, setMainCarvingFace] = useState('w');
   const [fittingLabour, setFittingLabour] = useState('1200');
+  const [notes, setNotes] = useState(() => location.state?.returnToOrder?.notes || location.state?.loadEstimate?.data?.notes || '');
 
   useEffect(() => {
     if (activeTemplate === 'door_frame') {
@@ -185,6 +186,7 @@ export default function WoodEstimator() {
     hasArch, archHeight, archHeightUnit,
     labourItems, hasCarving, carvings, carvingRateOption, carvingRate, mainCarvingFace, fittingLabour,
     quotedAmount: (quoteAmount !== '' && !isNaN(Number(quoteAmount))) ? Math.round(Number(quoteAmount)) : undefined,
+    notes: (notes || '').trim() || undefined,
     version: ESTIMATION_ENGINE_VERSION
   });
 
@@ -323,6 +325,7 @@ export default function WoodEstimator() {
     setCarvingRate(data.carvingRate || '');
     setMainCarvingFace(data.mainCarvingFace || 'w');
     setFittingLabour(data.fittingLabour || '1200');
+    setNotes(data.notes || '');
     if (data.quotedAmount !== undefined && data.quotedAmount !== null) {
       setQuoteAmount(String(Math.round(Number(data.quotedAmount))));
     }
@@ -1114,6 +1117,23 @@ export default function WoodEstimator() {
               )}
             </>
           )}
+        </section>
+
+        {/* 6. Estimate Notes */}
+        <section className="bg-white p-4 md:p-6 border-b-[8px] border-gray-900 last:border-b-0">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gray-700" />
+              <span>6. Estimate Notes & Instructions</span>
+            </h2>
+          </div>
+          <textarea
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add special notes, specifications, site measurements, customer preferences, or negotiation details to this estimate copy..."
+            className="w-full p-3 text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:bg-white focus:outline-none transition-colors text-gray-900 placeholder:text-gray-400 resize-y"
+          />
         </section>
       </div>
 

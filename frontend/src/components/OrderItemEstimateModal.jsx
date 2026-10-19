@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   RefreshCw,
   Search,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateEstimate } from '../utils/estimationEngine';
@@ -40,6 +41,7 @@ export default function OrderItemEstimateModal({
   const [editingData, setEditingData] = useState(null);
   const [updateUnitPrice, setUpdateUnitPrice] = useState(true);
   const [quoteAmount, setQuoteAmount] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -58,6 +60,7 @@ export default function OrderItemEstimateModal({
     hasCarving: false,
     carvingRateOption: '5',
     mainCarvingFace: 'w',
+    notes: '',
     labourItems: []
   });
 
@@ -66,9 +69,11 @@ export default function OrderItemEstimateModal({
     
     const isDf = initialTemplate === 'door_frame' || isDoorFrameProduct(item);
 
-    // Initialize quote amount
+    // Initialize quote amount and notes
     const existingQuote = item.estimateData?.quotedAmount ?? (item.unitPrice ? Math.round(Number(item.unitPrice)) : '');
     setQuoteAmount(existingQuote ? String(existingQuote) : '');
+    const existingNotes = item.estimateData?.notes || '';
+    setNotes(existingNotes);
 
     // Default to view mode if estimateData exists
     if (item.estimateData) {
@@ -179,6 +184,10 @@ export default function OrderItemEstimateModal({
         ? Math.round(Number(quoteAmount))
         : finalCost;
 
+      const effectiveNotes = (notes !== undefined && notes !== '') 
+        ? notes.trim() 
+        : (editingData.notes || '').trim() || undefined;
+
       const payload = {
         productId: item.productId || item.product?.id || null,
         productName: item.productName || item.product?.name || '',
@@ -188,6 +197,7 @@ export default function OrderItemEstimateModal({
           finalCost,
           quotedAmount: effectiveQuote,
           totalVolumeCft: computed?.totalVolumeCft || 0,
+          notes: effectiveNotes,
         },
         savedEstimateId: selectedEstimate?.id || item.savedEstimateId || null,
         updateLinePrice: true,
@@ -226,6 +236,10 @@ export default function OrderItemEstimateModal({
         ? Math.round(Number(quoteAmount))
         : (payloadData.quotedAmount ? Math.round(Number(payloadData.quotedAmount)) : finalCost);
 
+      const effectiveNotes = (notes !== undefined && notes !== '') 
+        ? notes.trim() 
+        : (payloadData.notes || '').trim() || undefined;
+
       const payload = {
         productId: item.productId || item.product?.id || null,
         productName: item.productName || item.product?.name || '',
@@ -234,6 +248,7 @@ export default function OrderItemEstimateModal({
           ...payloadData,
           finalCost,
           quotedAmount: effectiveQuote,
+          notes: effectiveNotes,
         },
         savedEstimateId: estimateToAttach.id || null,
         updateLinePrice: updateUnitPrice,
@@ -269,6 +284,10 @@ export default function OrderItemEstimateModal({
         ? Math.round(Number(quoteAmount))
         : finalCost;
 
+      const effectiveNotes = (notes !== undefined && notes !== '') 
+        ? notes.trim() 
+        : (currentData.notes || '').trim() || undefined;
+
       const payload = {
         productId: item.productId || item.product?.id || null,
         productName: item.productName || item.product?.name || '',
@@ -277,6 +296,7 @@ export default function OrderItemEstimateModal({
           ...currentData,
           finalCost,
           quotedAmount: effectiveQuote,
+          notes: effectiveNotes,
         },
         savedEstimateId: item.savedEstimateId || null,
         updateLinePrice: true,
@@ -360,6 +380,7 @@ export default function OrderItemEstimateModal({
           productName: item.productName || item.product?.name || '',
           product: item.product || null,
           quotedAmount: currentQuote,
+          notes: notes || editingData?.notes || item.estimateData?.notes || '',
           formData: baseFormData,
           isOrderForm: !orderId || !item.id,
           returnUrl: returnUrl || (orderId ? `/orders/${orderId}` : '/orders/new')
@@ -368,7 +389,8 @@ export default function OrderItemEstimateModal({
           name: item.productName,
           data: {
             ...(prefillEstimate.data || prefillEstimate),
-            quotedAmount: currentQuote
+            quotedAmount: currentQuote,
+            notes: notes || editingData?.notes || item.estimateData?.notes || ''
           },
           id: prefillEstimate.id || null
         } : null
@@ -693,6 +715,27 @@ export default function OrderItemEstimateModal({
                         )}
                       </section>
 
+                      {/* Notes / Special Instructions */}
+                      <section>
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 border-b border-gray-200 pb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-gray-500" />
+                            <span>Estimate Notes & Instructions</span>
+                          </span>
+                        </h3>
+                        <textarea
+                          rows={2}
+                          value={data.notes !== undefined ? data.notes : notes}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNotes(val);
+                            updateDetailField('notes', val);
+                          }}
+                          placeholder="Add special notes or customer instructions (e.g. wood grain, site measurements, delivery requests, negotiation details)..."
+                          className="w-full p-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-gray-900 focus:bg-white focus:outline-none transition-colors text-gray-900 placeholder:text-gray-400 resize-y"
+                        />
+                      </section>
+
                       {/* Door Frame Estimate Total & Customer Quote */}
                       <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
                         <div className="flex justify-between items-center text-gray-500 py-0.5">
@@ -815,13 +858,40 @@ export default function OrderItemEstimateModal({
                       type="button"
                       disabled={isSubmitting}
                       onClick={handleSaveCustomQuote}
-                      className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-2xs disabled:opacity-50"
+                      className="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-2xs disabled:opacity-50 cursor-pointer"
                       title="Update Quote on Order Item"
                     >
                       {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
                       <span>Save Quote</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Estimate Notes Card for Custom Items */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-gray-500" />
+                      <span>Estimate Notes</span>
+                    </span>
+                    {item.id && (
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={handleSaveCustomQuote}
+                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                      >
+                        Save Note
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add special notes or customer instructions for this estimate..."
+                    className="w-full p-2 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:border-gray-900 focus:bg-white focus:outline-none transition-colors text-gray-900 placeholder:text-gray-400 resize-y"
+                  />
                 </div>
 
                 {/* Action Buttons for Non-Door-Frame View Mode */}

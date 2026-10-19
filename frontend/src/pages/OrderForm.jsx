@@ -48,6 +48,16 @@ export default function OrderForm() {
     const handleHashChange = () => {
         setIsCustomerModalOpen(window.location.hash === '#new-customer');
         setIsProductModalOpen(window.location.hash === '#new-product');
+        if (window.location.hash.startsWith('#estimate-')) {
+          const rowIdx = parseInt(window.location.hash.replace('#estimate-', ''), 10);
+          if (!isNaN(rowIdx)) {
+            setActiveEstimateRowIndex(rowIdx);
+            setIsEstimateModalOpen(true);
+          }
+        } else {
+          setIsEstimateModalOpen(false);
+          setActiveEstimateRowIndex(null);
+        }
     };
     // Initial check
     handleHashChange();
@@ -482,6 +492,7 @@ export default function OrderForm() {
            onOpenEstimateModal={(idx) => {
              setActiveEstimateRowIndex(idx);
              setIsEstimateModalOpen(true);
+             window.location.hash = `estimate-${idx}`;
            }}
            footerChildren={
              !isEdit ? (
@@ -621,6 +632,9 @@ export default function OrderForm() {
            onClose={() => {
              setIsEstimateModalOpen(false);
              setActiveEstimateRowIndex(null);
+             if (window.location.hash.startsWith('#estimate-')) {
+               window.history.back();
+             }
            }}
            item={{
              ...formData.items[activeEstimateRowIndex],
