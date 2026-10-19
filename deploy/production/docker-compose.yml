@@ -1,10 +1,12 @@
+name: zenkar_platform_production
+
 services:
   backend:
     image: vishwahegdek/zenkar-backend:production
     container_name: zenkar-backend-prod
     restart: always
     ports:
-      - "3001:3000" # Shifted to 3001
+      - "3001:3000"
     depends_on:
       - db
     env_file: ../../.env
@@ -18,7 +20,7 @@ services:
     container_name: zenkar-frontend-prod
     restart: always
     ports:
-      - "5174:5173" # Nginx expects Frontend on 5174 (Mapped to 5173)
+      - "5174:5173"
     depends_on:
       - backend
     networks:
@@ -28,17 +30,22 @@ services:
     image: postgres:15-alpine
     container_name: zenkar-db-prod
     restart: always
+    ports:
+      - "127.0.0.1:5433:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=order_book
-    ports:
-      - "127.0.0.1:5433:5432"
     volumes:
-      - ../../pgdata:/var/lib/postgresql/data
+      - zenkar_db_data_prod_v3:/var/lib/postgresql/data
     networks:
       - zenkar-network
 
+volumes:
+  zenkar_db_data_prod_v3:
+    name: zenkar_platform_production_zenkar_db_data_prod_v3
+
 networks:
   zenkar-network:
+    name: zenkar_platform_production_zenkar-network
     driver: bridge

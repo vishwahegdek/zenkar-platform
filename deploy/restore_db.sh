@@ -18,7 +18,7 @@ if [ "$ENV" == "production" ]; then
     DB_USER="postgres"
 else
     DB_CONTAINER="zenkar-db-demo"
-    DB_NAME="zenkar_db_demo"
+    DB_NAME="order_book"
     DB_USER="postgres"
 fi
 

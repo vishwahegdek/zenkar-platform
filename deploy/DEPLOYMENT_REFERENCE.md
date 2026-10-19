@@ -11,7 +11,7 @@ This document serves as the **Single Source of Truth** for the deployment archit
 | :--- | :--- | :--- |
 | **URL** | [orderdemo.zenkar.in](https://orderdemo.zenkar.in) | [order.zenkar.in](https://order.zenkar.in) |
 | **Server Path** | `~/zenkar_platform_staging` | `~/zenkar_platform_production` |
-| **Data Volume** | `~/zenkar_platform_staging/pgdata_demo` | `~/zenkar_platform_production/pgdata` (**REAL DATA**) |
+| **Data Volume** | `zenkar_platform_staging_zenkar_db_data_demo_v3` | `zenkar_platform_production_zenkar_db_data_prod_v3` (**REAL DATA**) |
 | **Compose File** | `deploy/staging/docker-compose.yml` | `deploy/production/docker-compose.yml` |
 | **Git Branch** | `master` | `master` |
 
@@ -22,9 +22,9 @@ This document serves as the **Single Source of Truth** for the deployment archit
 ### 🟡 Staging Containers
 | Service | Container Name | Host Port | Internal Port | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **Frontend** | `zenkar-frontend-demo` | **5173** | 5173 | Proxied by Nginx (`orderdemo`) |
-| **Backend** | `zenkar-backend-demo` | **3000** | 3000 | API is open / No Auth |
-| **Database** | `zenkar-db-demo` | **5432** | 5432 | DB Name: `zenkar_db_demo` |
+| **Frontend** | `zenkar-frontend-demo` | **5175** | 5173 | Proxied by Nginx (`orderdemo`) |
+| **Backend** | `zenkar-backend-demo` | **3002** | 3000 | Proxied by Nginx (`orderdemo/api`) |
+| **Database** | `zenkar-db-demo` | **5432** | 5432 | DB Name: `order_book` |
 
 ### 🟢 Production Containers
 | Service | Container Name | Host Port | Internal Port | Notes |
