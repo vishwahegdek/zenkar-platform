@@ -141,6 +141,10 @@ model Product {
   deletedAt   DateTime?   @map("deleted_at")
   orderItems  OrderItem[]
 
+  estimateData    Json?          @map("estimate_data")
+  savedEstimateId Int?           @map("saved_estimate_id")
+  savedEstimate   SavedEstimate? @relation(fields: [savedEstimateId], references: [id], onDelete: SetNull)
+
   // Inventory
   isPurchasable         Boolean                @default(false) @map("is_inventory_tracked")
   stockQuantity         Int                    @default(0) @map("stock_quantity")
@@ -620,6 +624,7 @@ model SavedEstimate {
   createdAt   DateTime @default(now()) @map("created_at")
 
   orderItems  OrderItem[]
+  products    Product[]
 
   @@map("saved_estimates")
 }

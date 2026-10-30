@@ -69,16 +69,18 @@ export default function OrderItemEstimateModal({
     
     const isDf = initialTemplate === 'door_frame' || isDoorFrameProduct(item);
 
+    const activeEstimate = item.estimateData || item.product?.estimateData;
+
     // Initialize quote amount and notes
-    const existingQuote = item.estimateData?.quotedAmount ?? (item.unitPrice ? Math.round(Number(item.unitPrice)) : '');
+    const existingQuote = activeEstimate?.quotedAmount ?? (item.unitPrice ? Math.round(Number(item.unitPrice)) : '');
     setQuoteAmount(existingQuote ? String(existingQuote) : '');
-    const existingNotes = item.estimateData?.notes || '';
+    const existingNotes = activeEstimate?.notes || '';
     setNotes(existingNotes);
 
     // Default to view mode if estimateData exists
-    if (item.estimateData) {
+    if (activeEstimate) {
       setMode('view');
-      setEditingData({ ...item.estimateData });
+      setEditingData({ ...activeEstimate });
     } else if (isDf) {
       // Direct fixed Door Frame template - no custom estimation required!
       setMode('view');

@@ -3,10 +3,16 @@ import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
+import { UploadsService } from '../uploads/uploads.service';
 
 describe('ProductsController', () => {
   let controller: ProductsController;
   let module: TestingModule;
+  const mockUploadsService = {
+    processAndSaveImage: jest.fn(),
+    deleteImageFiles: jest.fn(),
+    serveFile: jest.fn(),
+  };
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -14,6 +20,7 @@ describe('ProductsController', () => {
       providers: [
         ProductsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: UploadsService, useValue: mockUploadsService },
       ],
     }).compile();
 
@@ -40,7 +47,7 @@ describe('ProductsController', () => {
         'findAll',
       );
 
-      await controller.findAll(query);
+      await controller.findAll(query, '1', '20', undefined as any);
 
       expect(findAllSpy).toHaveBeenCalledWith(query, 1, 20, undefined);
     });
@@ -51,7 +58,7 @@ describe('ProductsController', () => {
         'findAll',
       );
 
-      await controller.findAll(undefined as unknown as string);
+      await controller.findAll(undefined as any, '1', '20', undefined as any);
 
       expect(findAllSpy).toHaveBeenCalledWith(undefined, 1, 20, undefined);
     });
@@ -65,9 +72,9 @@ describe('ProductsController', () => {
         'create',
       );
 
-      await controller.create(dto);
+      await controller.create(dto, { user: { id: 1 } });
 
-      expect(createSpy).toHaveBeenCalledWith(dto);
+      expect(createSpy).toHaveBeenCalledWith(dto, 1);
     });
   });
 

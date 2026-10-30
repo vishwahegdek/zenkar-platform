@@ -24,11 +24,13 @@ import { LedgerModule } from './ledger/ledger.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { WoodTypesModule } from './wood-types/wood-types.module';
 import { SavedEstimatesModule } from './saved-estimates/saved-estimates.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     PrismaModule,
+    UploadsModule,
     CustomersModule,
     RecipientsModule,
     ProductsModule,

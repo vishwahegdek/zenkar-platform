@@ -46,25 +46,35 @@ export const api = {
     return res.json();
   },
   post: async (url, data, options = {}) => {
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    const headers = getHeaders(options);
+    if (!isFormData && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    } else if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
     const res = await fetch(`/api${url}`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getHeaders(options)
-      },
-      body: JSON.stringify(data),
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
     });
     if (!res.ok) await handleResponseError(res);
     return res.json();
   },
   put: async (url, data, options = {}) => {
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    const headers = getHeaders(options);
+    if (!isFormData && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    } else if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
     const res = await fetch(`/api${url}`, {
       method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getHeaders(options)
-      },
-      body: JSON.stringify(data),
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
     });
     if (!res.ok) await handleResponseError(res);
     return res.json();
@@ -78,13 +88,18 @@ export const api = {
     return res.json();
   },
   patch: async (url, data, options = {}) => {
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    const headers = getHeaders(options);
+    if (!isFormData && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    } else if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
     const res = await fetch(`/api${url}`, {
       method: 'PATCH',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getHeaders(options)
-      },
-      body: JSON.stringify(data),
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
     });
     if (!res.ok) await handleResponseError(res);
     return res.json();

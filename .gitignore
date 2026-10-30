@@ -51,3 +51,9 @@ live_prod_dump.sql
 # Environments
 deploy/*.env
 .env
+
+# Uploads (storage directory only, not source code)
+/uploads/
+/backend/uploads/
+
+

@@ -2,15 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
+import { UploadsService } from '../uploads/uploads.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
+  const mockUploadsService = {
+    processAndSaveImage: jest.fn(),
+    deleteImageFiles: jest.fn(),
+    serveFile: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: UploadsService, useValue: mockUploadsService },
       ],
     }).compile();
 
@@ -37,7 +44,12 @@ describe('ProductsService', () => {
         take: 20,
         skip: 0,
         orderBy: { name: 'asc' },
-        include: { category: true },
+        include: {
+          category: true,
+          images: { orderBy: { id: 'asc' } },
+          savedEstimate: true,
+          createdBy: { select: { id: true, username: true } },
+        },
       });
     });
 
@@ -49,7 +61,10 @@ describe('ProductsService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             isDeleted: false,
-            OR: [{ name: { contains: query, mode: 'insensitive' } }],
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { notes: { contains: query, mode: 'insensitive' } },
+            ],
           }),
         }),
       );
@@ -87,6 +102,15 @@ describe('ProductsService', () => {
           notes: undefined,
           categoryId: 1,
           isPurchasable: false,
+          createdById: undefined,
+          estimateData: undefined,
+          savedEstimateId: undefined,
+        },
+        include: {
+          category: true,
+          images: { orderBy: { id: 'asc' } },
+          savedEstimate: true,
+          createdBy: { select: { id: true, username: true } },
         },
       });
     });

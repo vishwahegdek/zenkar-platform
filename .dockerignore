@@ -26,3 +26,8 @@ Thumbs.db
 
 # Test coverage
 coverage
+
+# Uploads
+uploads
+backend/uploads
+

@@ -23,4 +23,13 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isPurchasable?: boolean;
+
+  @ApiPropertyOptional({ description: 'Full estimate copy JSON' })
+  @IsOptional()
+  estimateData?: any;
+
+  @ApiPropertyOptional({ example: 1, description: 'Saved estimate template ID' })
+  @IsOptional()
+  @IsNumber()
+  savedEstimateId?: number;
 }

@@ -1,25 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uploadsService: UploadsService,
+  ) {}
 
   async create(createProductDto: CreateProductDto, userId?: number) {
     let categoryId = Number(createProductDto.categoryId);
 
     if (!categoryId) {
       // Default to 'General'
-      const generalCategory = await (
-        this.prisma as any
-      ).productCategory.findFirst({ where: { name: 'General' } });
+      const generalCategory = await this.prisma.productCategory.findFirst({
+        where: { name: 'General' },
+      });
       if (generalCategory) {
         categoryId = generalCategory.id;
       } else {
-        // Fallback: Create General if somehow missing (failsafe)
-        const newCat = await (this.prisma as any).productCategory.create({
+        const newCat = await this.prisma.productCategory.create({
           data: { name: 'General' },
         });
         categoryId = newCat.id;
@@ -34,6 +37,14 @@ export class ProductsService {
         categoryId: categoryId,
         isPurchasable: createProductDto.isPurchasable || false,
         createdById: userId,
+        estimateData: createProductDto.estimateData ?? undefined,
+        savedEstimateId: createProductDto.savedEstimateId ?? undefined,
+      },
+      include: {
+        category: true,
+        images: { orderBy: { id: 'asc' } },
+        savedEstimate: true,
+        createdBy: { select: { id: true, username: true } },
       },
     });
   }
@@ -47,7 +58,10 @@ export class ProductsService {
     const whereClause: any = { isDeleted: false };
 
     if (query) {
-      whereClause.OR = [{ name: { contains: query, mode: 'insensitive' } }];
+      whereClause.OR = [
+        { name: { contains: query, mode: 'insensitive' } },
+        { notes: { contains: query, mode: 'insensitive' } },
+      ];
     }
     if (categoryId) {
       whereClause.categoryId = categoryId;
@@ -61,9 +75,11 @@ export class ProductsService {
         take: limit,
         skip: skip,
         orderBy: { name: 'asc' },
-        include: { 
+        include: {
           category: true,
-          createdBy: { select: { id: true, username: true } }
+          images: { orderBy: { id: 'asc' } },
+          savedEstimate: true,
+          createdBy: { select: { id: true, username: true } },
         },
       }),
       this.prisma.product.count({ where: whereClause }),
@@ -80,26 +96,108 @@ export class ProductsService {
     };
   }
 
-  findOne(id: number) {
-    return this.prisma.product.findUnique({
+  async findOne(id: number) {
+    const product = await this.prisma.product.findUnique({
       where: { id },
+      include: {
+        category: true,
+        images: { orderBy: { id: 'asc' } },
+        savedEstimate: true,
+        createdBy: { select: { id: true, username: true } },
+      },
     });
+    if (!product || product.isDeleted) {
+      throw new NotFoundException('Product not found');
+    }
+    return product;
   }
 
-  update(id: number, updateProductDto: UpdateProductDto, userId?: number) {
+  async update(id: number, updateProductDto: UpdateProductDto, userId?: number) {
     return this.prisma.product.update({
       where: { id },
       data: {
         ...updateProductDto,
-        updatedById: userId
+        updatedById: userId,
+      },
+      include: {
+        category: true,
+        images: { orderBy: { id: 'asc' } },
+        savedEstimate: true,
+        createdBy: { select: { id: true, username: true } },
       },
     });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
     return this.prisma.product.update({
       where: { id },
       data: { isDeleted: true, deletedAt: new Date() },
+    });
+  }
+
+  async addImages(productId: number, files: Express.Multer.File[]) {
+    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const createdImages: any[] = [];
+    for (const file of files) {
+      const processed = await this.uploadsService.processAndSaveImage(file);
+      const img = await this.prisma.image.create({
+        data: {
+          keyRaw: processed.keyRaw,
+          keyOptimized: processed.keyOptimized,
+          keyThumbnail: processed.keyThumbnail,
+          productId: productId,
+        },
+      });
+      createdImages.push(img);
+    }
+    return createdImages;
+  }
+
+  async deleteImage(productId: number, imageId: number) {
+    const image = await this.prisma.image.findFirst({
+      where: { id: imageId, productId: productId },
+    });
+    if (!image) throw new NotFoundException('Image not found for this product');
+
+    await this.uploadsService.deleteImageFiles(image);
+    await this.prisma.image.delete({ where: { id: imageId } });
+    return { success: true };
+  }
+
+  async updateEstimate(
+    productId: number,
+    body: {
+      estimateData: any;
+      savedEstimateId?: number | null;
+      updateUnitPrice?: boolean;
+      unitPrice?: number;
+    },
+    userId?: number,
+  ) {
+    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const updateData: any = {
+      estimateData: body.estimateData ?? null,
+      savedEstimateId: body.savedEstimateId ?? null,
+      updatedById: userId,
+    };
+
+    if (body.updateUnitPrice && body.unitPrice !== undefined) {
+      updateData.defaultUnitPrice = body.unitPrice;
+    }
+
+    return this.prisma.product.update({
+      where: { id: productId },
+      data: updateData,
+      include: {
+        category: true,
+        images: { orderBy: { id: 'asc' } },
+        savedEstimate: true,
+        createdBy: { select: { id: true, username: true } },
+      },
     });
   }
 }

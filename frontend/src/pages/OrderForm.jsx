@@ -295,8 +295,9 @@ export default function OrderForm() {
     const isEst = isEstimateCategoryOrProduct(product);
 
     const newItems = [...formData.items];
-    const qty = Number(newItems[index]?.quantity) || 1;
-    const price = Number(product.defaultUnitPrice || 0);
+    const effectivePrice = product.estimateData?.quotedAmount
+      ? Number(product.estimateData.quotedAmount)
+      : Number(product.defaultUnitPrice || 0);
 
     newItems[index] = {
       ...newItems[index],
@@ -304,13 +305,15 @@ export default function OrderForm() {
       productName: product.name,
       product: product,
       quantity: qty,
-      unitPrice: price,
-      lineTotal: qty * price,
+      unitPrice: effectivePrice,
+      lineTotal: qty * effectivePrice,
+      estimateData: product.estimateData || newItems[index]?.estimateData || null,
+      savedEstimateId: product.savedEstimateId || newItems[index]?.savedEstimateId || null,
     };
     setFormData({ ...formData, items: newItems });
 
-    // If product is from Doors & Frames or Furniture, launch estimate workflow
-    if (isDf || isEst) {
+    // If product is from Doors & Frames or Furniture, launch estimate workflow if not already has estimateData
+    if ((isDf || isEst) && !product.estimateData) {
       setActiveEstimateRowIndex(index);
       setIsEstimateModalOpen(true);
     }

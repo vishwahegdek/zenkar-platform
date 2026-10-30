@@ -4,6 +4,7 @@ import { CustomersService } from './customers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
 import { ContactsService } from '../contacts/contacts.service';
+import { LedgerService } from '../ledger/ledger.service';
 
 describe('CustomersService', () => {
   let service: CustomersService;
@@ -14,6 +15,7 @@ describe('CustomersService', () => {
         CustomersService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ContactsService, useValue: {} },
+        { provide: LedgerService, useValue: {} },
       ],
     }).compile();
 

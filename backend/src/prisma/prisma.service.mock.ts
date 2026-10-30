@@ -95,6 +95,19 @@ export const mockPrismaService = {
     findUnique: jest.fn(),
     create: jest.fn(),
   },
+  labourPayment: {
+    findMany: jest.fn().mockResolvedValue([]),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
+  image: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+  },
   labourSettlement: {
     findMany: jest.fn(),
     findUnique: jest.fn(),

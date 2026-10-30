@@ -8,11 +8,14 @@ import {
   Delete,
   Query,
   Req,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 
 @ApiTags('products')
 @Controller('products')
@@ -66,5 +69,41 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Product successfully deleted.' })
   remove(@Param('id') id: string) {
     return this.productsService.remove(+id);
+  }
+
+  @Post(':id/images')
+  @UseInterceptors(FilesInterceptor('files', 10))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload photos for a product' })
+  uploadImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.productsService.addImages(+id, files || []);
+  }
+
+  @Delete(':id/images/:imageId')
+  @ApiOperation({ summary: 'Delete a photo from a product' })
+  deleteImage(
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return this.productsService.deleteImage(+id, +imageId);
+  }
+
+  @Patch(':id/estimate')
+  @ApiOperation({ summary: 'Attach or update an estimate copy for a product' })
+  updateEstimate(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      estimateData: any;
+      savedEstimateId?: number;
+      updateUnitPrice?: boolean;
+      unitPrice?: number;
+    },
+    @Req() req: any,
+  ) {
+    return this.productsService.updateEstimate(+id, body, req.user?.userId || req.user?.id);
   }
 }

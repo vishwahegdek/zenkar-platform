@@ -12,8 +12,11 @@ services:
     env_file: ../../.env
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/order_book?schema=public"
+    volumes:
+      - zenkar_uploads_prod:/app/uploads
     networks:
       - zenkar-network
+
 
   frontend:
     image: vishwahegdek/zenkar-frontend:production
@@ -44,6 +47,9 @@ services:
 volumes:
   zenkar_db_data_prod_v3:
     name: zenkar_platform_production_zenkar_db_data_prod_v3
+  zenkar_uploads_prod:
+    name: zenkar_platform_production_zenkar_uploads_prod
+
 
 networks:
   zenkar-network:

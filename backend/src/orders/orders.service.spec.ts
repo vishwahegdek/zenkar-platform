@@ -6,6 +6,7 @@ import { ProductsService } from '../products/products.service';
 import { CustomersService } from '../customers/customers.service';
 import { AuditService } from '../audit/audit.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { LedgerService } from '../ledger/ledger.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -33,6 +34,7 @@ describe('OrdersService', () => {
         { provide: CustomersService, useValue: mockCustomersService },
         { provide: AuditService, useValue: mockAuditService },
         { provide: InventoryService, useValue: mockInventoryService },
+        { provide: LedgerService, useValue: {} },
       ],
     }).compile();
 
@@ -154,14 +156,14 @@ describe('OrdersService', () => {
         totalAmount: 100,
         advanceAmount: 0,
       };
-      mockPrismaService.order.findUnique.mockResolvedValue(order);
+      mockPrismaService.order.findFirst.mockResolvedValue(order);
 
       const expected = { ...order, remainingBalance: 100, paidAmount: 0, advanceAmount: 0 };
       expect(await service.findOne(1)).toEqual(expected);
     });
 
     it('should return null if order not found', async () => {
-      mockPrismaService.order.findUnique.mockResolvedValue(null);
+      mockPrismaService.order.findFirst.mockResolvedValue(null);
       expect(await service.findOne(999)).toBeNull();
     });
   });

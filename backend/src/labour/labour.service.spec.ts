@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LabourService } from './labour.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrismaService } from '../prisma/prisma.service.mock';
+import { LedgerService } from '../ledger/ledger.service';
 
 describe('LabourService', () => {
   let service: LabourService;
@@ -11,6 +12,7 @@ describe('LabourService', () => {
       providers: [
         LabourService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: LedgerService, useValue: { getSystemAccount: jest.fn().mockResolvedValue({ id: 1 }) } },
       ],
     }).compile();
 
@@ -43,6 +45,7 @@ describe('LabourService', () => {
       mockPrismaService.labourer.findMany.mockResolvedValue(labourers);
       mockPrismaService.attendance.findMany.mockResolvedValue(attendances);
       mockPrismaService.expense.findMany.mockResolvedValue(expenses);
+      mockPrismaService.labourPayment.findMany.mockResolvedValue([{ labourerId: 1, amount: 200 }]);
       mockPrismaService.labourSettlement.findMany.mockResolvedValue(settlements);
 
       const result = await service.getDailyView(date);
