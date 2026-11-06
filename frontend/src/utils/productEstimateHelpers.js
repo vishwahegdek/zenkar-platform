@@ -11,20 +11,53 @@ export const isDoorFrameProduct = (item) => {
 
 export const isDoorsAndFramesCategory = (item) => {
   if (!item) return false;
-  const cat = (item.category?.name || item.category || '').trim().toLowerCase();
+  const cat = (
+    item.name ||
+    item.category?.name ||
+    item.category ||
+    (typeof item === 'string' ? item : '')
+  )
+    .trim()
+    .toLowerCase();
   return (
     cat === 'doors & frames' ||
     cat === 'door - door frames' ||
     cat === 'door frames' ||
-    (cat.includes('door') && cat.includes('frame'))
+    cat === 'doors' ||
+    (cat.includes('door') && cat.includes('frame')) ||
+    cat.includes('door')
   );
 };
 
 export const isFurnitureCategory = (item) => {
   if (!item) return false;
-  const cat = (item.category?.name || item.category || '').trim().toLowerCase();
-  return cat === 'furniture' || cat === 'furnitures';
+  const cat = (
+    item.name ||
+    item.category?.name ||
+    item.category ||
+    (typeof item === 'string' ? item : '')
+  )
+    .trim()
+    .toLowerCase();
+  return cat === 'furniture' || cat === 'furnitures' || cat.includes('furniture');
 };
+
+export const getCategoryPriority = (cat) => {
+  if (isDoorsAndFramesCategory(cat)) return 1;
+  if (isFurnitureCategory(cat)) return 2;
+  return 3;
+};
+
+export const sortCategoriesWithPriority = (categories = []) => {
+  if (!Array.isArray(categories)) return [];
+  return [...categories].sort((a, b) => {
+    const pA = getCategoryPriority(a);
+    const pB = getCategoryPriority(b);
+    if (pA !== pB) return pA - pB;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+};
+
 
 export const isEstimateCategoryOrProduct = (item) => {
   if (!item) return false;

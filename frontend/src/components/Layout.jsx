@@ -18,6 +18,7 @@ const PAGE_TITLES = {
   '/production': 'Production Floor',
   '/products': 'Inventory & Products',
   '/purchases': 'Purchase History',
+  '/expenses/analytics': 'Expense Analytics',
   '/expenses': 'Expense Book',
   '/labour': 'Labour Management',
   '/contacts': 'Global Contacts',

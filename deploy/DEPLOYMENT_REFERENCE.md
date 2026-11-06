@@ -7,13 +7,15 @@ This document serves as the **Single Source of Truth** for the deployment archit
 
 ## 🏗️ Environment Overview
 
-| Feature | 🟡 Staging (Demo) | 🟢 Production (Live) |
-| :--- | :--- | :--- |
-| **URL** | [orderdemo.zenkar.in](https://orderdemo.zenkar.in) | [order.zenkar.in](https://order.zenkar.in) |
-| **Server Path** | `~/zenkar_platform_staging` | `~/zenkar_platform_production` |
-| **Data Volume** | `zenkar_platform_staging_zenkar_db_data_demo_v3` | `zenkar_platform_production_zenkar_db_data_prod_v3` (**REAL DATA**) |
-| **Compose File** | `deploy/staging/docker-compose.yml` | `deploy/production/docker-compose.yml` |
-| **Git Branch** | `master` | `master` |
+| Feature | 🟡 Staging (Demo) | 🟢 Production (Live) | 🏠 Local Server (On-Prem) |
+| :--- | :--- | :--- | :--- |
+| **URL / Host** | [orderdemo.zenkar.in](https://orderdemo.zenkar.in) | [order.zenkar.in](https://order.zenkar.in) | `192.168.68.115` (`local-server`) |
+| **Server Path** | `~/zenkar_platform_staging` | `~/zenkar_platform_production` | `~/backups/production/` |
+| **Data Volume** | `zenkar_platform_staging_zenkar_db_data_demo_v3` | `zenkar_platform_production_zenkar_db_data_prod_v3` (**REAL DATA**) | Offline Cold Backups (`kuma.db` & SQL dumps) |
+| **Compose File** | `deploy/staging/docker-compose.yml` | `deploy/production/docker-compose.yml` | See [LOCAL_SERVER.md](file:///home/vishwa/Projects/zenkar-platform/deploy/LOCAL_SERVER.md) |
+| **Git Branch** | `master` | `master` | N/A |
+
+> 📘 **See Also**: Full specifications for the local Raspberry Pi server, reverse SSH tunnel, cross-monitoring, and backup management are documented in [LOCAL_SERVER.md](file:///home/vishwa/Projects/zenkar-platform/deploy/LOCAL_SERVER.md).
 
 ---
 

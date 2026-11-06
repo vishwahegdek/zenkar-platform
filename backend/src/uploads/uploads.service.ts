@@ -27,8 +27,17 @@ export class UploadsService {
     this.ensureUploadsDir();
 
     const id = crypto.randomUUID();
-    const origExt = path.extname(file.originalname).toLowerCase() || '.jpg';
-    const rawFilename = `raw-${id}${origExt}`;
+
+    // Inspect image metadata to handle transparency and auto-rotation
+    const image = sharp(file.buffer);
+    const metadata = await image.metadata();
+    const hasAlpha = Boolean(metadata.hasAlpha);
+
+    // Master / high-res photo:
+    // Downsized to max 2048x2048 (2K resolution) with MozJPEG/WebP quality 86,
+    // maintaining crisp wood grain and fine carpentry details without noticeable degradation,
+    // while keeping storage footprint firmly around 0.5 to 1.0 MB (instead of 5-15 MB uncompressed).
+    const rawFilename = `raw-${id}${hasAlpha ? '.webp' : '.jpg'}`;
     const optFilename = `opt-${id}.webp`;
     const thumbFilename = `thumb-${id}.webp`;
 
@@ -36,17 +45,29 @@ export class UploadsService {
     const optPath = path.join(this.uploadsDir, optFilename);
     const thumbPath = path.join(this.uploadsDir, thumbFilename);
 
-    // Save raw file
-    await fs.promises.writeFile(rawPath, file.buffer);
+    // Save downsized master image (0.5 to 1.0 MB target)
+    if (hasAlpha) {
+      await sharp(file.buffer)
+        .rotate()
+        .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 86, effort: 4 })
+        .toFile(rawPath);
+    } else {
+      await sharp(file.buffer)
+        .rotate()
+        .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 86, mozjpeg: true, progressive: true })
+        .toFile(rawPath);
+    }
 
-    // Generate optimized image (max 1200x1200, webp quality 80, auto-oriented)
+    // Generate optimized image for catalog cards and views (max 1200x1200, webp quality 80, ~80-120 KB)
     await sharp(file.buffer)
       .rotate()
       .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toFile(optPath);
 
-    // Generate thumbnail (300x300, cover, webp quality 80, auto-oriented)
+    // Generate thumbnail (300x300, cover, webp quality 80, ~15-25 KB)
     await sharp(file.buffer)
       .rotate()
       .resize(300, 300, { fit: 'cover' })

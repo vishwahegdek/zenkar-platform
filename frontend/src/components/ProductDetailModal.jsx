@@ -184,10 +184,11 @@ export default function ProductDetailModal({
               <button
                 type="button"
                 onClick={() => onOpenEstimateModal(product)}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-xs flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Configure in Wood Estimator"
               >
                 <Calculator className="w-3.5 h-3.5" />
-                {estimateData ? 'Edit Estimate' : 'Attach Estimate'}
+                {estimateData ? 'Edit in Wood Estimator' : 'Attach Estimate'}
               </button>
             </div>
 

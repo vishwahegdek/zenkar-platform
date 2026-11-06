@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { 
   X, 
@@ -11,7 +12,8 @@ import {
   Sparkles, 
   Layers, 
   Calculator,
-  RotateCcw
+  RotateCcw,
+  ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateEstimate } from '../utils/estimationEngine';
@@ -22,6 +24,7 @@ export default function ProductEstimateModal({
   product,
   onEstimateSaved,
 }) {
+  const navigate = useNavigate();
   const [activeTemplate, setActiveTemplate] = useState('door_frame');
   const [woodTypes, setWoodTypes] = useState([]);
   const [isLoadingWoods, setIsLoadingWoods] = useState(false);
@@ -29,6 +32,25 @@ export default function ProductEstimateModal({
   const [quoteAmount, setQuoteAmount] = useState('');
   const [updateDefaultPrice, setUpdateDefaultPrice] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOpenWoodEstimator = () => {
+    onClose();
+    navigate('/wood-estimator', {
+      state: {
+        returnToProduct: {
+          productId: product?.id || null,
+          productName: product?.name || 'Product',
+          product: product,
+          returnUrl: '/products'
+        },
+        loadEstimate: (editingData || product?.estimateData) ? {
+          name: product?.name || 'Product Estimate',
+          data: editingData || product?.estimateData,
+          id: product?.savedEstimateId || null
+        } : null
+      }
+    });
+  };
 
   const getDefaultDoorFrameData = (firstWoodId = '') => ({
     activeTemplate: 'door_frame',
@@ -206,13 +228,24 @@ export default function ProductEstimateModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleOpenWoodEstimator}
+              className="px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 flex items-center gap-1 transition-colors cursor-pointer"
+              title="Open full Wood Estimator page"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Open Wood Estimator</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Template Switcher Tabs */}

@@ -11,6 +11,7 @@ import PurchaseForm from './pages/PurchaseForm';
 import CustomersList from './pages/CustomersList';
 import CustomerForm from './pages/CustomerForm';
 import ExpensesBook from './pages/ExpensesBook';
+import ExpenseAnalytics from './pages/ExpenseAnalytics';
 import ExpenseForm from './pages/ExpenseForm';
 import ManageExpenses from './pages/ManageExpenses';
 import ContactsManager from './pages/ContactsManager';
@@ -96,6 +97,7 @@ function App() {
 
 
               <Route path="expenses" element={<ExpensesBook />} />
+              <Route path="expenses/analytics" element={<ExpenseAnalytics />} />
               <Route path="expenses/new" element={<ExpenseForm />} />
               <Route path="expenses/manage" element={<ManageExpenses />} />
               <Route path="expenses/:id/edit" element={<ExpenseForm />} />

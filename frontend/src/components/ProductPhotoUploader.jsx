@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, Plus, Trash2, X, ZoomIn, Loader2, Image as ImageIcon } from 'lucide-react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
+import { compressImageForUpload } from '../utils/imageCompressor';
 
 export default function ProductPhotoUploader({
   productId,
@@ -23,18 +24,27 @@ export default function ProductPhotoUploader({
     // Reset input so same file can be selected again if needed
     e.target.value = '';
 
+    setIsUploading(true);
+    let processedFiles;
+    try {
+      // Downsize large photos (especially 4-12 MB phone photos) before uploading,
+      // saving mobile cellular data and preventing timeouts
+      processedFiles = await Promise.all(files.map((f) => compressImageForUpload(f)));
+    } catch {
+      processedFiles = files;
+    }
+
     // If product exists, upload immediately to backend
     if (productId) {
-      setIsUploading(true);
       const formData = new FormData();
-      files.forEach((file) => {
+      processedFiles.forEach((file) => {
         formData.append('files', file);
       });
 
       try {
         const res = await api.post(`/products/${productId}/images`, formData);
         toast.success(
-          files.length === 1 ? 'Photo uploaded successfully' : `${files.length} photos uploaded`,
+          processedFiles.length === 1 ? 'Photo uploaded successfully' : `${processedFiles.length} photos uploaded`,
         );
         if (onImagesUploaded) {
           onImagesUploaded(res);
@@ -46,11 +56,12 @@ export default function ProductPhotoUploader({
         setIsUploading(false);
       }
     } else {
+      setIsUploading(false);
       // New product mode: buffer files locally before product creation
       if (onPendingFilesChange) {
-        const newFiles = [...pendingFiles, ...files];
+        const newFiles = [...pendingFiles, ...processedFiles];
         onPendingFilesChange(newFiles);
-        toast.success(`${files.length} photo(s) selected`);
+        toast.success(`${processedFiles.length} photo(s) selected`);
       }
     }
   };

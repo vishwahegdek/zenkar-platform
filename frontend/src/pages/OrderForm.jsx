@@ -493,9 +493,27 @@ export default function OrderForm() {
            handleItemBlur={handleItemBlur}
            isItemInvalid={(item) => item.touched && !item.productId && (item.productName || '').trim() !== ''}
            onOpenEstimateModal={(idx) => {
-             setActiveEstimateRowIndex(idx);
-             setIsEstimateModalOpen(true);
-             window.location.hash = `estimate-${idx}`;
+             const it = formData.items[idx];
+             navigate('/wood-estimator', {
+               state: {
+                 returnToOrder: {
+                   rowIndex: idx,
+                   productId: it?.productId || null,
+                   productName: it?.productName || '',
+                   product: it?.product || null,
+                   quotedAmount: it?.estimateData?.quotedAmount || it?.unitPrice || null,
+                   notes: it?.estimateData?.notes || it?.description || '',
+                   formData: formData,
+                   isOrderForm: true,
+                   returnUrl: isEdit ? `/orders/${id}/edit` : '/orders/new'
+                 },
+                 loadEstimate: it?.estimateData ? {
+                   name: it?.productName,
+                   data: it?.estimateData,
+                   id: it?.savedEstimateId || null
+                 } : null
+               }
+             });
            }}
            footerChildren={
              !isEdit ? (

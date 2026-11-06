@@ -17,7 +17,7 @@ import {
     subMonths,
     isSameDay
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, BarChart2 } from 'lucide-react';
 
 const ExpensesBook = () => {
     // View State
@@ -161,14 +161,21 @@ const ExpensesBook = () => {
 
                 <div className="flex gap-2 w-full md:w-auto">
                     <Link 
-                        to="/expenses/manage" 
-                        className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm flex-1 md:flex-none text-center"
+                        to="/expenses/analytics" 
+                        className="bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 px-3.5 py-2 rounded-lg text-sm font-semibold shadow-xs flex-1 md:flex-none text-center flex items-center justify-center gap-1.5 transition-colors"
                     >
-                        Manage Categories
+                        <BarChart2 className="w-4 h-4 text-rose-600" />
+                        <span>Analytics</span>
+                    </Link>
+                    <Link 
+                        to="/expenses/manage" 
+                        className="bg-white border border-gray-300 text-gray-700 px-3.5 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-xs flex-1 md:flex-none text-center"
+                    >
+                        Categories
                     </Link>
                     <Link 
                         to="/expenses/new" 
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex-1 md:flex-none text-center"
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-xs flex-1 md:flex-none text-center"
                     >
                         + Add Expense
                     </Link>

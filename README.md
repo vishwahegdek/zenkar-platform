@@ -73,8 +73,13 @@ cd ..
 
 ### 4. Start Development Servers
 ```bash
-# Starts Backend (3000) and Frontend (5173) concurrently
+# Starts Backend (3000) and Frontend (5173) concurrently in the foreground:
 npm run dev
+
+# Or manage the persistent background services (starts automatically on system reboot):
+./scripts/dev-services.sh status   # Check backend, frontend, db, and port health
+./scripts/dev-services.sh restart  # Restart backend and frontend
+./scripts/dev-services.sh logs     # View live logs
 ```
 
 ### 5. Testing & Quality Checks

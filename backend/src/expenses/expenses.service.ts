@@ -264,4 +264,210 @@ export class ExpensesService {
 
     return deleted;
   }
+
+  async getExpenseAnalytics(params: {
+    fromStr: string;
+    toStr: string;
+    categoryId?: number;
+    paymentMethod?: string;
+    timeframe?: 'day' | 'week' | 'month';
+  }) {
+    const timeframe = params.timeframe || 'day';
+    const from = new Date(params.fromStr + 'T00:00:00.000Z');
+    const to = new Date(params.toStr + 'T23:59:59.999Z');
+
+    // Compute previous period of identical duration for comparison
+    const durationMs = Math.max(1, to.getTime() - from.getTime());
+    const prevTo = new Date(from.getTime() - 1);
+    const prevFrom = new Date(prevTo.getTime() - durationMs);
+
+    const where: Prisma.ExpenseWhereInput = {
+      date: { gte: from, lte: to },
+    };
+
+    if (params.categoryId) {
+      where.categoryId = params.categoryId;
+    }
+
+    if (params.paymentMethod && params.paymentMethod !== 'All') {
+      where.method = params.paymentMethod;
+    }
+
+    const prevWhere: Prisma.ExpenseWhereInput = {
+      date: { gte: prevFrom, lte: prevTo },
+      ...(params.categoryId ? { categoryId: params.categoryId } : {}),
+      ...(params.paymentMethod && params.paymentMethod !== 'All' ? { method: params.paymentMethod } : {}),
+    };
+
+    // Parallel fetch: current expenses & previous period sum
+    const [expenses, prevExpenses] = await Promise.all([
+      this.prisma.expense.findMany({
+        where,
+        include: {
+          category: true,
+          recipient: true,
+        },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.expense.findMany({
+        where: prevWhere,
+        select: { amount: true },
+      }),
+    ]);
+
+    const prevPeriodTotal = prevExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+    let totalExpenses = 0;
+    const categoryMap = new Map<string, { id: number; name: string; amount: number; count: number }>();
+    const methodMap = new Map<string, { method: string; amount: number; count: number }>();
+    const recipientMap = new Map<string, { id?: number; name: string; amount: number; count: number; latestDate: string }>();
+    const trendMap = new Map<string, { total: number; count: number; categories: Record<string, number> }>();
+
+    const getBucketKey = (date: Date) => {
+      const d = new Date(date);
+      if (timeframe === 'month') return d.toISOString().slice(0, 7); // YYYY-MM
+      if (timeframe === 'week') {
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d);
+        monday.setDate(diff);
+        return monday.toISOString().slice(0, 10); // YYYY-MM-DD
+      }
+      return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    };
+
+    expenses.forEach((expense) => {
+      const amount = Number(expense.amount);
+      totalExpenses += amount;
+
+      // Trend
+      const bucketKey = getBucketKey(expense.date);
+      if (!trendMap.has(bucketKey)) {
+        trendMap.set(bucketKey, { total: 0, count: 0, categories: {} });
+      }
+      const bucket = trendMap.get(bucketKey)!;
+      bucket.total += amount;
+      bucket.count += 1;
+      const catName = expense.category?.name || 'Uncategorized';
+      bucket.categories[catName] = (bucket.categories[catName] || 0) + amount;
+
+      // Category breakdown
+      const catId = expense.categoryId;
+      if (!categoryMap.has(catName)) {
+        categoryMap.set(catName, { id: catId, name: catName, amount: 0, count: 0 });
+      }
+      const catData = categoryMap.get(catName)!;
+      catData.amount += amount;
+      catData.count += 1;
+
+      // Payment method
+      const method = expense.method || 'CASH';
+      if (!methodMap.has(method)) {
+        methodMap.set(method, { method, amount: 0, count: 0 });
+      }
+      const methodData = methodMap.get(method)!;
+      methodData.amount += amount;
+      methodData.count += 1;
+
+      // Recipient
+      const recipientName = expense.recipient?.name || 'Direct / Miscellaneous';
+      const dateStr = expense.date.toISOString().slice(0, 10);
+      if (!recipientMap.has(recipientName)) {
+        recipientMap.set(recipientName, {
+          id: expense.recipientId || undefined,
+          name: recipientName,
+          amount: 0,
+          count: 0,
+          latestDate: dateStr,
+        });
+      }
+      const recipientData = recipientMap.get(recipientName)!;
+      recipientData.amount += amount;
+      recipientData.count += 1;
+      if (dateStr > recipientData.latestDate) {
+        recipientData.latestDate = dateStr;
+      }
+    });
+
+    const totalTransactions = expenses.length;
+    const averageExpense = totalTransactions > 0 ? totalExpenses / totalTransactions : 0;
+    const diff = totalExpenses - prevPeriodTotal;
+    const percentageChange = prevPeriodTotal > 0 ? (diff / prevPeriodTotal) * 100 : null;
+    const daysCount = Math.max(1, Math.round(durationMs / (1000 * 60 * 60 * 24)) + 1);
+    const dailyAverage = totalExpenses / daysCount;
+
+    // Sort categories
+    const byCategory = Array.from(categoryMap.values())
+      .map((c) => ({
+        ...c,
+        percentage: totalExpenses > 0 ? (c.amount / totalExpenses) * 100 : 0,
+        averageAmount: c.count > 0 ? c.amount / c.count : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // Sort methods
+    const byPaymentMethod = Array.from(methodMap.values())
+      .map((m) => ({
+        ...m,
+        percentage: totalExpenses > 0 ? (m.amount / totalExpenses) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // Sort recipients
+    const topRecipients = Array.from(recipientMap.values())
+      .map((r) => ({
+        ...r,
+        percentage: totalExpenses > 0 ? (r.amount / totalExpenses) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+
+    // High value expenses (top 10 largest)
+    const highValueExpenses = [...expenses]
+      .sort((a, b) => Number(b.amount) - Number(a.amount))
+      .slice(0, 10)
+      .map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        date: e.date,
+        description: e.description,
+        categoryName: e.category?.name || 'Uncategorized',
+        recipientName: e.recipient?.name || 'Direct / Miscellaneous',
+        method: e.method,
+      }));
+
+    const topCategory = byCategory.length > 0 ? byCategory[0] : null;
+    const topRecipient = topRecipients.length > 0 ? topRecipients[0] : null;
+
+    return {
+      summary: {
+        totalExpenses,
+        totalTransactions,
+        averageExpense,
+        prevPeriodTotal,
+        percentageChange,
+        dailyAverage,
+        daysCount,
+        topCategory: topCategory
+          ? { name: topCategory.name, amount: topCategory.amount, percentage: topCategory.percentage }
+          : null,
+        topRecipient: topRecipient
+          ? { name: topRecipient.name, amount: topRecipient.amount, percentage: topRecipient.percentage }
+          : null,
+      },
+      trend: Array.from(trendMap.entries())
+        .map(([date, data]) => ({
+          date,
+          amount: data.total,
+          count: data.count,
+          categories: data.categories,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      byCategory,
+      byPaymentMethod,
+      topRecipients,
+      highValueExpenses,
+    };
+  }
 }
+

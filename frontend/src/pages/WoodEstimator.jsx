@@ -60,7 +60,11 @@ export default function WoodEstimator() {
   const location = useLocation();
   const navigate = useNavigate();
   const [returnToOrder] = useState(() => location.state?.returnToOrder || null);
+  const [returnToProduct] = useState(() => location.state?.returnToProduct || null);
   const [quoteAmount, setQuoteAmount] = useState(() => {
+    if (location.state?.returnToProduct?.quotedAmount) {
+      return String(location.state.returnToProduct.quotedAmount);
+    }
     if (location.state?.returnToOrder?.quotedAmount) {
       return String(location.state.returnToOrder.quotedAmount);
     }
@@ -144,7 +148,12 @@ export default function WoodEstimator() {
   const [carvingRate, setCarvingRate] = useState('');
   const [mainCarvingFace, setMainCarvingFace] = useState('w');
   const [fittingLabour, setFittingLabour] = useState('1200');
-  const [notes, setNotes] = useState(() => location.state?.returnToOrder?.notes || location.state?.loadEstimate?.data?.notes || '');
+  const [notes, setNotes] = useState(() =>
+    location.state?.returnToProduct?.notes ||
+    location.state?.returnToOrder?.notes ||
+    location.state?.loadEstimate?.data?.notes ||
+    ''
+  );
 
   useEffect(() => {
     if (activeTemplate === 'door_frame') {
@@ -273,6 +282,56 @@ export default function WoodEstimator() {
     } catch (e) {
       console.error(e);
       toast.error('Failed to apply estimate to order: ' + (e.response?.data?.message || e.message));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const applyToProduct = async () => {
+    if (!returnToProduct) return;
+    setIsSaving(true);
+    try {
+      const data = getEstimatePayload();
+      const finalCost = Math.round(estimateData.finalCost);
+      const effectiveQuote = (quoteAmount !== '' && !isNaN(Number(quoteAmount))) 
+        ? Math.round(Number(quoteAmount)) 
+        : finalCost;
+
+      const payload = {
+        estimateData: {
+          ...data,
+          finalCost,
+          quotedAmount: effectiveQuote,
+          totalVolumeCft: estimateData.totalCft || 0
+        },
+        updateUnitPrice: true,
+        unitPrice: effectiveQuote
+      };
+
+      if (returnToProduct.productId) {
+        await api.patch(`/products/${returnToProduct.productId}/estimate`, payload);
+        toast.success(`Estimate attached to ${returnToProduct.productName || 'product'}! (Quote: ₹${effectiveQuote.toLocaleString()})`);
+        navigate(returnToProduct.returnUrl || '/products');
+      } else {
+        toast.success(`Estimate configured for ${returnToProduct.productName || 'new product'}! (Quote: ₹${effectiveQuote.toLocaleString()})`);
+        navigate(returnToProduct.returnUrl || '/products/new', {
+          state: {
+            appliedEstimate: {
+              estimateData: payload.estimateData,
+              finalCost,
+              quotedAmount: effectiveQuote
+            },
+            savedFormData: {
+              ...(returnToProduct.formData || {}),
+              defaultUnitPrice: effectiveQuote,
+              estimateData: payload.estimateData
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to attach estimate to product: ' + (e.response?.data?.message || e.message));
     } finally {
       setIsSaving(false);
     }
@@ -472,6 +531,55 @@ export default function WoodEstimator() {
             >
               {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
               <span>Apply to Order</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {returnToProduct && (
+        <div className="bg-amber-400 text-gray-950 px-3 sm:px-4 py-2 sm:py-2.5 font-bold flex flex-wrap items-center justify-between gap-2 border-b-2 border-amber-500 shadow-md sticky top-0 z-40">
+          <div className="flex items-center gap-2 min-w-0">
+            <Ruler className="w-4 h-4 shrink-0 text-gray-900" />
+            <span className="text-xs sm:text-sm truncate">
+              Estimate for <strong>{returnToProduct.productName || 'Product'}</strong> (Product Catalogue)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Calculated estimate badge */}
+            <div className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-xs font-black text-gray-900 bg-amber-300/80 border border-amber-500/40" title="Calculated Estimate Cost">
+              Est: ₹{finalCost.toFixed(0)}
+            </div>
+
+            {/* Quote amount field */}
+            <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border-2 border-gray-900 shadow-2xs">
+              <span className="text-[10px] sm:text-xs font-bold text-gray-600 uppercase">Quote: ₹</span>
+              <input
+                type="number"
+                value={quoteAmount}
+                onChange={(e) => setQuoteAmount(e.target.value)}
+                placeholder={Math.round(finalCost).toString()}
+                className="w-20 sm:w-24 text-right font-black text-xs sm:text-sm text-gray-900 focus:outline-none bg-transparent"
+                title="Customer Quote (Price to quote customer)"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                navigate(returnToProduct.returnUrl || '/products', {
+                  state: returnToProduct.formData ? { savedFormData: returnToProduct.formData } : undefined
+                });
+              }}
+              className="px-2 sm:px-2.5 py-1 bg-white hover:bg-gray-100 text-gray-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={applyToProduct}
+              disabled={isSaving}
+              className="px-3 sm:px-3.5 py-1 bg-gray-900 hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-amber-400" />}
+              <span>Attach to Product</span>
             </button>
           </div>
         </div>
@@ -1164,7 +1272,7 @@ export default function WoodEstimator() {
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Calculated Est.</span>
               <span className="text-lg md:text-2xl font-black text-white leading-none">₹{finalCost.toFixed(0)}</span>
             </div>
-            {returnToOrder && (
+            {(returnToOrder || returnToProduct) && (
               <div className="flex items-center gap-1 bg-gray-800 border border-gray-700 px-2 py-1 rounded-lg">
                 <span className="text-[10px] text-amber-400 font-bold uppercase">Quote: ₹</span>
                 <input
@@ -1176,6 +1284,16 @@ export default function WoodEstimator() {
                   title="Customer Quote (Price quoted to customer)"
                 />
               </div>
+            )}
+            {returnToProduct && (
+              <button
+                onClick={applyToProduct}
+                disabled={isSaving}
+                className="px-3 sm:px-4 py-1.5 bg-amber-400 hover:bg-amber-500 text-gray-950 font-black rounded-lg text-xs uppercase tracking-wider flex items-center gap-1 shadow-md transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                <span>Attach</span>
+              </button>
             )}
           </div>
         </div>

@@ -27,7 +27,13 @@ Future enhancements for the Zenkar Platform.
 
 ## 🔐 Security & Access Control
 - [ ] **Authentication**: Implement JWT-based login screen.
-- [ ] **RBAC**: Differentiate between Admin (full access) and Staff (restricted access).
+- [ ] **RBAC**: Differentiate between Admin (full access), Workshop/Production Floor (orders/cutting/labour), Sales (estimates/orders), and Accounts (expenses/purchases).
+
+## 🏭 Workshop & Production Floor Interface (Mobile-First)
+- [ ] **Dedicated Production & Cutting UI**: Mobile-first screen tailored for factory floor phones and tablets.
+  - Wood cutting & door frame job queue (Pending → In Cutting → Carving → Ready).
+  - Quick daily piece-rate and carving labour work logger.
+  - Large touch targets and high-contrast UI for workshop conditions.
 
 ## 👥 Customer Management (CRM)
 - [ ] **Directory**: Dedicated page to list and search all customers.
@@ -59,6 +65,7 @@ Future enhancements for the Zenkar Platform.
     -   **CI Integration**: Run E2E suite on every PR.
 - [ ] **Infrastructure**
     - [ ] **Telegram Bot Integration**: For notifications and server control (deploy/restart)through commands.
+    - [ ] **Local Pi UPS Power Cut Monitor**: Grid outage alert mechanism via UPS status/LAN ping with auto-shutdown.
     - [x] **Schema Documentation**: maintaned in `backend/SCHEMA_CHANGELOG.md` and `backend/prisma/schema.prisma`.
 
 ## ☁️ Google Integration

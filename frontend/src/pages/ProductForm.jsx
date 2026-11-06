@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { toast } from 'react-hot-toast';
@@ -10,6 +10,7 @@ import ProductEstimateModal from '../components/ProductEstimateModal';
 export default function ProductForm({ onSuccess, onCancel, initialData, isModal = false }) {
   const { id: paramId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const id = paramId;
   const isEdit = Boolean(id);
@@ -61,7 +62,45 @@ export default function ProductForm({ onSuccess, onCancel, initialData, isModal 
         categoryId: generalCat ? generalCat.id : prev.categoryId,
       }));
     }
-  }, [product, initialData, isEdit, categories]);
+  }, [product, categories, isEdit, initialData]);
+
+  // Handle returned estimate from Wood Estimator
+  useEffect(() => {
+    if (location.state?.appliedEstimate) {
+      const { estimateData, quotedAmount, finalCost } = location.state.appliedEstimate;
+      const price = Number(quotedAmount ?? finalCost) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        ...(location.state.savedFormData || {}),
+        estimateData: estimateData,
+        defaultUnitPrice: price > 0 ? price : prev.defaultUnitPrice,
+      }));
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  const handleOpenWoodEstimator = () => {
+    navigate('/wood-estimator', {
+      state: {
+        returnToProduct: {
+          productId: isEdit ? id : null,
+          productName: formData.name || 'New Product',
+          formData: formData,
+          isProductForm: true,
+          returnUrl: isEdit ? `/products/${id}/edit` : '/products/new',
+          quotedAmount: formData.defaultUnitPrice || formData.estimateData?.quotedAmount || null,
+          notes: formData.notes || formData.estimateData?.notes || '',
+        },
+        loadEstimate: formData.estimateData
+          ? {
+              name: formData.name || 'Product Estimate',
+              data: formData.estimateData,
+              id: formData.savedEstimateId || null,
+            }
+          : null,
+      },
+    });
+  };
 
   // Mutations
   const mutation = useMutation({
@@ -232,11 +271,11 @@ export default function ProductForm({ onSuccess, onCancel, initialData, isModal 
 
             <button
               type="button"
-              onClick={() => setIsEstimateModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs flex items-center gap-1.5 transition-colors"
+              onClick={handleOpenWoodEstimator}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Calculator className="w-3.5 h-3.5" />
-              {formData.estimateData ? 'Edit Estimate' : 'Attach Estimate'}
+              {formData.estimateData ? 'Edit in Wood Estimator' : 'Attach Estimate'}
             </button>
           </div>
 
@@ -246,14 +285,24 @@ export default function ProductForm({ onSuccess, onCancel, initialData, isModal 
                 <span className="font-semibold text-gray-800 capitalize">
                   {formData.estimateData.activeTemplate === 'door_frame' ? 'Door Frame Template' : 'Custom Blocks Template'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, estimateData: null })}
-                  className="text-red-500 hover:text-red-700 flex items-center gap-1 text-[11px]"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Detach
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenWoodEstimator}
+                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
+                  >
+                    <Calculator className="w-3 h-3" />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, estimateData: null })}
+                    className="text-red-500 hover:text-red-700 flex items-center gap-1 text-[11px] cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Detach
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-gray-600">

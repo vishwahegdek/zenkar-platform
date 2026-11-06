@@ -50,11 +50,24 @@ export default function OrderDetails() {
   }, [estimateItemIdParam, order?.items]);
 
   const handleOpenEstimateModal = (item) => {
-    setEstimateModalItem(item);
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      next.set('estimateItemId', String(item.id));
-      return next;
+    navigate('/wood-estimator', {
+      state: {
+        returnToOrder: {
+          orderId: order?.id || null,
+          itemId: item.id || null,
+          productId: item.productId || item.product?.id || null,
+          productName: item.productName || item.product?.name || '',
+          product: item.product || null,
+          quotedAmount: item.estimateData?.quotedAmount || item.unitPrice || null,
+          notes: item.estimateData?.notes || '',
+          returnUrl: `/orders/${order?.id}`
+        },
+        loadEstimate: item.estimateData ? {
+          name: item.productName,
+          data: item.estimateData,
+          id: item.savedEstimateId || null
+        } : null
+      }
     });
   };
 

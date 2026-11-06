@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
@@ -27,15 +27,15 @@ import toast from 'react-hot-toast';
 import ManageCategoriesModal from './ManageCategoriesModal';
 import ProductDetailModal from '../components/ProductDetailModal';
 import ProductEstimateModal from '../components/ProductEstimateModal';
+import { isFurnitureCategory, sortCategoriesWithPriority } from '../utils/productEstimateHelpers';
 
 export default function ProductsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const searchParam = searchParams.get('search') || '';
-  const categoryParam = searchParams.get('category') || '';
+  const categoryParam = searchParams.get('category');
 
   const [searchTerm, setSearchTerm] = useState(searchParam);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(categoryParam);
   const [filterWithPhotos, setFilterWithPhotos] = useState(false);
   const [filterWithEstimate, setFilterWithEstimate] = useState(false);
   const [filterInStock, setFilterInStock] = useState(false);
@@ -47,12 +47,12 @@ export default function ProductsList() {
   const [estimateProduct, setEstimateProduct] = useState(null);
 
   const queryClient = useQueryClient();
+  const activeTabRef = useRef(null);
 
-  // Sync URL to Local on Mount/Back
+  // Sync URL searchParam to local searchTerm on back/forward
   useEffect(() => {
     setSearchTerm(searchParam);
-    setSelectedCategoryId(categoryParam);
-  }, [searchParam, categoryParam]);
+  }, [searchParam]);
 
   // Debounce URL update for search
   useEffect(() => {
@@ -67,20 +67,68 @@ export default function ProductsList() {
     return () => clearTimeout(timer);
   }, [searchTerm, searchParam, setSearchParams]);
 
-  // Update URL for category
-  const handleCategoryChange = (val) => {
-    setSelectedCategoryId(val);
-    const next = new URLSearchParams(searchParams);
-    if (val) next.set('category', val);
-    else next.delete('category');
-    setSearchParams(next, { replace: true });
-  };
-
   // Fetch Categories
-  const { data: categories = [] } = useQuery({
+  const {
+    data: categories = [],
+    isSuccess: isCategoriesSuccess,
+    isError: isCategoriesError,
+  } = useQuery({
     queryKey: ['productCategories'],
     queryFn: () => api.get('/product-categories'),
   });
+
+  // Prioritize doors/frames and furniture categories
+  const prioritizedCategories = useMemo(() => {
+    return sortCategoriesWithPriority(categories);
+  }, [categories]);
+
+  const furnitureCategory = useMemo(() => {
+    return categories.find((c) => isFurnitureCategory(c));
+  }, [categories]);
+
+  // If category is explicitly specified in URL ('all' or specific id), use it.
+  // Otherwise, default to Furniture tab once we enter product catalogue.
+  const activeCategoryId = useMemo(() => {
+    if (categoryParam !== null && categoryParam !== undefined && categoryParam !== '') {
+      return categoryParam;
+    }
+    if (furnitureCategory) {
+      return String(furnitureCategory.id);
+    }
+    return '';
+  }, [categoryParam, furnitureCategory]);
+
+  const targetCategoryId = activeCategoryId && activeCategoryId !== 'all' ? activeCategoryId : undefined;
+
+  // Auto-scroll the active tab into view for smooth mobile navigation
+  useEffect(() => {
+    if (typeof activeTabRef.current?.scrollIntoView === 'function') {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [activeCategoryId]);
+
+  // Update URL for category
+  const handleCategoryChange = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val === 'all') {
+      next.set('category', 'all');
+    } else if (val) {
+      next.set('category', String(val));
+    } else {
+      next.set('category', 'all');
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const isCategoryReady =
+    categoryParam !== null ||
+    categories.length > 0 ||
+    isCategoriesError ||
+    (isCategoriesSuccess && categories.length === 0);
 
   // Infinite query for products
   const {
@@ -91,13 +139,13 @@ export default function ProductsList() {
     isLoading,
     refetch: refetchProducts,
   } = useInfiniteQuery({
-    queryKey: ['products', searchParam, selectedCategoryId],
+    queryKey: ['products', searchParam, targetCategoryId],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         query: searchParam,
         page: pageParam,
         limit: 24,
-        categoryId: selectedCategoryId || undefined,
+        categoryId: targetCategoryId,
       };
       const res = await api.get('/products', { params });
       return res;
@@ -106,6 +154,7 @@ export default function ProductsList() {
       const { page, totalPages } = lastPage.meta;
       return page < totalPages ? page + 1 : undefined;
     },
+    enabled: isCategoryReady,
   });
 
   const rawProducts = data?.pages.flatMap((page) => page.data) || [];
@@ -133,6 +182,26 @@ export default function ProductsList() {
     if (window.confirm('Are you sure you want to delete this product?')) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleOpenWoodEstimator = (product) => {
+    navigate('/wood-estimator', {
+      state: {
+        returnToProduct: {
+          productId: product.id,
+          productName: product.name,
+          product: product,
+          returnUrl: '/products',
+          quotedAmount: product.estimateData?.quotedAmount || product.defaultUnitPrice || null,
+          notes: product.notes || product.estimateData?.notes || ''
+        },
+        loadEstimate: product.estimateData ? {
+          name: product.name,
+          data: product.estimateData,
+          id: product.savedEstimateId || null
+        } : null
+      }
+    });
   };
 
   const formatTemplateBadge = (tmpl) => {
@@ -233,29 +302,31 @@ export default function ProductsList() {
         </div>
 
         {/* Category Horizontal Scroll Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 touch-pan-x scroll-smooth -mx-1 px-1 sm:mx-0 sm:px-0">
           <button
+            ref={activeCategoryId === 'all' ? activeTabRef : null}
             type="button"
-            onClick={() => handleCategoryChange('')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-              selectedCategoryId === ''
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
+            onClick={() => handleCategoryChange('all')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all min-h-[36px] flex items-center justify-center shrink-0 ${
+              activeCategoryId === 'all'
+                ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-600/20'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 active:bg-gray-200'
             }`}
           >
             All Categories
           </button>
-          {categories.map((cat) => {
-            const isSelected = String(selectedCategoryId) === String(cat.id);
+          {prioritizedCategories.map((cat) => {
+            const isSelected = String(activeCategoryId) === String(cat.id);
             return (
               <button
                 key={cat.id}
+                ref={isSelected ? activeTabRef : null}
                 type="button"
                 onClick={() => handleCategoryChange(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all min-h-[36px] flex items-center justify-center shrink-0 ${
                   isSelected
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
+                    ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-600/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 active:bg-gray-200'
                 }`}
               >
                 {cat.name}
@@ -335,7 +406,7 @@ export default function ProductsList() {
           <div>
             <h3 className="text-sm font-bold text-gray-800">No products found</h3>
             <p className="text-xs text-gray-500 mt-1">
-              {searchTerm || selectedCategoryId || filterWithPhotos || filterWithEstimate
+              {searchTerm || (activeCategoryId && activeCategoryId !== 'all') || filterWithPhotos || filterWithEstimate
                 ? 'Try adjusting your search query or filters'
                 : 'Get started by creating your first product in the catalogue'}
             </p>
@@ -466,13 +537,13 @@ export default function ProductsList() {
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
-                        onClick={() => setEstimateProduct(product)}
+                        onClick={() => handleOpenWoodEstimator(product)}
                         className={`p-1.5 rounded-lg border text-xs transition-colors ${
                           estimate
                             ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                             : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                         }`}
-                        title={estimate ? 'Edit Estimate Copy' : 'Attach Estimate Copy'}
+                        title={estimate ? 'Edit in Wood Estimator' : 'Attach Estimate (Wood Estimator)'}
                       >
                         <Calculator className="w-3.5 h-3.5" />
                       </button>
@@ -588,9 +659,9 @@ export default function ProductsList() {
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setEstimateProduct(product)}
+                            onClick={() => handleOpenWoodEstimator(product)}
                             className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                            title="Estimate Copy"
+                            title={estimate ? 'Edit in Wood Estimator' : 'Attach Estimate (Wood Estimator)'}
                           >
                             <Calculator className="w-3.5 h-3.5" />
                           </button>
@@ -644,7 +715,7 @@ export default function ProductsList() {
           onDeleteProduct={(id) => handleDelete(id)}
           onOpenEstimateModal={(p) => {
             setDetailProduct(null);
-            setEstimateProduct(p);
+            handleOpenWoodEstimator(p);
           }}
           onProductUpdated={(updated) => {
             setDetailProduct(updated);

@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   TrendingUp,
+  TrendingDown,
   Settings,
   Calculator,
   Box
@@ -48,6 +49,7 @@ export function Sidebar({ className }) {
       title: "Finance",
       items: [
         { name: "Expenses", path: "/expenses", icon: Receipt },
+        { name: "Expense Analytics", path: "/expenses/analytics", icon: TrendingDown },
         { name: "Ledger", path: "/ledger", icon: BookOpen },
         { name: "Chart of Accounts", path: "/ledger-accounts", icon: BookOpen },
         { name: "Balance Sheet", path: "/balance-sheet", icon: BookOpen },
@@ -69,7 +71,14 @@ export function Sidebar({ className }) {
     }
   ];
 
-  const isActive = (path) => location.pathname.startsWith(path);
+  const isActive = (path) => {
+    if (path === location.pathname) return true;
+    if (path === '/expenses') {
+      return location.pathname === '/expenses' || (location.pathname.startsWith('/expenses/') && !location.pathname.startsWith('/expenses/analytics'));
+    }
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <aside className={`bg-white border-r border-gray-200 flex flex-col ${className}`}>

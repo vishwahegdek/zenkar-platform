@@ -19,6 +19,7 @@ export default function ManageCategoriesModal({ onClose }) {
     mutationFn: (name) => api.post('/product-categories', { name }),
     onSuccess: () => {
       queryClient.invalidateQueries(['product-categories']);
+      queryClient.invalidateQueries(['productCategories']);
       setNewCategoryName('');
       toast.success('Category created');
     }
@@ -28,6 +29,7 @@ export default function ManageCategoriesModal({ onClose }) {
     mutationFn: ({ id, name }) => api.patch(`/product-categories/${id}`, { name }),
     onSuccess: () => {
       queryClient.invalidateQueries(['product-categories']);
+      queryClient.invalidateQueries(['productCategories']);
       setEditingId(null);
       toast.success('Category updated');
     }
@@ -37,6 +39,7 @@ export default function ManageCategoriesModal({ onClose }) {
     mutationFn: (id) => api.delete(`/product-categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(['product-categories']);
+      queryClient.invalidateQueries(['productCategories']);
       toast.success('Category deleted');
     },
     onError: () => toast.error('Check if category is used by products')

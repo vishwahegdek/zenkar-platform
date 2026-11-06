@@ -81,6 +81,29 @@ export class ExpensesController {
     return this.expensesService.createCategory(body.name);
   }
 
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get expense analytics' })
+  @ApiQuery({ name: 'from', required: true, type: String })
+  @ApiQuery({ name: 'to', required: true, type: String })
+  @ApiQuery({ name: 'categoryId', required: false, type: Number })
+  @ApiQuery({ name: 'paymentMethod', required: false, type: String })
+  @ApiQuery({ name: 'timeframe', required: false, enum: ['day', 'week', 'month'] })
+  getAnalytics(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+    @Query('timeframe') timeframe?: 'day' | 'week' | 'month',
+  ) {
+    return this.expensesService.getExpenseAnalytics({
+      fromStr: from,
+      toStr: to,
+      categoryId: categoryId ? parseInt(categoryId) : undefined,
+      paymentMethod,
+      timeframe,
+    });
+  }
+
   // Payee endpoints moved to ContactsController
 
   @Get(':id')
