@@ -30,24 +30,30 @@ BACKEND_TAGS="-t $BACKEND_REPO:staging -t $BACKEND_REPO:staging-$DATE_TAG -t $BA
 # Tags for Frontend (Staging + Immutable SHA)
 FRONTEND_TAGS="-t $FRONTEND_REPO:staging -t $FRONTEND_REPO:staging-$DATE_TAG -t $FRONTEND_REPO:$GIT_SHA"
 
+if sudo -n true 2>/dev/null; then
+  DOCKER_CMD="sudo docker"
+else
+  DOCKER_CMD="docker"
+fi
+
 # Build Backend
 echo "🔨 Building Backend..."
-sudo docker build $BACKEND_TAGS -f backend/Dockerfile .
+$DOCKER_CMD build $BACKEND_TAGS -f backend/Dockerfile .
 
 # Build Frontend
 echo "🔨 Building Frontend..."
-sudo docker build $FRONTEND_TAGS -f frontend/Dockerfile .
+$DOCKER_CMD build $FRONTEND_TAGS -f frontend/Dockerfile .
 
 # Push Images
 echo "📤 Pushing Backend Images..."
-sudo docker push "$BACKEND_REPO:staging"
-sudo docker push "$BACKEND_REPO:staging-$DATE_TAG"
-sudo docker push "$BACKEND_REPO:$GIT_SHA"
+$DOCKER_CMD push "$BACKEND_REPO:staging"
+$DOCKER_CMD push "$BACKEND_REPO:staging-$DATE_TAG"
+$DOCKER_CMD push "$BACKEND_REPO:$GIT_SHA"
 
 echo "📤 Pushing Frontend Images..."
-sudo docker push "$FRONTEND_REPO:staging"
-sudo docker push "$FRONTEND_REPO:staging-$DATE_TAG"
-sudo docker push "$FRONTEND_REPO:$GIT_SHA"
+$DOCKER_CMD push "$FRONTEND_REPO:staging"
+$DOCKER_CMD push "$FRONTEND_REPO:staging-$DATE_TAG"
+$DOCKER_CMD push "$FRONTEND_REPO:$GIT_SHA"
 
 echo "✅ Build and Push Complete!"
 # Try to write SHA, but don't fail the script if it fails (it's just a helper)
